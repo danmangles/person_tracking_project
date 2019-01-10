@@ -1,0 +1,4 @@
+<launch>
+<node pkg="passthrough_2" type="passthrough_2" name="passthrough_2" output="screen">
+</node>
+</launch>
