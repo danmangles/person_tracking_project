@@ -240,3 +240,6 @@ add_executable (get_centroid src/get_centroid.cpp)
 target_link_libraries (get_centroid ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 add_executable (average_tracker src/average_tracker.cpp)
 target_link_libraries (average_tracker ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+
+
+#
