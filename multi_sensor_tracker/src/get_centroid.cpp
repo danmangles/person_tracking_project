@@ -35,11 +35,17 @@
 #include <math.h>       /* sin */
 using namespace std;
 
-
-ros::Publisher pub1; // setup the publisher for the output point cloud
-ros::Publisher pub2; // setup the publisher for the output point cloud
+// HACK: setup the public transform listener so we can listen to the odom_base_tf
 boost::shared_ptr<tf::TransformListener> odom_base_ls;
 
+// setup 5 publishers to display point clouds at each stage
+ros::Publisher pub_raw; // setup the publisher for the output point cloud
+ros::Publisher pub_trans; // setup the publisher for the output point cloud
+ros::Publisher pub_zfilt; // setup the publisher for the output point cloud
+ros::Publisher pub_ds; // setup the publisher for the output point cloud
+ros::Publisher pub_centroid; // setup the publisher for the output point cloud
+
+//sensor_msgs::PointCloud2 output_msg; // general message to store data to be published on
 
 pcl::PointCloud<pcl::PointXYZ>::Ptr get_cloud_cluster (pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud) {
   // INPUTS: input_cloud: pointer to the pointcloud produced by the velodyne relative to "base"
@@ -102,13 +108,18 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr get_cloud_cluster (pcl::PointCloud<pcl::Poin
     extract.filter (*cloud_plane);
     cout << "PointCloud representing the planar component: " << cloud_plane->points.size () << " data points." << endl;
 
-  	//define cloud_f for extracting into
-  	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_f (new pcl::PointCloud<pcl::PointXYZ>);
+    //define cloud_f for extracting into
+    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_f (new pcl::PointCloud<pcl::PointXYZ>);
     // Remove the planar inliers, extract the rest
     extract.setNegative (true);
     extract.filter (*cloud_f);
     *cloud_filtered = *cloud_f;
   }
+
+  // Convert to ROS data type
+  // sensor_msgs::PointCloud2 output_msg;
+  // pcl_conversions::moveFromPCL(*cloud_filtered, output_msg);
+  // pub_ds.publish (output_msg);
 
   // Create the KdTree object for the search method of the extraction
   cout << "Creating Kdtree objects" << endl;
@@ -149,11 +160,11 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr get_cloud_cluster (pcl::PointCloud<pcl::Poin
 //void cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_msg, tf::TransformListener& odom_base_ls)
 void cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_msg)
 {
-	// INPUTS: cloud_msg: pointer to the raw input cloud from the velodyne
-	// OUTPUTS: void
-	// This is a callback function that reads in the velodyne message, removes the ground plane, 
-	// calls get_cloud_cluster() to get the largest cluster, extracts the centroid from this, 
-	// and publishes the centroid coordinates on the transform "velodyne_person_est"
+  // INPUTS: cloud_msg: pointer to the raw input cloud from the velodyne
+  // OUTPUTS: void
+  // This is a callback function that reads in the velodyne message, removes the ground plane, 
+  // calls get_cloud_cluster() to get the largest cluster, extracts the centroid from this, 
+  // and publishes the centroid coordinates on the transform "velodyne_person_est"
 
   //////////////////////////////////////
   /* COMMENTED OUT BECAUSE I DON'T THINK CLOUD HAS BEEN DEFINED YET
@@ -168,8 +179,9 @@ void cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_msg)
 
   
   //////////////////////* TRANSFORM THE INPUT CLOUD INTO THE ODOM FRAME  /////////////////////////////
+// Publish the cloud
+  // pub_raw.publish (*cloud_msg);
 
-  //pub1.publish (*cloud_msg);
   string target_frame = "odom", base_frame = "base"; // target frame for transform
   sensor_msgs::PointCloud2 transformed_cloud; // initiate output cloud
 
@@ -181,8 +193,8 @@ void cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_msg)
   pcl_ros::transformPointCloud(target_frame, *cloud_msg, transformed_cloud, *odom_base_ls); // perform the transformation
 
 
-  // Publish the data
-  pub1.publish (transformed_cloud);
+  // Publish the cloud
+  // pub_trans.publish (transformed_cloud);
 
   //////////////////////* REMOVE ALL POINTS OUTSIDE OF 0.1, 100.0  /////////////////////////////
   // Convert from sensor_msgs::PointCloud2 to pcl::PointCloud2
@@ -202,15 +214,14 @@ void cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_msg)
   //sor.filter (cloud_filtered);
   pcl::PCLPointCloud2 output_cloud; // initiate our PC2 to send
   pass.filter(output_cloud);
-
   //////////////////////* PUBLISH THE RESULT ON pub/////////////////////////////
 
   // Convert to ROS data type
-  sensor_msgs::PointCloud2 output_msg;
-  pcl_conversions::moveFromPCL(output_cloud, output_msg);
+   sensor_msgs::PointCloud2 output_msg;
+  // pcl_conversions::moveFromPCL(output_cloud, output_msg);
 
-  // Publish the data
-  pub2.publish (output_msg);
+  // // Publish the data
+  // pub_zfilt.publish (output_msg);
 
 ////////////////////////////////////////////////////////// NOT SURE WHAT THESE LINES DO.
   //pcl::PointCloud<pcl::PointXYZ>::Ptr centroid_cloud (new pcl::PointCloud<pcl::PointXYZ>);
@@ -239,6 +250,13 @@ void cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_msg)
 
 
   centroid_cloud_ptr = get_cloud_cluster(prefiltered_cloud_ptr);
+
+  // Convert to ROS data type
+  //sensor_msgs::PointCloud2 output_msg;
+  // pcl_conversions::moveFromPCL(*centroid_cloud_ptr, output_msg);
+
+  // // Publish the data
+  // pub_centroid.publish (output_msg);
 
   // centroid_cloud is now a pointer
   //pcl::PointCloud<pcl::PointXYZ> centroid_cloud = *centroid_cloud_ptr;  // pcl version of the point cloud
@@ -278,7 +296,7 @@ void cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_msg)
   string target_frame_id = "velodyne_person_est";
   //br.sendTransform(centre_point, q, ros::Time::now(), target_frame_id, velodyne_frame_id);
   // not sure if i put the ids the right way round
-  br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), velodyne_frame_id, target_frame_id));
+  br.sendTransform(tf::StampedTransform(transform, ros::Time(0), velodyne_frame_id, target_frame_id));
   
 }
 
@@ -298,9 +316,14 @@ int main (int argc, char** argv)
   ros::Subscriber sub = nh.subscribe<sensor_msgs::PointCloud2> (input_topic, 1, cloud_cb);
 
   // Create a ROS publisher for the output point cloud
-  string output_topic_1 = "output_1", output_topic_2 = "output_2";
-  pub1 = nh.advertise<sensor_msgs::PointCloud2> (output_topic_1, 1);
-  pub2 = nh.advertise<sensor_msgs::PointCloud2> (output_topic_2, 1);
+  string topic_raw = "pcl_raw", topic_trans = "pcl_trans", topic_zfilt = "pcl_zfilt", topic_ds = "pcl_ds", topic_centroid = "pcl_centroid";
+  
+  pub_raw = nh.advertise<sensor_msgs::PointCloud2> (topic_raw, 1);
+  pub_trans = nh.advertise<sensor_msgs::PointCloud2> (topic_trans, 1);
+  pub_zfilt = nh.advertise<sensor_msgs::PointCloud2> (topic_zfilt, 1);
+  pub_ds = nh.advertise<sensor_msgs::PointCloud2> (topic_ds, 1);
+  pub_centroid = nh.advertise<sensor_msgs::PointCloud2> (topic_centroid, 1);
+
   // Spin
   ros::spin ();
 }
