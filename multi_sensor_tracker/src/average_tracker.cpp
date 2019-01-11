@@ -1,3 +1,30 @@
+/*
+
+
+THIS FILE HAS BEEN SUPERCEDED BY THE PYTHON FILE average_tracker.py in ANAKIN_ROS
+
+
+*/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 #include <ros/ros.h>
 // tf includes
 #include <tf/transform_listener.h>
