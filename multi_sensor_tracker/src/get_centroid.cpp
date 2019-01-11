@@ -155,8 +155,6 @@ void cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_msg)
 	// calls get_cloud_cluster() to get the largest cluster, extracts the centroid from this, 
 	// and publishes the centroid coordinates on the transform "velodyne_person_est"
 
-  //////////////////////* READ IN THE CLOUD AND CONVERT TO A PointCloud2 /////////////////////////////
-
   //////////////////////////////////////
   /* COMMENTED OUT BECAUSE I DON'T THINK CLOUD HAS BEEN DEFINED YET
   cerr << "Cloud before filtering: " << endl;
