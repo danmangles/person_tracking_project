@@ -53,9 +53,12 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr get_cloud_cluster (pcl::PointCloud<pcl::Poin
   // This method takes the pcloud input_cloud, downsizes it with a voxel grid, splits up the grid into 
   // clusters, and returns the largest cluster as "cloud_cluster", a pointer to a PointCloud
 
+  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered (new pcl::PointCloud<pcl::PointXYZ>);
+  /* COMMENTED OUT THE DOWNSAMPLING BECAUSE OUR POINT CLOUD IS ALREADY SPARSE
 
 
-  /////////////////* DOWNSAMPLE THE INPUT WITH A VOXEL GRID */////////////////
+
+  ///////////////// DOWNSAMPLE THE INPUT WITH A VOXEL GRID /////////////////
 
   // Create the filtering object: downsample the dataset using a leaf size of 1cm
   pcl::VoxelGrid<pcl::PointXYZ> vg;
@@ -64,11 +67,22 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr get_cloud_cluster (pcl::PointCloud<pcl::Poin
   // set vg input to input cloud
   vg.setInputCloud (input_cloud);
 
-  //vg.setLeafSize (0.01f, 0.01f, 0.01f);
-  vg.setLeafSize (0.1f, 0.1f, 0.1f);
+  vg.setLeafSize (0.01f, 0.01f, 0.01f);
+  // vg.setLeafSize (0.1f, 0.1f, 0.1f);
   vg.filter (*cloud_filtered);
   cout << "PointCloud after filtering has: " << cloud_filtered->points.size ()  << " data points." << endl; //*
   
+
+
+
+  */
+  cloud_filtered = input_cloud;
+
+  // CONVERT FROM PCL:PC1 TO SM:PC2
+  sensor_msgs::PointCloud2 msg_to_publish; // initiate intermediate message variable
+  pcl::toROSMsg(*cloud_filtered,msg_to_publish ); // con
+  pub_ds.publish (msg_to_publish);
+
 
   /////////////////* DECOMPOSE cloud_filtered INTO CLUSTERS */////////////////
 
@@ -116,10 +130,13 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr get_cloud_cluster (pcl::PointCloud<pcl::Poin
     *cloud_filtered = *cloud_f;
   }
 
+
+  
   // Convert to ROS data type
-  // sensor_msgs::PointCloud2 output_msg;
-  // pcl_conversions::moveFromPCL(*cloud_filtered, output_msg);
-  // pub_ds.publish (output_msg);
+  // sensor_msgs::PointCloud pc1_pub_ds;
+
+  // pcl_conversions::moveFromPCL(*cloud_filtered, pc1_pub_ds);
+
 
   // Create the KdTree object for the search method of the extraction
   cout << "Creating Kdtree objects" << endl;
@@ -129,9 +146,9 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr get_cloud_cluster (pcl::PointCloud<pcl::Poin
   cout << "setting up cluster objects" << endl;
   vector<pcl::PointIndices> cluster_indices;
   pcl::EuclideanClusterExtraction<pcl::PointXYZ> ec;
-  ec.setClusterTolerance (0.7); // 2cm
-  ec.setMinClusterSize (4);
-  ec.setMaxClusterSize (25000);
+  ec.setClusterTolerance (0.8); // 2cm: too small, we split one object into many, too big, we merge objects into one.
+  ec.setMinClusterSize (30);
+  ec.setMaxClusterSize (2500);
   ec.setSearchMethod (tree);
   ec.setInputCloud (cloud_filtered);
   ec.extract (cluster_indices);
@@ -151,7 +168,6 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr get_cloud_cluster (pcl::PointCloud<pcl::Poin
     cloud_cluster->is_dense = true;
 
     cout << "PointCloud representing the Cluster: " << cloud_cluster->points.size () << " data points." << endl;
-
     return cloud_cluster; // actually we want to leave this loop after the first cluster
   }
 }
@@ -167,20 +183,20 @@ void cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_msg)
   // and publishes the centroid coordinates on the transform "velodyne_person_est"
 
   //////////////////////////////////////
-  /* COMMENTED OUT BECAUSE I DON'T THINK CLOUD HAS BEEN DEFINED YET
-  cerr << "Cloud before filtering: " << endl;
-  for (size_t i = 0; i < cloud->points.size (); ++i)
-    cerr << "    " << cloud->points[i].x << " " 
-                        << cloud->points[i].y << " " 
-                        << cloud->points[i].z << endl;
-  */
+  // COMMENTED OUT BECAUSE I DON'T THINK CLOUD HAS BEEN DEFINED YET
+  // cerr << "Raw Cloud: " << endl;
+  // for (size_t i = 0; i < cloud_msg->points.size (); ++i)
+  //   cerr << "    " << cloud_msg->points[i].x << " " 
+  //                       << cloud_msg->points[i].y << " " 
+  //                       << cloud_msg->points[i].z << endl;
+  
 
   ///////////////////////////////////////
 
   
   //////////////////////* TRANSFORM THE INPUT CLOUD INTO THE ODOM FRAME  /////////////////////////////
-// Publish the cloud
-  // pub_raw.publish (*cloud_msg);
+  // Publish the cloud
+  pub_raw.publish (*cloud_msg);
 
   string target_frame = "odom", base_frame = "base"; // target frame for transform
   sensor_msgs::PointCloud2 transformed_cloud; // initiate output cloud
@@ -194,7 +210,7 @@ void cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_msg)
 
 
   // Publish the cloud
-  // pub_trans.publish (transformed_cloud);
+  pub_trans.publish (transformed_cloud);
 
   //////////////////////* REMOVE ALL POINTS OUTSIDE OF 0.1, 100.0  /////////////////////////////
   // Convert from sensor_msgs::PointCloud2 to pcl::PointCloud2
@@ -203,7 +219,8 @@ void cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_msg)
   // setup the filter
   pcl::PassThrough<pcl::PCLPointCloud2> pass; 
   pass.setFilterFieldName ("z");
-  pass.setFilterLimits (0.1, 100.0);
+  pass.setFilterLimits (0.0, 100.0);
+  //pass.setFilterLimits (0.1, 100.0);
   //** set the input cloud
   //sor.setInputCloud (cloudPtr);
   pcl::PCLPointCloud2ConstPtr cloudPtr(cloud); // create a cloudPtr to use for our filter
@@ -218,10 +235,10 @@ void cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_msg)
 
   // Convert to ROS data type
    sensor_msgs::PointCloud2 output_msg;
-  // pcl_conversions::moveFromPCL(output_cloud, output_msg);
+  pcl_conversions::moveFromPCL(output_cloud, output_msg);
 
   // // Publish the data
-  // pub_zfilt.publish (output_msg);
+  pub_zfilt.publish (output_msg);
 
 ////////////////////////////////////////////////////////// NOT SURE WHAT THESE LINES DO.
   //pcl::PointCloud<pcl::PointXYZ>::Ptr centroid_cloud (new pcl::PointCloud<pcl::PointXYZ>);
@@ -246,24 +263,19 @@ void cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_msg)
 
   // create a cloud pointer centroid_cloud and populate it with the largest cluster from prefiltered_cloud
   pcl::PointCloud<pcl::PointXYZ>::Ptr centroid_cloud_ptr (new pcl::PointCloud<pcl::PointXYZ>);
-
-
-
   centroid_cloud_ptr = get_cloud_cluster(prefiltered_cloud_ptr);
 
-  // Convert to ROS data type
-  //sensor_msgs::PointCloud2 output_msg;
-  // pcl_conversions::moveFromPCL(*centroid_cloud_ptr, output_msg);
-
-  // // Publish the data
-  // pub_centroid.publish (output_msg);
-
-  // centroid_cloud is now a pointer
-  //pcl::PointCloud<pcl::PointXYZ> centroid_cloud = *centroid_cloud_ptr;  // pcl version of the point cloud
+ // publish it!
+  sensor_msgs::PointCloud2 msg_to_publish2; // initiate intermediate message variable
+  // // CONVERT FROM PCL:PC1 TO SM:PC2
+  pcl::toROSMsg(*centroid_cloud_ptr,msg_to_publish2); // con
+  // //cout<< centroid_cloud_ptr->points.size <<endl;
+  pub_centroid.publish (msg_to_publish2);
 
   // check the size
-  cout << centroid_cloud_ptr->points.size ()<< endl;
+  cout << "There are "<<centroid_cloud_ptr->points.size ()<<" points in centroid_cloud_ptr"<< endl;
   
+
   ////////////////////// COMPUTE THE CENTROID OF THE CLUSTER /////////////////////////////
   // Initialise a point to store the centroid inoutput_topic
   pcl::CentroidPoint<pcl::PointXYZ> centroid;
@@ -297,6 +309,7 @@ void cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_msg)
   //br.sendTransform(centre_point, q, ros::Time::now(), target_frame_id, velodyne_frame_id);
   // not sure if i put the ids the right way round
   br.sendTransform(tf::StampedTransform(transform, ros::Time(0), velodyne_frame_id, target_frame_id));
+  
   
 }
 
