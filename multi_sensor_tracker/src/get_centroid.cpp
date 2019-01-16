@@ -270,6 +270,7 @@ void cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_msg)
   // // CONVERT FROM PCL:PC1 TO SM:PC2
   pcl::toROSMsg(*centroid_cloud_ptr,msg_to_publish2); // con
   // //cout<< centroid_cloud_ptr->points.size <<endl;
+  msg_to_publish2.header.frame_id = "odom";
   pub_centroid.publish (msg_to_publish2);
 
   // check the size
