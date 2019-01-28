@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8.3)
 project(multi_sensor_tracker)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
-# add_compile_options(-std=c++11)
+add_compile_options(-std=c++11)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
@@ -13,6 +13,15 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   sensor_msgs
 )
+
+
+# bfl (Bayesian Filtering Library) is a third party package that uses pkg-config
+#find_package(PkgConfig)
+#pkg_check_modules(BFL REQUIRED orocos-bfl)
+#include_directories(${BFL_INCLUDE_DIRS}/bfl)
+#message("BFL include dirs:" ${BFL_INCLUDE_DIRS})
+#message("BFL library dirs:" ${BFL_LIBRARY_DIRS})
+#link_directories(${BFL_LIBRARY_DIRS})
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -56,7 +65,7 @@ find_package(catkin REQUIRED COMPONENTS
 
 ## Generate services in the 'srv' folder
 # add_service_files(
-#   FILES
+#   FILESKalmanFilter
 #   Service1.srv
 #   Service2.srv
 # )
@@ -68,7 +77,7 @@ find_package(catkin REQUIRED COMPONENTS
 #   Action2.action
 # )
 
-## Generate added messages and services with any dependencies listed here
+## Generate added messages and servicekalman_filters with any dependencies listed here
 # generate_messages(
 #   DEPENDENCIES
 #   sensor_msgs
@@ -104,7 +113,7 @@ find_package(catkin REQUIRED COMPONENTS
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-#  INCLUDE_DIRS include
+#
 #  LIBRARIES multi_sensor_tracker
 #  CATKIN_DEPENDS pcl_conversions pcl_ros roscpp sensor_msgs
 #  DEPENDS system_lib
@@ -120,12 +129,13 @@ include_directories(
 # include
   ${catkin_INCLUDE_DIRS}
   ${PCL_INCLUDE_DIRS}
+  INCLUDE_DIRS include
 )
 
 ## Declare a C++ library
-# add_library(${PROJECT_NAME}
-#   src/${PROJECT_NAME}/multi_sensor_tracker.cpp
-# )
+ add_library(${PROJECT_NAME}
+   src/kalman_filter.cpp
+ )
 
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
@@ -236,10 +246,14 @@ target_link_libraries (clustering ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
 #add_executable (get_centroid_v3 src/get_centroid_v3.cpp)
 #target_link_libraries (get_centroid_v3 ${catkin_LIBRARIES} ${PCL_LIBRARIES})
-add_executable (get_centroid src/get_centroid.cpp)
-target_link_libraries (get_centroid ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+#add_executable (get_centroid src/get_centroid.cpp)
+#target_link_libraries (get_centroid ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 add_executable (average_tracker src/average_tracker.cpp)
 target_link_libraries (average_tracker ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+add_executable (kalman_test src/kalman_test.cpp)
+target_link_libraries (kalman_test ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${PROJECT_NAME})
+add_executable (kalman_filter_tracker src/kalman_filter_tracker.cpp)
+target_link_libraries (kalman_filter_tracker ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${PROJECT_NAME})
 
 
 #

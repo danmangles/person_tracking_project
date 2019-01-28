@@ -35,6 +35,7 @@ real_exists = False #flags to indicate whether either has a transform
 
 base_frame = "base"  # we want both to have a common base frame
 
+
 def publishCombinedTf(trans1,rot1,trans2,rot2,br):
 
     avg_trans = np.mean(np.array([trans1, trans2]), axis=0)
@@ -56,6 +57,7 @@ def publishCombinedTf(trans1,rot1,trans2,rot2,br):
         print('the average transform is ' + str(avg_trans))
         print('the average rot is ' + str(avg_rot))
     #br.sendTransform(avg_trans, avg_rot, rospy.Time.now(), "realsense_d435_forward_camera", target_frame)
+    # technically we should use the time we received the transforms.
     br.sendTransform(trans1, rot1, rospy.Time.now(), "base", target_frame)
 
 
@@ -69,6 +71,8 @@ def publishCombinedTf(trans1,rot1,trans2,rot2,br):
 
 if verbose:
     print('node setup complete. Initiating loop')
+
+# main loop
 while not rospy.is_shutdown():
     print('\n\n*******Reading Inputs')
 
@@ -77,6 +81,7 @@ while not rospy.is_shutdown():
         vel_listener.waitForTransform(base_frame, vel_target_frame, rospy.Time(0), rospy.Duration(4.0))
         (vel_trans, vel_rot) = vel_listener.lookupTransform(base_frame, vel_target_frame, rospy.Time(0))
         vel_exists = True
+
     except:
         vel_exists = False
         print('Cant get transform from velodyne')
@@ -95,6 +100,12 @@ while not rospy.is_shutdown():
 
     # This section accounts for the 4 possible states of velodyne and realsense inputs; so far
     # it seems that the transform is always published irrespective of both.
+    publishCombinedTf(vel_trans, vel_rot, real_trans, real_rot, br)
+    print('can see both')
+
+
+    """
+
     if real_exists:
         if vel_exists:
             publishCombinedTf(vel_trans, vel_rot, real_trans, real_rot, br)
@@ -112,6 +123,8 @@ while not rospy.is_shutdown():
             print('can only see vel')
         else:
             print("can't see anything")
+
+	"""
 
     print('\noutput:')
 #    print(avg_trans)
