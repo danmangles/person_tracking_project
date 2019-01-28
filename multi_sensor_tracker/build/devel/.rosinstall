@@ -1,0 +1,2 @@
+- setup-file:
+    local-name: /home/ori/catkin_ws/src/person_tracking_project/multi_sensor_tracker/build/devel/setup.sh
