@@ -4,7 +4,7 @@
 #include <tf/transform_broadcaster.h>
 #include "kalman_filter.h" // for the kalman filter
 #include <Eigen/Dense>  // for all the lovely matrices
-#include <unistd.h>
+
 using namespace std;
 using namespace Eigen; // to make matrix stuff more compact
 
@@ -14,6 +14,7 @@ int main (int argc, char** argv)
 
     int n = 1; // Number of states
     int m = 1; // Number of measurements
+    int d = 3; // Number of dimensions
 
     // 1. Initialise ROS
 
@@ -28,7 +29,9 @@ int main (int argc, char** argv)
     string base_frame = "odom"; // define the transform origin we are looking for
     string target_frame = "velodyne_person_est"; // define the transform target we are looking for
 
-    VectorXd y(m); // define a variable y to hold all the input transforms.
+    VectorXd y_x(m); // define a variable y to hold all the input transforms. //NOT SURE IF d,m or m,d
+    VectorXd y_y(m); // define a variable y to hold all the input transforms. //NOT SURE IF d,m or m,d
+    VectorXd y_z(m); // define a variable y to hold all the input transforms. //NOT SURE IF d,m or m,d
 
     // 3. Create a Kalman filter to process the inputs
 
@@ -60,11 +63,25 @@ int main (int argc, char** argv)
     cout << "R: \n" << R << endl;
     cout << "P: \n" << P << endl;
 
-    // create the filter
-    kalman_filter kf(dt, A, C, Q, R, P);
+    // create the filter x
+    kalman_filter kf_x(dt, A, C, Q, R, P);
     VectorXd x0(n);
     x0 << 0;
-    kf.init(0, x0); // initialise the kalman filter
+    kf_x.init(0, x0); // initialise the kalman filter
+
+    // create the filter y
+    kalman_filter kf_y(dt, A, C, Q, R, P);
+    VectorXd y0(n);
+    y0 << 0;
+    kf_y.init(0, y0); // initialise the kalman filter
+
+    // create the filter
+    kalman_filter kf_z(dt, A, C, Q, R, P);
+    VectorXd z0(n);
+    z0 << 0;
+    kf_z.init(0, z0); // initialise the kalman filter
+
+
     // 4. Create a broadcaster on which to publish the outputs
      tf::TransformBroadcaster br;
      string output_frame = "kalman_filter_est";
@@ -72,7 +89,9 @@ int main (int argc, char** argv)
 
     ros::Time curr_time, prev_time;
     ros::Duration delta;
-    prev_time = ros::Time(0);
+    prev_time = ros::Time(0); //init previous time
+
+
 //     * 5. Loop:
      while (nh.ok()) {
          // receive the input transform
@@ -96,10 +115,18 @@ int main (int argc, char** argv)
          input_vector = input_tf.getOrigin();
 
          //y << input_vector.getX(), input_vector.getY(), input_vector.getZ();
-         y << input_vector.getX();// we are only getting one measurement- put this in y
-         kf.update(y, delta.toSec(), A);
-         cout << "t = " << curr_time << ", dt = "<<delta<<", y =" << y.transpose()
-             << ", x_hat = " << kf.state().transpose() << endl;
+         y_x << input_vector.getX();// we are only getting one measurement- put this in y
+         kf_x.update(y_x, delta.toSec(), A);
+
+         y_y << input_vector.getY();// we are only getting one measurement- put this in y
+         kf_y.update(y_y, delta.toSec(), A);
+
+         y_z << input_vector.getZ();// we are only getting one measurement- put this in y
+         kf_z.update(y_z, delta.toSec(), A);
+
+
+         cout << "t = " << curr_time << ", dt = "<<delta<<", y =(" << y_x.transpose() <<","<< y_y.transpose() <<","<< y_z.transpose()
+             << "), x_hat = (" << kf_x.state().transpose() <<","<< kf_y.state().transpose() <<","<< kf_z.state().transpose() << ")"<< endl;
 
 
         r.sleep();
