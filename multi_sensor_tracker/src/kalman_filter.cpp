@@ -20,9 +20,9 @@ kalman_filter::kalman_filter(
 	const Eigen::MatrixXd& R,
 	const Eigen::MatrixXd& P)
 
-  : A(A), C(C), Q(Q), R(R), P0(P),
-	m(C.rows()), n(A.rows()), dt(dt), initialized(false),
-	I(n, n), x_hat(n), x_hat_new(n)
+  : A(A), C(C), Q(Q), R(R), P0(P), //populate A,C,Q,R,P0 with values given in constructor
+    m(C.rows()), nd(A.rows()), dt(dt), initialized(false), //populate m with number of rows in C, n with number of rows in A
+    I(nd, nd), x_hat(nd), x_hat_new(nd)
 	{
 		I.setIdentity();
 	}
@@ -52,30 +52,34 @@ void kalman_filter::update(const VectorXd& y) {
 	//check if we are initialised
 	if (!initialized)
 		throw std::runtime_error("Filter is not initialised... :3");
+
+
+
         cout << "*************\ny = "<<y<<endl;
-	x_hat_new = A*x_hat; // update
+    x_hat_new = A*x_hat; // PREDICT
 
-        cout << "*UPDATE*\nx_hat_new = "<<x_hat_new<<endl;
+        cout << "*PREDICT*\nx_hat_new = "<<x_hat_new<<endl;
 
-	P = A*P*A.transpose() + Q; //update
+    P = A*P*A.transpose() + Q; //PREDICT
 
         cout << "P = "<<P<<endl;
 
-	K = P*C.transpose()*(C*P*C.transpose() + R).inverse(); //predict
 
-        cout << "*PREDICT*\nK = "<<K<<endl;
+
+
+    K = P*C.transpose()*(C*P*C.transpose() + R).inverse(); //UPDATE
+
+        cout << "*UPDATE*\nK = "<<K<<endl;
 
 	x_hat_new += K * (y - C*x_hat_new); // predict
 
-        cout << "predicted x_hat_new = "<<x_hat<<endl;
+        cout << "UPDATED x_hat_new = "<<x_hat_new<<endl;
 
-	P = (I - K*C)*P; // predict
+    P = (I - K*C)*P; // UPDATE
 
-        cout << "new p x_hat_new = "<<x_hat<<endl;
+        cout << "UPDATED P = "<<P<<endl;
 
-	x_hat = x_hat_new; // predict
-
-        cout << "x_hat = "<<x_hat<<"\n*******"<<endl;
+    x_hat = x_hat_new; // UPDATE
 
 	t += dt;
 }

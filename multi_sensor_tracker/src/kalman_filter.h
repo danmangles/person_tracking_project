@@ -46,7 +46,7 @@ public:
           * Update the estimated state based on measured values. The
           * time step is assumed to remain constant.
           */
-        void update(const Eigen::VectorXd& y);
+        void update(const VectorXd& y);
 
         /*
          * Update estimate state using measured values, using give time step and dynamics matrix
@@ -56,7 +56,7 @@ public:
 	/*
 	 * Return current state and time
 	 */
-	VectorXd state() { return x_hat; };
+    VectorXd state() { return x_hat; };
 	double time() { return t; };
 
 private:
@@ -64,7 +64,7 @@ private:
 	  MatrixXd A, C, Q, R, P, K, P0;
 
 	  // System dimensions
-	  int m, n;
+      int m, nd;
 
 	  // Initial and current time
 	  double t0, t;
@@ -76,8 +76,8 @@ private:
 	  bool initialized;
 
 	  // n-size identity
-	  Eigen::MatrixXd I;
+      MatrixXd I;
 
-          // Estimated statesifndef
-	  VectorXd x_hat, x_hat_new;
+          // Estimated states
+      VectorXd x_hat, x_hat_new;
 };
