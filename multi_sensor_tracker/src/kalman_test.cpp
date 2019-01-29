@@ -67,13 +67,13 @@ int main(int argc, char* argv[]) {
   // Feed measurements into filter, output estimated states
   double t = 0;
   Eigen::VectorXd y(m);
-  std::cout << "t = " << t << ", " << "x_hat[0]: " << kf.state().transpose() << std::endl;
+  std::cout << "t = " << t << ", " << "x_hat[0]: " << kf.get_state().transpose() << std::endl;
   for(int i = 0; i < measurements.size(); i++) {
     t += dt;
     y << measurements[i];
     kf.update(y);
     std::cout << "t = " << t << ", " << "y[" << i << "] = " << y.transpose()
-        << ", x_hat[" << i << "] = " << kf.state().transpose() << std::endl;
+        << ", x_hat[" << i << "] = " << kf.get_state().transpose() << std::endl;
   }
 
   return 0;

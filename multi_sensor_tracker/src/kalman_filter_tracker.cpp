@@ -4,9 +4,48 @@
 #include <tf/transform_broadcaster.h>
 #include "kalman_filter.h" // for the kalman filter
 #include <Eigen/Dense>  // for all the lovely matrices
+#include <visualization_msgs/Marker.h>
 
 using namespace std;
 using namespace Eigen; // to make matrix stuff more compact
+
+void publish_marker(ros::Publisher vis_pub, VectorXd x_hat,double scale_x,double scale_y,double scale_z) {
+    ///
+    /// This publishes a box of scales set by vector onto publisher vis_pub at location x_hat
+    ///
+
+    visualization_msgs::Marker marker; // initiate the marker
+
+    marker.header.frame_id = "odom"; // we want to publish relative to the odom frame
+
+    marker.header.stamp = ros::Time();
+    marker.ns = "kalman_filter_marker";  // call our marker kalman_filter_marker
+    marker.id = 0;
+    marker.type = visualization_msgs::Marker::CUBE; // make it a cube
+    marker.action = visualization_msgs::Marker::ADD;
+
+    // assign the marker location according to x_hat
+    marker.pose.position.x = x_hat[0];
+    marker.pose.position.y = x_hat[1];
+    marker.pose.position.z = x_hat[2];
+
+    marker.pose.orientation.x = 0.0;
+    marker.pose.orientation.y = 0.0;
+    marker.pose.orientation.z = 0.0;
+    marker.pose.orientation.w = 1.0;
+
+    // set the marker size as an input params
+    marker.scale.x = scale_x;
+    marker.scale.y = scale_y;
+    marker.scale.z = scale_z;
+    marker.color.a = 0.8; // Don't forget to set the alpha!
+    marker.color.r = 0.0;
+    marker.color.g = 1.0;
+    marker.color.b = 0.0;
+    vis_pub.publish( marker );
+
+
+}
 
 int main (int argc, char** argv)
 {
@@ -56,7 +95,7 @@ int main (int argc, char** argv)
     //Q << .05, .05, .0, .05, .05, .0, .0, .0, .0; // I DON'T KNOW HOW TO TUNE THIS
     //Q << .001;
     Q << 2, 0, 0, 0, 2, 0, 0, 0, .5; //I3 * .05 // MAKE THIS A FUNCTION OF TIMESTEP^2
-    R << 1, 0, 0, 0, 1, 0, 0, 0, 1; //I3 * .05 // MAKE THIS A FUNCTION OF TIMESTEP^2
+    R << 5, 0, 0, 0, 5, 0, 0, 0, 1; //I3 * .05 // MAKE THIS A FUNCTION OF TIMESTEP^2
 
     //R = I3; //OR THIS // WHAT DIMENSION IS THIS????????????????????///
     //P << .1, .1, .1, .1, 10000, 10, .1, 10, 100; //OR THIS, FOR THAT MATTER
@@ -72,6 +111,7 @@ int main (int argc, char** argv)
     // create the filter x
     kalman_filter kf(dt, A, C, Q, R, P);
     VectorXd x0(n);
+    VectorXd x_hat(3);
     x0 << 0, 0, 0;
     kf.init(0, x0); // initialise the kalman filter
 
@@ -89,6 +129,10 @@ int main (int argc, char** argv)
     ros::Time curr_time, prev_time;
     ros::Duration delta;
     prev_time = ros::Time(0); //init previous time
+
+
+    // SET A MARKER
+    ros::Publisher vis_pub = nh.advertise<visualization_msgs::Marker>( "kalman_filter_marker", 0 ); // this name shows up in RVIZ
 
 
 
@@ -117,20 +161,19 @@ int main (int argc, char** argv)
          y << input_vector.getX(), input_vector.getY(), input_vector.getZ();
          //y_ << input_vector.getX();// we are only getting one measurement- put this in y
          kf.update(y, delta.toSec(), A);
-
-
+         x_hat << kf.get_state().transpose()[0], kf.get_state().transpose()[1],kf.get_state().transpose()[2];
+         P << kf.get_covariance();
+         cout << "P:\n" << P<<endl;
 
          cout << "t = " << curr_time << ", dt = "<<delta<<", \n    y =" << y.transpose()
-             << ",\nx_hat = " << kf.state().transpose() << endl;
-//         double x = kf.state().transpose()[0];
-//         cout<<x<<endl;
-
-
+             << ",\nx_hat = " << kf.get_state().transpose() << endl;
 
          //Now publish the output
-         output_tf.setOrigin( tf::Vector3(kf.state().transpose()[0],kf.state().transpose()[1],kf.state().transpose()[2]) );
+         output_tf.setOrigin( tf::Vector3(x_hat[0],x_hat[1],x_hat[2]) );
 
-         br.sendTransform(tf::StampedTransform(output_tf, ros::Time(0), base_frame, output_frame));
+         br.sendTransform(tf::StampedTransform(output_tf, ros::Time(0), base_frame, output_frame)); // send the transform
+
+         publish_marker(vis_pub, x_hat, P(0,0),P(1,1),P(2,2)); // publish the marker
 
          r.sleep();
      }

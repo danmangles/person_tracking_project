@@ -56,7 +56,8 @@ public:
 	/*
 	 * Return current state and time
 	 */
-    VectorXd state() { return x_hat; };
+    VectorXd get_state() { return x_hat; };
+    MatrixXd get_covariance() { return P; };
 	double time() { return t; };
 
 private:
