@@ -17,6 +17,16 @@
             <DistClean command="/usr/bin/make -f &quot;/home/ori/catkin_ws/src/person_tracking_project/multi_sensor_tracker/build/Makefile&quot;  VERBOSE=1 clean" />
          </MakeCommands>
       </Target>
+      <Target title="rebuild_cache">
+         <Option working_dir="/home/ori/catkin_ws/src/person_tracking_project/multi_sensor_tracker/build" />
+         <Option type="4" />
+         <MakeCommands>
+            <Build command="/usr/bin/make -f &quot;/home/ori/catkin_ws/src/person_tracking_project/multi_sensor_tracker/build/Makefile&quot;  VERBOSE=1 rebuild_cache" />
+            <CompileFile command="/usr/bin/make -f &quot;/home/ori/catkin_ws/src/person_tracking_project/multi_sensor_tracker/build/Makefile&quot;  VERBOSE=1 &quot;$file&quot;" />
+            <Clean command="/usr/bin/make -f &quot;/home/ori/catkin_ws/src/person_tracking_project/multi_sensor_tracker/build/Makefile&quot;  VERBOSE=1 clean" />
+            <DistClean command="/usr/bin/make -f &quot;/home/ori/catkin_ws/src/person_tracking_project/multi_sensor_tracker/build/Makefile&quot;  VERBOSE=1 clean" />
+         </MakeCommands>
+      </Target>
       <Target title="nodelet_generate_messages_nodejs">
          <Option working_dir="/home/ori/catkin_ws/src/person_tracking_project/multi_sensor_tracker/build" />
          <Option type="4" />
@@ -1177,16 +1187,6 @@
             <DistClean command="/usr/bin/make -f &quot;/home/ori/catkin_ws/src/person_tracking_project/multi_sensor_tracker/build/Makefile&quot;  VERBOSE=1 clean" />
          </MakeCommands>
       </Target>
-      <Target title="rebuild_cache">
-         <Option working_dir="/home/ori/catkin_ws/src/person_tracking_project/multi_sensor_tracker/build" />
-         <Option type="4" />
-         <MakeCommands>
-            <Build command="/usr/bin/make -f &quot;/home/ori/catkin_ws/src/person_tracking_project/multi_sensor_tracker/build/Makefile&quot;  VERBOSE=1 rebuild_cache" />
-            <CompileFile command="/usr/bin/make -f &quot;/home/ori/catkin_ws/src/person_tracking_project/multi_sensor_tracker/build/Makefile&quot;  VERBOSE=1 &quot;$file&quot;" />
-            <Clean command="/usr/bin/make -f &quot;/home/ori/catkin_ws/src/person_tracking_project/multi_sensor_tracker/build/Makefile&quot;  VERBOSE=1 clean" />
-            <DistClean command="/usr/bin/make -f &quot;/home/ori/catkin_ws/src/person_tracking_project/multi_sensor_tracker/build/Makefile&quot;  VERBOSE=1 clean" />
-         </MakeCommands>
-      </Target>
       <Target title="tf_generate_messages_py">
          <Option working_dir="/home/ori/catkin_ws/src/person_tracking_project/multi_sensor_tracker/build" />
          <Option type="4" />
@@ -1460,6 +1460,90 @@
          </Compiler>
          <MakeCommands>
             <Build command="/usr/bin/make -f &quot;/home/ori/catkin_ws/src/person_tracking_project/multi_sensor_tracker/build/Makefile&quot;  VERBOSE=1 clustering/fast" />
+            <CompileFile command="/usr/bin/make -f &quot;/home/ori/catkin_ws/src/person_tracking_project/multi_sensor_tracker/build/Makefile&quot;  VERBOSE=1 &quot;$file&quot;" />
+            <Clean command="/usr/bin/make -f &quot;/home/ori/catkin_ws/src/person_tracking_project/multi_sensor_tracker/build/Makefile&quot;  VERBOSE=1 clean" />
+            <DistClean command="/usr/bin/make -f &quot;/home/ori/catkin_ws/src/person_tracking_project/multi_sensor_tracker/build/Makefile&quot;  VERBOSE=1 clean" />
+         </MakeCommands>
+      </Target>
+      <Target title="get_centroid">
+         <Option output="/home/ori/catkin_ws/src/person_tracking_project/multi_sensor_tracker/build/devel/lib/multi_sensor_tracker/get_centroid" prefix_auto="0" extension_auto="0" />
+         <Option working_dir="/home/ori/catkin_ws/src/person_tracking_project/multi_sensor_tracker/build/devel/lib/multi_sensor_tracker" />
+         <Option object_output="./" />
+         <Option type="1" />
+         <Option compiler="gcc" />
+         <Compiler>
+            <Add option="-DROS_PACKAGE_NAME=&quot;multi_sensor_tracker&quot;" />
+            <Add option="-DROSCONSOLE_BACKEND_LOG4CXX" />
+            <Add directory="/home/ori/catkin_ws/src/person_tracking_project/multi_sensor_tracker/INCLUDE_DIRS" />
+            <Add directory="/home/ori/catkin_ws/src/person_tracking_project/multi_sensor_tracker/include" />
+            <Add directory="/opt/ros/kinetic/include" />
+            <Add directory="/opt/ros/kinetic/share/xmlrpcpp/cmake/../../../include/xmlrpcpp" />
+            <Add directory="/usr/include" />
+            <Add directory="/usr/include/c++/5" />
+            <Add directory="/usr/include/c++/5/backward" />
+            <Add directory="/usr/include/eigen3" />
+            <Add directory="/usr/include/freetype2" />
+            <Add directory="/usr/include/jsoncpp" />
+            <Add directory="/usr/include/libxml2" />
+            <Add directory="/usr/include/ni" />
+            <Add directory="/usr/include/pcl-1.7" />
+            <Add directory="/usr/include/python2.7" />
+            <Add directory="/usr/include/tcl" />
+            <Add directory="/usr/include/vtk-6.2" />
+            <Add directory="/usr/include/x86_64-linux-gnu" />
+            <Add directory="/usr/include/x86_64-linux-gnu/c++/5" />
+            <Add directory="/usr/lib/gcc/x86_64-linux-gnu/5/include" />
+            <Add directory="/usr/lib/gcc/x86_64-linux-gnu/5/include-fixed" />
+            <Add directory="/usr/lib/openmpi/include" />
+            <Add directory="/usr/lib/openmpi/include/openmpi" />
+            <Add directory="/usr/lib/openmpi/include/openmpi/opal/mca/event/libevent2021/libevent" />
+            <Add directory="/usr/lib/openmpi/include/openmpi/opal/mca/event/libevent2021/libevent/include" />
+            <Add directory="/usr/local/include" />
+         </Compiler>
+         <MakeCommands>
+            <Build command="/usr/bin/make -f &quot;/home/ori/catkin_ws/src/person_tracking_project/multi_sensor_tracker/build/Makefile&quot;  VERBOSE=1 get_centroid" />
+            <CompileFile command="/usr/bin/make -f &quot;/home/ori/catkin_ws/src/person_tracking_project/multi_sensor_tracker/build/Makefile&quot;  VERBOSE=1 &quot;$file&quot;" />
+            <Clean command="/usr/bin/make -f &quot;/home/ori/catkin_ws/src/person_tracking_project/multi_sensor_tracker/build/Makefile&quot;  VERBOSE=1 clean" />
+            <DistClean command="/usr/bin/make -f &quot;/home/ori/catkin_ws/src/person_tracking_project/multi_sensor_tracker/build/Makefile&quot;  VERBOSE=1 clean" />
+         </MakeCommands>
+      </Target>
+      <Target title="get_centroid/fast">
+         <Option output="/home/ori/catkin_ws/src/person_tracking_project/multi_sensor_tracker/build/devel/lib/multi_sensor_tracker/get_centroid" prefix_auto="0" extension_auto="0" />
+         <Option working_dir="/home/ori/catkin_ws/src/person_tracking_project/multi_sensor_tracker/build/devel/lib/multi_sensor_tracker" />
+         <Option object_output="./" />
+         <Option type="1" />
+         <Option compiler="gcc" />
+         <Compiler>
+            <Add option="-DROS_PACKAGE_NAME=&quot;multi_sensor_tracker&quot;" />
+            <Add option="-DROSCONSOLE_BACKEND_LOG4CXX" />
+            <Add directory="/home/ori/catkin_ws/src/person_tracking_project/multi_sensor_tracker/INCLUDE_DIRS" />
+            <Add directory="/home/ori/catkin_ws/src/person_tracking_project/multi_sensor_tracker/include" />
+            <Add directory="/opt/ros/kinetic/include" />
+            <Add directory="/opt/ros/kinetic/share/xmlrpcpp/cmake/../../../include/xmlrpcpp" />
+            <Add directory="/usr/include" />
+            <Add directory="/usr/include/c++/5" />
+            <Add directory="/usr/include/c++/5/backward" />
+            <Add directory="/usr/include/eigen3" />
+            <Add directory="/usr/include/freetype2" />
+            <Add directory="/usr/include/jsoncpp" />
+            <Add directory="/usr/include/libxml2" />
+            <Add directory="/usr/include/ni" />
+            <Add directory="/usr/include/pcl-1.7" />
+            <Add directory="/usr/include/python2.7" />
+            <Add directory="/usr/include/tcl" />
+            <Add directory="/usr/include/vtk-6.2" />
+            <Add directory="/usr/include/x86_64-linux-gnu" />
+            <Add directory="/usr/include/x86_64-linux-gnu/c++/5" />
+            <Add directory="/usr/lib/gcc/x86_64-linux-gnu/5/include" />
+            <Add directory="/usr/lib/gcc/x86_64-linux-gnu/5/include-fixed" />
+            <Add directory="/usr/lib/openmpi/include" />
+            <Add directory="/usr/lib/openmpi/include/openmpi" />
+            <Add directory="/usr/lib/openmpi/include/openmpi/opal/mca/event/libevent2021/libevent" />
+            <Add directory="/usr/lib/openmpi/include/openmpi/opal/mca/event/libevent2021/libevent/include" />
+            <Add directory="/usr/local/include" />
+         </Compiler>
+         <MakeCommands>
+            <Build command="/usr/bin/make -f &quot;/home/ori/catkin_ws/src/person_tracking_project/multi_sensor_tracker/build/Makefile&quot;  VERBOSE=1 get_centroid/fast" />
             <CompileFile command="/usr/bin/make -f &quot;/home/ori/catkin_ws/src/person_tracking_project/multi_sensor_tracker/build/Makefile&quot;  VERBOSE=1 &quot;$file&quot;" />
             <Clean command="/usr/bin/make -f &quot;/home/ori/catkin_ws/src/person_tracking_project/multi_sensor_tracker/build/Makefile&quot;  VERBOSE=1 clean" />
             <DistClean command="/usr/bin/make -f &quot;/home/ori/catkin_ws/src/person_tracking_project/multi_sensor_tracker/build/Makefile&quot;  VERBOSE=1 clean" />
@@ -1811,6 +1895,9 @@
       </Unit>
       <Unit filename="/home/ori/catkin_ws/src/person_tracking_project/multi_sensor_tracker/src/clustering.cpp">
          <Option target="clustering"/>
+      </Unit>
+      <Unit filename="/home/ori/catkin_ws/src/person_tracking_project/multi_sensor_tracker/src/get_centroid.cpp">
+         <Option target="get_centroid"/>
       </Unit>
       <Unit filename="/home/ori/catkin_ws/src/person_tracking_project/multi_sensor_tracker/src/kalman_filter.cpp">
          <Option target="multi_sensor_tracker"/>

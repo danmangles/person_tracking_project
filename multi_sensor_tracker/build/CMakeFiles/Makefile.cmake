@@ -346,6 +346,7 @@ set(CMAKE_DEPEND_INFO_FILES
   "CMakeFiles/tf2_msgs_generate_messages_lisp.dir/DependInfo.cmake"
   "CMakeFiles/multi_sensor_tracker.dir/DependInfo.cmake"
   "CMakeFiles/clustering.dir/DependInfo.cmake"
+  "CMakeFiles/get_centroid.dir/DependInfo.cmake"
   "CMakeFiles/kalman_filter_tracker.dir/DependInfo.cmake"
   "CMakeFiles/std_msgs_generate_messages_lisp.dir/DependInfo.cmake"
   "gtest/CMakeFiles/gmock.dir/DependInfo.cmake"

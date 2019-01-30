@@ -56,6 +56,17 @@ CMAKE_BINARY_DIR = /home/ori/catkin_ws/src/person_tracking_project/multi_sensor_
 #=============================================================================
 # Targets provided globally by CMake.
 
+# Special rule for the target rebuild_cache
+rebuild_cache:
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Running CMake to regenerate build system..."
+	/usr/bin/cmake -H$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR)
+.PHONY : rebuild_cache
+
+# Special rule for the target rebuild_cache
+rebuild_cache/fast: rebuild_cache
+
+.PHONY : rebuild_cache/fast
+
 # Special rule for the target list_install_components
 list_install_components:
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Available install components are: \"Unspecified\""
@@ -88,17 +99,6 @@ install/fast: preinstall/fast
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Install the project..."
 	/usr/bin/cmake -P cmake_install.cmake
 .PHONY : install/fast
-
-# Special rule for the target rebuild_cache
-rebuild_cache:
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Running CMake to regenerate build system..."
-	/usr/bin/cmake -H$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR)
-.PHONY : rebuild_cache
-
-# Special rule for the target rebuild_cache
-rebuild_cache/fast: rebuild_cache
-
-.PHONY : rebuild_cache/fast
 
 # Special rule for the target install/strip
 install/strip: preinstall
@@ -1323,6 +1323,19 @@ clustering/fast:
 .PHONY : clustering/fast
 
 #=============================================================================
+# Target rules for targets named get_centroid
+
+# Build rule for target.
+get_centroid: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 get_centroid
+.PHONY : get_centroid
+
+# fast build rule for target.
+get_centroid/fast:
+	$(MAKE) -f CMakeFiles/get_centroid.dir/build.make CMakeFiles/get_centroid.dir/build
+.PHONY : get_centroid/fast
+
+#=============================================================================
 # Target rules for targets named kalman_filter_tracker
 
 # Build rule for target.
@@ -1453,6 +1466,33 @@ src/clustering.s: src/clustering.cpp.s
 src/clustering.cpp.s:
 	$(MAKE) -f CMakeFiles/clustering.dir/build.make CMakeFiles/clustering.dir/src/clustering.cpp.s
 .PHONY : src/clustering.cpp.s
+
+src/get_centroid.o: src/get_centroid.cpp.o
+
+.PHONY : src/get_centroid.o
+
+# target to build an object file
+src/get_centroid.cpp.o:
+	$(MAKE) -f CMakeFiles/get_centroid.dir/build.make CMakeFiles/get_centroid.dir/src/get_centroid.cpp.o
+.PHONY : src/get_centroid.cpp.o
+
+src/get_centroid.i: src/get_centroid.cpp.i
+
+.PHONY : src/get_centroid.i
+
+# target to preprocess a source file
+src/get_centroid.cpp.i:
+	$(MAKE) -f CMakeFiles/get_centroid.dir/build.make CMakeFiles/get_centroid.dir/src/get_centroid.cpp.i
+.PHONY : src/get_centroid.cpp.i
+
+src/get_centroid.s: src/get_centroid.cpp.s
+
+.PHONY : src/get_centroid.s
+
+# target to generate assembly for a file
+src/get_centroid.cpp.s:
+	$(MAKE) -f CMakeFiles/get_centroid.dir/build.make CMakeFiles/get_centroid.dir/src/get_centroid.cpp.s
+.PHONY : src/get_centroid.cpp.s
 
 src/kalman_filter.o: src/kalman_filter.cpp.o
 
@@ -1622,6 +1662,7 @@ help:
 	@echo "... all (the default if no target is provided)"
 	@echo "... clean"
 	@echo "... depend"
+	@echo "... rebuild_cache"
 	@echo "... nodelet_generate_messages_nodejs"
 	@echo "... dynamic_reconfigure_gencfg"
 	@echo "... rosgraph_msgs_generate_messages_nodejs"
@@ -1701,7 +1742,6 @@ help:
 	@echo "... tf2_msgs_generate_messages_py"
 	@echo "... passthrough"
 	@echo "... tf_generate_messages_eus"
-	@echo "... rebuild_cache"
 	@echo "... tf_generate_messages_py"
 	@echo "... std_msgs_generate_messages_eus"
 	@echo "... actionlib_generate_messages_eus"
@@ -1715,6 +1755,7 @@ help:
 	@echo "... tf2_msgs_generate_messages_lisp"
 	@echo "... multi_sensor_tracker"
 	@echo "... clustering"
+	@echo "... get_centroid"
 	@echo "... kalman_filter_tracker"
 	@echo "... install/strip"
 	@echo "... install/local"
@@ -1730,6 +1771,9 @@ help:
 	@echo "... src/clustering.o"
 	@echo "... src/clustering.i"
 	@echo "... src/clustering.s"
+	@echo "... src/get_centroid.o"
+	@echo "... src/get_centroid.i"
+	@echo "... src/get_centroid.s"
 	@echo "... src/kalman_filter.o"
 	@echo "... src/kalman_filter.i"
 	@echo "... src/kalman_filter.s"

@@ -32,6 +32,8 @@ set(CMAKE_CXX_TARGET_INCLUDE_PATH
   "/usr/lib/openmpi/include"
   "/usr/lib/openmpi/include/openmpi"
   "/usr/include/tcl"
+  "../INCLUDE_DIRS"
+  "../include"
   )
 
 # Targets to which this target links.

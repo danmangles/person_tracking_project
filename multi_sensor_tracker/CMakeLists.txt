@@ -237,8 +237,8 @@ add_executable (clustering src/clustering.cpp)
 target_link_libraries (clustering ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
 
-#add_executable (get_centroid src/get_centroid.cpp)
-#target_link_libraries (get_centroid ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+add_executable (get_centroid src/get_centroid.cpp)
+target_link_libraries (get_centroid ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
 
 #add_executable (get_centroid_v2 src/get_centroid_v2.cpp)

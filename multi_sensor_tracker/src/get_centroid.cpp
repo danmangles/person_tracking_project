@@ -205,7 +205,7 @@ void cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_msg)
   //odom_base_ls.waitForTransform(target_frame, base_frame, ros::Time::now(), ros::Duration(10.0) );
   odom_base_ls->waitForTransform(target_frame, base_frame, ros::Time(0), ros::Duration(10.0) );
 
-  cout<<"transforming pcloud"<<endl;
+  cout<<"transforming pcloud using time "<< ros::Time(0)<<endl;
   pcl_ros::transformPointCloud(target_frame, *cloud_msg, transformed_cloud, *odom_base_ls); // perform the transformation
 
 
@@ -216,6 +216,16 @@ void cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_msg)
   // Convert from sensor_msgs::PointCloud2 to pcl::PointCloud2
   pcl::PCLPointCloud2* cloud = new pcl::PCLPointCloud2;
   pcl_conversions::toPCL(transformed_cloud, *cloud);
+
+
+  //   if cloud has less than 10 points, jump out of the callback
+    if (cloud->width < 10) { // the velodyne reading is invalid- probably an issue with the transform
+          cout << "*** THERE'S SOMETHING WRONG WITH THIS CLOUD. waiting for the next one. ****" << endl;
+          cout << "Width: "<< cloud->width <<endl;
+        return; // drop out of this callback and come back with the next transform
+    }
+    cout << "*** LOOKS OK TO ME***"<< endl;
+
   // setup the filter
   pcl::PassThrough<pcl::PCLPointCloud2> pass; 
   pass.setFilterFieldName ("z");
@@ -223,7 +233,9 @@ void cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_msg)
   //pass.setFilterLimits (0.1, 100.0);
   //** set the input cloud
   //sor.setInputCloud (cloudPtr);
-  pcl::PCLPointCloud2ConstPtr cloudPtr(cloud); // create a cloudPtr to use for our filter
+
+  pcl::PCLPointCloud2ConstPtr cloudPtr(cloud); // create a pointer called cloudPtr to use for our filter
+
   pass.setInputCloud (cloudPtr); //set the input cloud for our filter
   
 
@@ -231,6 +243,8 @@ void cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_msg)
   //sor.filter (cloud_filtered);
   pcl::PCLPointCloud2 output_cloud; // initiate our PC2 to send
   pass.filter(output_cloud);
+
+
   //////////////////////* PUBLISH THE RESULT ON pub/////////////////////////////
 
   // Convert to ROS data type
@@ -256,9 +270,9 @@ void cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_msg)
 
   pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud (); //convert from an object to a boost shared pointer
 
-  using namespace boost;
+//  using namespace boost;
   typedef pcl::PointCloud<pcl::PointXYZ>  mytype;
-  shared_ptr<mytype> prefiltered_cloud_ptr = make_shared <mytype> (prefiltered_cloud);
+  boost::shared_ptr<mytype> prefiltered_cloud_ptr = boost::make_shared <mytype> (prefiltered_cloud);
 
 
   // create a cloud pointer centroid_cloud and populate it with the largest cluster from prefiltered_cloud
@@ -271,7 +285,7 @@ void cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_msg)
   pcl::toROSMsg(*centroid_cloud_ptr,msg_to_publish2); // con
   // //cout<< centroid_cloud_ptr->points.size <<endl;
   msg_to_publish2.header.frame_id = "odom";
-  pub_centroid.publish (msg_to_publish2);
+  pub_centroid.publish (msg_to_publish2); // OK APPARENTLY THIS WORKS
 
   // check the size
   cout << "There are "<<centroid_cloud_ptr->points.size ()<<" points in centroid_cloud_ptr"<< endl;
@@ -294,6 +308,8 @@ void cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_msg)
             << c
             << endl; 
 
+
+
   ////////////////////// PUBLISH THE CENTROID ON A TRANSFORM /////////////////////////////
   // create a transformBroadcaster 
   static tf::TransformBroadcaster br;
@@ -309,7 +325,7 @@ void cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_msg)
   string target_frame_id = "velodyne_person_est";
   //br.sendTransform(centre_point, q, ros::Time::now(), target_frame_id, velodyne_frame_id);
   // not sure if i put the ids the right way round
-  br.sendTransform(tf::StampedTransform(transform, ros::Time(0), velodyne_frame_id, target_frame_id));
+  br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), velodyne_frame_id, target_frame_id));
   
   
 }
