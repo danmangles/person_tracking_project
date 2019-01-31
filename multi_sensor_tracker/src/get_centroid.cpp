@@ -96,7 +96,7 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr get_cloud_cluster (pcl::PointCloud<pcl::Poin
   seg.setModelType (pcl::SACMODEL_PLANE);
   seg.setMethodType (pcl::SAC_RANSAC);
   seg.setMaxIterations (100);
-  seg.setDistanceThreshold (0.02);
+  seg.setDistanceThreshold (0.01);
 
   // Loop through the cloud, performing the clustering operation
   int i=0, nr_points = (int) cloud_filtered->points.size ();
@@ -146,9 +146,9 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr get_cloud_cluster (pcl::PointCloud<pcl::Poin
   cout << "setting up cluster objects" << endl;
   vector<pcl::PointIndices> cluster_indices;
   pcl::EuclideanClusterExtraction<pcl::PointXYZ> ec;
-  ec.setClusterTolerance (0.8); // 2cm: too small, we split one object into many, too big, we merge objects into one.
-  ec.setMinClusterSize (30);
-  ec.setMaxClusterSize (2500);
+  ec.setClusterTolerance (0.2); // 2cm: too small, we split one object into many, too big, we merge objects into one.
+  ec.setMinClusterSize (50);
+  ec.setMaxClusterSize (200);
   ec.setSearchMethod (tree);
   ec.setInputCloud (cloud_filtered);
   ec.extract (cluster_indices);
@@ -229,7 +229,7 @@ void cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_msg)
   // setup the filter
   pcl::PassThrough<pcl::PCLPointCloud2> pass; 
   pass.setFilterFieldName ("z");
-  pass.setFilterLimits (0.0, 100.0);
+  pass.setFilterLimits (0.1, 4.0);
   //pass.setFilterLimits (0.1, 100.0);
   //** set the input cloud
   //sor.setInputCloud (cloudPtr);
@@ -337,6 +337,7 @@ int main (int argc, char** argv)
   // Initialize ROS
   ros::init (argc, argv, "my_pcl_tutorial");
   ros::NodeHandle nh;
+  ros::Rate r(1); // 10 hz
 
 
   odom_base_ls.reset(new tf::TransformListener);
@@ -356,5 +357,6 @@ int main (int argc, char** argv)
 
   // Spin
   ros::spin ();
+  r.sleep();
 }
 
