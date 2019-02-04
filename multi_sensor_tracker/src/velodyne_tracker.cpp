@@ -101,7 +101,7 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr get_cloud_cluster (pcl::PointCloud<pcl::Poin
   // Loop through the cloud, performing the clustering operation
   int i=0, nr_points = (int) cloud_filtered->points.size ();
   cout << "Segmenting planar componets" << endl;
-  while (cloud_filtered->points.size () > 0.4 * nr_points)
+  while (cloud_filtered->points.size () > 0.3 * nr_points)
   {
     // Segment the largest planar component from the remaining cloud
     seg.setInputCloud (cloud_filtered);
@@ -148,7 +148,7 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr get_cloud_cluster (pcl::PointCloud<pcl::Poin
   pcl::EuclideanClusterExtraction<pcl::PointXYZ> ec;
   ec.setClusterTolerance (0.2); // 2cm: too small, we split one object into many, too big, we merge objects into one.
   ec.setMinClusterSize (50);
-  ec.setMaxClusterSize (200);
+  ec.setMaxClusterSize (10000);
   ec.setSearchMethod (tree);
   ec.setInputCloud (cloud_filtered);
   ec.extract (cluster_indices);
@@ -157,7 +157,7 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr get_cloud_cluster (pcl::PointCloud<pcl::Poin
 
   // we have used some dodgy coding here so we only loop ONCE- WE ONLY WANT THE LARGEST CLUSTER
   cout << "extracting the clusters" << endl;
-  
+  int MAX_CLUSTER_SIZE = 120;
   for (vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin (); it != cluster_indices.end (); ++it)
   {
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_cluster (new pcl::PointCloud<pcl::PointXYZ>);
@@ -168,7 +168,11 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr get_cloud_cluster (pcl::PointCloud<pcl::Poin
     cloud_cluster->is_dense = true;
 
     cout << "PointCloud representing the Cluster: " << cloud_cluster->points.size () << " data points." << endl;
-    return cloud_cluster; // actually we want to leave this loop after the first cluster
+
+    if (cloud_cluster->points.size() < MAX_CLUSTER_SIZE)
+        return cloud_cluster; // we want to publish this cluster
+    //else just ignore and keep looping
+    cout << "Ditched a cloud with "<<cloud_cluster->points.size() <<" points in it"<<endl;
   }
 }
 

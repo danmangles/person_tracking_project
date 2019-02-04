@@ -9,7 +9,7 @@
 #include <vector>
 #include <Eigen/Dense>
 
-#include "kalman_filter.h"
+#include "include/kalman_filter.h"
 
 int main(int argc, char* argv[]) {
 

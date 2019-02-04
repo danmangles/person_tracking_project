@@ -2,7 +2,7 @@
 // tf includes
 #include <tf/transform_listener.h>
 #include <tf/transform_broadcaster.h>
-#include "kalman_filter.h" // for the kalman filter
+#include "include/kalman_filter.h" // for the kalman filter
 #include <Eigen/Dense>  // for all the lovely matrices
 #include <visualization_msgs/Marker.h>
 
