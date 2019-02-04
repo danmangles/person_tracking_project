@@ -1,0 +1,11 @@
+pod-build
+*~
+python/results
+python/.ipynb_checkpoints
+
+# Files
+matlab/*.png
+*.user
+
+build/*
+src/.metadata/*

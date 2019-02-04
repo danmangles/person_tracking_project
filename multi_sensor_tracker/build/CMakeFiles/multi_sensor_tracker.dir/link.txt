@@ -1,1 +1,0 @@
-/usr/bin/g++  -fPIC   -shared -Wl,-soname,libmulti_sensor_tracker.so -o devel/lib/libmulti_sensor_tracker.so CMakeFiles/multi_sensor_tracker.dir/src/kalman_filter.cpp.o 

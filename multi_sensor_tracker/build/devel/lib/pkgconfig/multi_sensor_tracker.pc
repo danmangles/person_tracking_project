@@ -1,8 +1,0 @@
-prefix=/home/ori/catkin_ws/src/person_tracking_project/multi_sensor_tracker/build/devel
-
-Name: multi_sensor_tracker
-Description: Description of multi_sensor_tracker
-Version: 0.0.0
-Cflags: 
-Libs: -L/home/ori/catkin_ws/src/person_tracking_project/multi_sensor_tracker/build/devel/lib 
-Requires: 
