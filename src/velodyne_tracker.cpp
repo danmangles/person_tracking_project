@@ -47,6 +47,9 @@ ros::Publisher pub_centroid; // setup the publisher for the output point cloud
 
 //sensor_msgs::PointCloud2 output_msg; // general message to store data to be published on
 
+
+
+
 pcl::PointCloud<pcl::PointXYZ>::Ptr get_cloud_cluster (pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud) {
   // INPUTS: input_cloud: pointer to the pointcloud produced by the velodyne relative to "base"
   // OUTPUTS: cloud_cluster: pointer to the output cloud which contains the points from the largest cluster
@@ -96,7 +99,7 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr get_cloud_cluster (pcl::PointCloud<pcl::Poin
   seg.setModelType (pcl::SACMODEL_PLANE);
   seg.setMethodType (pcl::SAC_RANSAC);
   seg.setMaxIterations (100);
-  seg.setDistanceThreshold (0.01);
+  seg.setDistanceThreshold (0.03);
 
   // Loop through the cloud, performing the clustering operation
   int i=0, nr_points = (int) cloud_filtered->points.size ();
@@ -146,7 +149,7 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr get_cloud_cluster (pcl::PointCloud<pcl::Poin
   cout << "setting up cluster objects" << endl;
   vector<pcl::PointIndices> cluster_indices;
   pcl::EuclideanClusterExtraction<pcl::PointXYZ> ec;
-  ec.setClusterTolerance (0.2); // 2cm: too small, we split one object into many, too big, we merge objects into one.
+  ec.setClusterTolerance (0.3); // 2cm: too small, we split one object into many, too big, we merge objects into one.
   ec.setMinClusterSize (50);
   ec.setMaxClusterSize (10000);
   ec.setSearchMethod (tree);
@@ -157,22 +160,31 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr get_cloud_cluster (pcl::PointCloud<pcl::Poin
 
   // we have used some dodgy coding here so we only loop ONCE- WE ONLY WANT THE LARGEST CLUSTER
   cout << "extracting the clusters" << endl;
-  int MAX_CLUSTER_SIZE = 120;
-  for (vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin (); it != cluster_indices.end (); ++it)
+  int MAX_CLUSTER_SIZE = 200;
+  vector<pcl::PointIndices>::const_iterator it;
+  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_cluster (new pcl::PointCloud<pcl::PointXYZ>);
+
+  for (it = cluster_indices.begin (); it != cluster_indices.end (); ++it)
   {
-    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_cluster (new pcl::PointCloud<pcl::PointXYZ>);
-    for (vector<int>::const_iterator pit = it->indices.begin (); pit != it->indices.end (); ++pit)
+
+    for (vector<int>::const_iterator pit = it->indices.begin (); pit != it->indices.end (); ++pit) {
       cloud_cluster->points.push_back (cloud_filtered->points[*pit]); //*
+    }
+
     cloud_cluster->width = cloud_cluster->points.size ();
     cloud_cluster->height = 1;
     cloud_cluster->is_dense = true;
 
     cout << "PointCloud representing the Cluster: " << cloud_cluster->points.size () << " data points." << endl;
 
-    if (cloud_cluster->points.size() < MAX_CLUSTER_SIZE)
+    if (cloud_cluster->points.size() < MAX_CLUSTER_SIZE) {
+        cout << "** Returning a cloud with "<<cloud_cluster->points.size() <<" points in it"<<endl;
         return cloud_cluster; // we want to publish this cluster
+    } else {
     //else just ignore and keep looping
-    cout << "Ditched a cloud with "<<cloud_cluster->points.size() <<" points in it"<<endl;
+    cout << "Ditching a cloud with "<<cloud_cluster->points.size() <<" points in it"<<endl;
+
+    }
   }
 }
 
@@ -186,90 +198,92 @@ void cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_msg)
   // calls get_cloud_cluster() to get the largest cluster, extracts the centroid from this, 
   // and publishes the centroid coordinates on the transform "velodyne_person_est"
 
-  //////////////////////////////////////
-  // COMMENTED OUT BECAUSE I DON'T THINK CLOUD HAS BEEN DEFINED YET
-  // cerr << "Raw Cloud: " << endl;
-  // for (size_t i = 0; i < cloud_msg->points.size (); ++i)
-  //   cerr << "    " << cloud_msg->points[i].x << " " 
-  //                       << cloud_msg->points[i].y << " " 
-  //                       << cloud_msg->points[i].z << endl;
-  
 
-  ///////////////////////////////////////
+
 
   
+    // Publish the cloud
+    pub_raw.publish (*cloud_msg); // publish the raw cloud
+
+
+
+
+    // Convert from sensor_msgs::PointCloud2 to pcl::PointCloud2
+    pcl::PCLPointCloud2* cloud = new pcl::PCLPointCloud2;
+    pcl_conversions::toPCL(*cloud_msg, *cloud); // convert cloud_msg into a pcl edition
+
+    double radius = 8.0; // maximum distance from base we are interested in
+    double max_height = 2.0; // max height of z filter in metres
+    double min_height = -0.2; // min height of z filter in metres
+    // setup the filter
+    pcl::PassThrough<pcl::PCLPointCloud2> pass;
+    pass.setFilterFieldName ("x");
+    pass.setFilterLimits (-radius, radius); // limits
+    pcl::PCLPointCloud2ConstPtr cloudPtr_x(cloud); // create a pointer called cloudPtr to use for our filter
+    pass.setInputCloud (cloudPtr_x); //set the input cloud for our filter
+    pcl::PCLPointCloud2* output_cloud_x = new pcl::PCLPointCloud2; // initiate our PC2 to send
+    pass.filter(*output_cloud_x); // do the filtering operation
+
+
+    // setup the filter
+    pass.setFilterFieldName ("y");
+    pass.setFilterLimits (-radius, radius); // limits
+    pcl::PCLPointCloud2ConstPtr cloudPtr_y(output_cloud_x); // create a pointer called cloudPtr to use for our filter
+    pass.setInputCloud (cloudPtr_y); //set the input cloud for our filter
+    pcl::PCLPointCloud2* output_cloud_y = new pcl::PCLPointCloud2; // initiate our PC2 to send
+    pass.filter(*output_cloud_y); // do the filtering operation
+
+    // setup the filter
+    pass.setFilterFieldName ("z");
+    pass.setFilterLimits (min_height, max_height); // limits
+    pcl::PCLPointCloud2ConstPtr cloudPtr_z(output_cloud_y); // create a pointer called cloudPtr to use for our filter
+    pass.setInputCloud (cloudPtr_z); //set the input cloud for our filter
+    pcl::PCLPointCloud2* output_cloud_z = new pcl::PCLPointCloud2; // initiate our PC2 to send
+    pass.filter(*output_cloud_z); // do the filtering operation
+
+
+    //////////////////////* PUBLISH THE RESULT ON pub/////////////////////////////
+
+    // Convert to ROS data type
+    sensor_msgs::PointCloud2 output_msg; // define a message on which to publish
+    pcl_conversions::moveFromPCL(*output_cloud_z, output_msg); // convert into the sensor_msgs format
+    pub_zfilt.publish (output_msg); // Publish the data
+
   //////////////////////* TRANSFORM THE INPUT CLOUD INTO THE ODOM FRAME  /////////////////////////////
-  // Publish the cloud
-  pub_raw.publish (*cloud_msg);
+
 
   string target_frame = "odom", base_frame = "base"; // target frame for transform
   sensor_msgs::PointCloud2 transformed_cloud; // initiate output cloud
 
   cout<<"**********************waiting for transform"<<endl;
-  //odom_base_ls.waitForTransform(target_frame, base_frame, ros::Time::now(), ros::Duration(10.0) );
   odom_base_ls->waitForTransform(target_frame, base_frame, ros::Time(0), ros::Duration(10.0) );
-
   cout<<"transforming pcloud using time "<< ros::Time(0)<<endl;
-  pcl_ros::transformPointCloud(target_frame, *cloud_msg, transformed_cloud, *odom_base_ls); // perform the transformation
-
+  pcl_ros::transformPointCloud(target_frame, output_msg, transformed_cloud, *odom_base_ls); // perform the transformation
 
   // Publish the cloud
-  pub_trans.publish (transformed_cloud);
+  pub_trans.publish (transformed_cloud); // this is publishing correctly//////////////////////////////////
 
-  //////////////////////* REMOVE ALL POINTS OUTSIDE OF 0.1, 100.0  /////////////////////////////
+
   // Convert from sensor_msgs::PointCloud2 to pcl::PointCloud2
-  pcl::PCLPointCloud2* cloud = new pcl::PCLPointCloud2;
-  pcl_conversions::toPCL(transformed_cloud, *cloud);
-
+  pcl::PCLPointCloud2* new_cloud = new pcl::PCLPointCloud2;
+  pcl_conversions::toPCL(transformed_cloud, *new_cloud); // convert cloud_msg into a pcl edition
 
   //   if cloud has less than 10 points, jump out of the callback
-    if (cloud->width < 10) { // the velodyne reading is invalid- probably an issue with the transform
+    if (new_cloud->width < 10) { // the velodyne reading is invalid- probably an issue with the transform
           cout << "*** THERE'S SOMETHING WRONG WITH THIS CLOUD. waiting for the next one. ****" << endl;
-          cout << "Width: "<< cloud->width <<endl;
+          cout << "Width: "<< new_cloud->width <<endl;
         return; // drop out of this callback and come back with the next transform
     }
     cout << "*** LOOKS OK TO ME***"<< endl;
 
-  // setup the filter
-  pcl::PassThrough<pcl::PCLPointCloud2> pass; 
-  pass.setFilterFieldName ("z");
-  pass.setFilterLimits (0.1, 4.0);
-  //pass.setFilterLimits (0.1, 100.0);
-  //** set the input cloud
-  //sor.setInputCloud (cloudPtr);
-
-  pcl::PCLPointCloud2ConstPtr cloudPtr(cloud); // create a pointer called cloudPtr to use for our filter
-
-  pass.setInputCloud (cloudPtr); //set the input cloud for our filter
-  
-
-  // ** perform the filtering
-  //sor.filter (cloud_filtered);
-  pcl::PCLPointCloud2 output_cloud; // initiate our PC2 to send
-  pass.filter(output_cloud);
 
 
-  //////////////////////* PUBLISH THE RESULT ON pub/////////////////////////////
-
-  // Convert to ROS data type
-   sensor_msgs::PointCloud2 output_msg;
-  pcl_conversions::moveFromPCL(output_cloud, output_msg);
-
-  // // Publish the data
-  pub_zfilt.publish (output_msg);
-
-////////////////////////////////////////////////////////// NOT SURE WHAT THESE LINES DO.
-  //pcl::PointCloud<pcl::PointXYZ>::Ptr centroid_cloud (new pcl::PointCloud<pcl::PointXYZ>);
-  
-  //cout <<" cloud_filtered size: "<< cloud_filtered.points.size ()<< endl;
-  //cout << centroid_cloud.points.size ()<< endl;
-  
   ////////////////////// GET THE GROUND CLUSTER /////////////////////////////
 
   // Take the previously published output message and convert it to a pointcloud called "prefiltered cloud"
   pcl::PointCloud<pcl::PointXYZ> prefiltered_cloud;  // pcl version of the point cloud
 
-  pcl::fromROSMsg (output_msg, prefiltered_cloud);
+  pcl::fromROSMsg (transformed_cloud, prefiltered_cloud); // wrong: output_msg of type smPC2 and transformed_cloud of
 
 
   pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud (); //convert from an object to a boost shared pointer
@@ -288,49 +302,53 @@ void cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_msg)
   // // CONVERT FROM PCL:PC1 TO SM:PC2
   pcl::toROSMsg(*centroid_cloud_ptr,msg_to_publish2); // con
   // //cout<< centroid_cloud_ptr->points.size <<endl;
-  msg_to_publish2.header.frame_id = "odom";
-  pub_centroid.publish (msg_to_publish2); // OK APPARENTLY THIS WORKS
 
+  msg_to_publish2.header.frame_id = "odom"; // CHANGED THIS TO BASE INSTEAD OF ODOM BECAUSE WE WERE PUBLISHING POINTS IN THE WRONG PLACE
+
+  pub_centroid.publish (msg_to_publish2); // this is not publishing correctly
   // check the size
   cout << "There are "<<centroid_cloud_ptr->points.size ()<<" points in centroid_cloud_ptr"<< endl;
-  
+  int MIN_CENTROID_CLUSTER = 40;
 
-  ////////////////////// COMPUTE THE CENTROID OF THE CLUSTER /////////////////////////////
-  // Initialise a point to store the centroid inoutput_topic
-  pcl::CentroidPoint<pcl::PointXYZ> centroid;
+  if (centroid_cloud_ptr->points.size () > MIN_CENTROID_CLUSTER) { // if there are enough points
 
-
-  // loop through the point cloud, adding each to the centroid
-  for (size_t i = 0; i < centroid_cloud_ptr -> points.size (); ++i) {
-    centroid.add (centroid_cloud_ptr -> points[i]);
-  }
-
-  // Fetch centroid using `get()`
-  pcl::PointXYZ c; // the centre point
-  centroid.get (c);
-  cout << "\n Centroid is located at "
-            << c
-            << endl; 
+          ////////////////////// COMPUTE THE CENTROID OF THE CLUSTER /////////////////////////////
+      // Initialise a point to store the centroid inoutput_topic
+      pcl::CentroidPoint<pcl::PointXYZ> centroid;
 
 
+      // loop through the point cloud, adding each to the centroid
+      for (size_t i = 0; i < centroid_cloud_ptr -> points.size (); ++i) {
+        centroid.add (centroid_cloud_ptr -> points[i]);
+      }
 
-  ////////////////////// PUBLISH THE CENTROID ON A TRANSFORM /////////////////////////////
-  // create a transformBroadcaster 
-  static tf::TransformBroadcaster br;
-  tf::Transform transform;
-  transform.setOrigin( tf::Vector3(c.x,c.y,c.z) );
-  tf::Quaternion q; // initialise the quaternion q for the pose angle
-  tf::TransformListener odom_base_ls;
-  //msg = ...?;
-  q.setEulerZYX(0, 0, 0);
-  transform.setRotation(q);
-  //q.setRPY(0, 0, msg->theta);
-  string velodyne_frame_id = "odom";
-  string target_frame_id = "velodyne_person_est";
-  //br.sendTransform(centre_point, q, ros::Time::now(), target_frame_id, velodyne_frame_id);
-  // not sure if i put the ids the right way round
-  br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), velodyne_frame_id, target_frame_id));
-  
+      // Fetch centroid using `get()`
+      pcl::PointXYZ c; // the centre point
+      centroid.get (c);
+      cout << "\n Centroid is located at "
+                << c
+                << endl;
+
+
+
+      ////////////////////// PUBLISH THE CENTROID ON A TRANSFORM /////////////////////////////
+      // create a transformBroadcaster
+      static tf::TransformBroadcaster br;
+      tf::Transform transform;
+      transform.setOrigin( tf::Vector3(c.x,c.y,c.z) );
+      tf::Quaternion q; // initialise the quaternion q for the pose angle
+      tf::TransformListener odom_base_ls;
+      //msg = ...?;
+      q.setEulerZYX(0, 0, 0);
+      transform.setRotation(q);
+      //q.setRPY(0, 0, msg->theta);
+      string velodyne_frame_id = "odom";
+      string target_frame_id = "velodyne_person_est";
+      //br.sendTransform(centre_point, q, ros::Time::now(), target_frame_id, velodyne_frame_id);
+      // not sure if i put the ids the right way round
+      br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), velodyne_frame_id, target_frame_id));
+
+  } else { cout << "not enough points in cluster, waiting for next one"<<endl;}
   
 }
 
