@@ -53,7 +53,6 @@ int main (int argc, char** argv)
 
     int n = 3; // Number of states
     int m = 3; // Number of measurements
-    //int d = 3; // Number of dimensions
 
     // 1. Initialise ROS
 
@@ -87,13 +86,11 @@ int main (int argc, char** argv)
 
     // Assuming the person doesn't move, we are JUST X INITIALLY
     A = I3; //I3
-    //A << 1; // assume the person doesn't  move
-
     C = I3;
     //C << 1;
     // Reasonable covariance matrices
     //Q << .05, .05, .0, .05, .05, .0, .0, .0, .0; // I DON'T KNOW HOW TO TUNE THIS
-    //Q << .001;
+
     Q << 2, 0, 0, 0, 2, 0, 0, 0, .5; //I3 * .05 // MAKE THIS A FUNCTION OF TIMESTEP^2
     R << 5, 0, 0, 0, 5, 0, 0, 0, 1; //I3 * .05 // MAKE THIS A FUNCTION OF TIMESTEP^2
 
