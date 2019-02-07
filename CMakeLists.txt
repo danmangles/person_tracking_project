@@ -9,16 +9,20 @@ find_package(catkin REQUIRED COMPONENTS
   pcl_ros
   roscpp
   sensor_msgs
+
 )
 
 
 
-catkin_package()
+catkin_package(
+    CATKIN_DEPENDS roscpp sensor_msgs
+)
 
 include_directories(
-# include
+  src/include
   ${catkin_INCLUDE_DIRS}
   ${PCL_INCLUDE_DIRS}
+  ${PROJECT_NAME}
   INCLUDE_DIRS include
 )
 
@@ -28,16 +32,11 @@ include_directories(
    src/Centroid_Estimator.cpp
  )
 
-
-
-
 link_directories(${PCL_LIBRARY_DIRS})
 add_definitions(${PCL_DEFINITIONS})
 
 add_executable(pcd_read src/pcd_read.cpp)
 target_link_libraries(pcd_read ${catkin_LIBRARIES} ${PCL_LIBRARIES})
-
-
 
 add_executable (voxel_grid src/voxel_grid.cpp)
 target_link_libraries (voxel_grid ${catkin_LIBRARIES} ${PCL_LIBRARIES})
@@ -64,5 +63,3 @@ target_link_libraries (kalman_filter_tracker ${catkin_LIBRARIES} ${PCL_LIBRARIES
 
 add_executable (nearest_cluster_tracker src/nearest_cluster_tracker.cpp)
 target_link_libraries (nearest_cluster_tracker ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${PROJECT_NAME})
-
-#
