@@ -48,6 +48,7 @@ ros::Publisher pub_trans; // setup the publisher for the output point cloud
 ros::Publisher pub_zfilt; // setup the publisher for the output point cloud
 ros::Publisher pub_ds; // setup the publisher for the output point cloud
 ros::Publisher pub_centroid; // setup the publisher for the output point cloud
+
 ros::Publisher coords_publisher; // publisher to use for the vector of coords
 
 //sensor_msgs::PointCloud2 output_msg; // general message to store data to be published on
@@ -139,14 +140,20 @@ void transform_cloud(sensor_msgs::PointCloud2 input_cloud, sensor_msgs::PointClo
 }
 
 // METHOD CURRENTLY REDUNDANT
-//void publish_coord_vector(vector <Vector3f> coord_vector) {
-//    // publishes coord_vector to topic [topic_name]
+void publish_coord_vector(vector <Vector3f> coord_vector) {
+    // publishes coord_vector to topic [topic_name]
+//    sensor
+//    cloud.points
+//    for (int i = 0; i<coord_vector.size(); i++) {
+//        coord_pcl.header.
+
+//    }
 //    coords_publisher.publish(coord_vector);
 
 
 
 
-//}
+}
 
 
 void generate_coord_array (pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud, vector <Vector3f> &centroid_coord_array) {
@@ -282,7 +289,7 @@ void generate_coord_array (pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud, vect
             generate_centroid(cloud_cluster, coord_centroid);
             cout << "[inside generate_cluster_array()] coord_centroid is "<<coord_centroid<<endl;
             centroid_coord_array.push_back(coord_centroid); // we want to keep this cluster
-
+            cout << cloud_cluster.get() <<endl;
         } else {
         //else just ignore and keep looping
             cout << "Ditching a cloud with "<<cloud_cluster->points.size() <<" points in it"<<endl;
@@ -383,7 +390,9 @@ int main (int argc, char** argv)
   pub_ds = nh.advertise<sensor_msgs::PointCloud2> (topic_ds, 1);
   pub_centroid = nh.advertise<sensor_msgs::PointCloud2> (topic_centroid, 1);
 
-  //coords_publisher = nh.advertise<vector<Vector3f>> (topic_coords, 1); //setup the coordinate publisher
+
+  // use posestamped....
+  coords_publisher = nh.advertise<sensor_msgs::PointCloud2> (topic_coords, 1); //setup the coordinate publisher
 
   // Spin
   ros::spin ();
