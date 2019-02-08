@@ -63,20 +63,20 @@ void update_filter(Vector3f new_estimate) {
 
 
 
-//    kf.update(new_estimate, delta.toSec(), A);
-//    x_hat << kf.get_state().transpose()[0], kf.get_state().transpose()[1],kf.get_state().transpose()[2];
-//    P << kf.get_covariance();
-//    cout << "P:\n" << P<<endl;
+    kf.update(new_estimate, delta.toSec(), A);
+    x_hat << kf.get_state().transpose()[0], kf.get_state().transpose()[1],kf.get_state().transpose()[2];
+    P << kf.get_covariance();
+    cout << "P:\n" << P<<endl;
 
-//    cout << "t = " << curr_time << ", dt = "<<delta<<", \n    new_estimate =" << new_estimate.transpose()
-//        << ",\nx_hat = " << kf.get_state().transpose() << endl;
+    cout << "t = " << curr_time << ", dt = "<<delta<<", \n    new_estimate =" << new_estimate.transpose()
+        << ",\nx_hat = " << kf.get_state().transpose() << endl;
 
-//    //Now publish the output
-//    output_tf.setOrigin( tf::Vector3(x_hat[0],x_hat[1],x_hat[2]) );
+    //Now publish the output
+    output_tf.setOrigin( tf::Vector3(x_hat[0],x_hat[1],x_hat[2]) );
 
-//    br.sendTransform(tf::StampedTransform(output_tf, ros::Time(0), base_frame, output_frame)); // send the transform
+    br.sendTransform(tf::StampedTransform(output_tf, ros::Time(0), base_frame, output_frame)); // send the transform
 
-//    publish_marker(vis_pub, x_hat, P(0,0),P(1,1),P(2,2)); // publish the marker
+    publish_marker(vis_pub, x_hat, P(0,0),P(1,1),P(2,2)); // publish the marker
 
 
 
@@ -211,10 +211,18 @@ int main (int argc, char** argv)
 
     // setup a callback for any received messages:
 
-
+    kfilter_manager manager;
     // Create a ROS subscriber for the input point cloud
     string input_topic = "centroid_coord_array"; //
-//    ros::Subscriber sub = nh.subscribe<sensor_msgs::PointCloud2> (input_topic, 1, coordinate_callback);
+     ros::Subscriber sub = nh.subscribe<sensor_msgs::PointCloud2> (input_topic, 1, kfilter_manager.coordinate_callback);
+
+
+}
+class kalman_filter_manager() {
+    // this class has an object which is a kalman_filter
+    // when you construct the kalman_filter assign it to this manager
+    //
+
 
 
 }

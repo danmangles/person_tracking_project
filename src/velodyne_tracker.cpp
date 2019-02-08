@@ -360,6 +360,14 @@ void cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_msg)
   // nb the old version used to publish centroids here
 
   /////////////////// PUBLISH THE CLUSTER CENTROIDS
+  // posearray <-
+
+//  geometry_msgs::posearray
+  // need a geometry_msgs::pose can be made from 3 doubles [0 0 0 1]
+  geometry_msgs::pose
+  //
+
+
   //coords_publisher.publish(centroid_coord_array); // publish the vector to the coordinate publisher, at topic "centroid_coord_array"
   //publish_coord_vector(centroid_coord_array);
 
