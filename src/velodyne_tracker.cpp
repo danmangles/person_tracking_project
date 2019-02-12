@@ -364,7 +364,7 @@ void cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_msg)
 
 //  geometry_msgs::posearray
   // need a geometry_msgs::pose can be made from 3 doubles [0 0 0 1]
-  geometry_msgs::pose
+//  geometry_msgs::pose
   //
 
 
@@ -378,7 +378,7 @@ void cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_msg)
 int main (int argc, char** argv)
 {
   // Initialize ROS
-  ros::init (argc, argv, "my_pcl_tutorial");
+  ros::init (argc, argv, "velodyne_tracker");
   ros::NodeHandle nh;
   ros::Rate r(1); // 10 hz
 

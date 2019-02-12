@@ -2,7 +2,9 @@
 // tf includes
 #include <tf/transform_listener.h>
 #include <tf/transform_broadcaster.h>
+
 #include "include/kalman_filter.h" // for the kalman filter
+
 #include <Eigen/Dense>  // for all the lovely matrices
 #include <visualization_msgs/Marker.h>
 
@@ -50,10 +52,6 @@ void publish_marker(ros::Publisher vis_pub, VectorXd x_hat,double scale_x,double
 int main (int argc, char** argv)
 {
     cout <<"Initialising kalman_filter_tracker"<<endl;
-
-    int n = 3; // Number of states
-    int m = 3; // Number of measurements
-
     // 1. Initialise ROS
 
     ros::init (argc, argv, "multi_sensor_tracker");
@@ -67,10 +65,14 @@ int main (int argc, char** argv)
     string base_frame = "odom"; // define the transform origin we are looking for
     string target_frame = "velodyne_person_est"; // define the transform target we are looking for
 
+
+// kf params
+
+    int n = 3; // Number of states
+    int m = 3; // Number of measurements
     VectorXd y(m); // define a variable y to hold all the input transforms. //NOT SURE IF d,m or m,d
 
-    // 3. Create a Kalman filter to process the inputs
-
+    // 3. Create a Kalman filter to process the input
 
     double dt = 1.0/30; // Time step
 
