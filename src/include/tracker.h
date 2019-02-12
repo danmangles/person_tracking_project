@@ -45,6 +45,7 @@
 #include <pcl/sample_consensus/model_types.h>
 #include <pcl/segmentation/sac_segmentation.h>
 #include <pcl/segmentation/extract_clusters.h>
+#include <visualization_msgs/Marker.h> // for the marker
 
 ////////////////////////////////
 
@@ -74,8 +75,11 @@ public:
 private:
     void callback(const sensor_msgs::PointCloud2ConstPtr &cloud_msg); // this method is called whenever the tracker sees a new pointcloud
     void apply_passthrough_filter(const sensor_msgs::PointCloud2ConstPtr input_cloud, sensor_msgs::PointCloud2 &output_cloud); // filters points outside of a defined cube
-    void generate_coord_array (pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud, vector<Eigen::Vector3f> &centroid_coord_array);
-    void generate_centroid(pcl::PointCloud<pcl::PointXYZ>::Ptr cluster_ptr, Vector3f &coord_centroid); //returns a vector of centroid coordinates
+    void generate_coord_array (pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud, vector<Eigen::VectorXd> &centroid_coord_array);
+    void generate_centroid(pcl::PointCloud<pcl::PointXYZ>::Ptr cluster_ptr, VectorXd &coord_centroid); //returns a vector of centroid coordinates
+    void process_centroids(vector<VectorXd> centroid_coord_array);
+    void publish_marker(VectorXd x_hat,double scale_x,double scale_y,double scale_z);
+    VectorXd get_state(); // returns the current position estimate
     kalman_filter kf_; // our private copy of a kalman filter
     ros::Subscriber point_cloud_sub_; // private copy of subscriber
     // a billion publishers
@@ -85,7 +89,7 @@ private:
     ros::Publisher pub_zfilt_; // setup the publisher for the output point cloud
     ros::Publisher pub_ds_; // setup the publisher for the output point cloud
     ros::Publisher pub_centroid_; // setup the publisher for the output point cloud
-
+    ros::Publisher pub_marker_; // to publish the markers on
     // HACK: setup the public transform listener so we can listen to the odom_base_tf
     boost::shared_ptr<tf::TransformListener> odom_base_ls_;
 };

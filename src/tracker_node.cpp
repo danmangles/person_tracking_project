@@ -29,7 +29,7 @@ int main (int argc, char** argv) // runs the tracker node
 
     // 3. Create a Kalman filter to process the input
 
-    double dt = 1.0/30; // Time step
+    double dt = 1.0/10; // Time step
 
     MatrixXd I3(3,3);
     I3.setIdentity();
@@ -44,7 +44,7 @@ int main (int argc, char** argv) // runs the tracker node
     // Assuming the person doesn't move, we are JUST X INITIALLY
     A = I3; //I3
     C = I3;
-    R << 5, 0, 0, 0, 5, 0, 0, 0, 1; //I3 * .05 // MAKE THIS A FUNCTION OF TIMESTEP^2
+    R << 20, 0, 0, 0, 20, 0, 0, 0, 1; //I3 * .05 // MAKE THIS A FUNCTION OF TIMESTEP^2
     P << 2, 0, 0, 0, 2, 0, 0, 0, 2; //I3
     ////////////////////////////////////////////////
 
