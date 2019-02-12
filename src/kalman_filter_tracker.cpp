@@ -161,7 +161,7 @@ int main (int argc, char** argv)
          //y_ << input_vector.getX();// we are only getting one measurement- put this in y
          kf.update(y, delta.toSec(), A);
          x_hat << kf.get_state().transpose()[0], kf.get_state().transpose()[1],kf.get_state().transpose()[2];
-         P << kf.get_covariance();
+         P << kf.get_P();
          cout << "P:\n" << P<<endl;
 
          cout << "t = " << curr_time << ", dt = "<<delta<<", \n    y =" << y.transpose()
