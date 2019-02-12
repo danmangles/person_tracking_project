@@ -12,6 +12,7 @@
 using namespace Eigen;
 using namespace std;
 
+
 kalman_filter::kalman_filter(
 	double dt,
 	const Eigen::MatrixXd& A,
@@ -24,7 +25,15 @@ kalman_filter::kalman_filter(
     m(C.rows()), nd(A.rows()), dt(dt), initialized(false), //populate m with number of rows in C, n with number of rows in A
     I(nd, nd), x_hat(nd), x_hat_new(nd)
 	{
+        cout << "Kalman_filter_constructor called" << endl;
 		I.setIdentity();
+        //print out the chosen matrices
+        cout << "A: \n" << A << endl;
+        cout << "C: \n" << C << endl;
+        cout << "Q: \n" << Q << endl;
+        cout << "R: \n" << R << endl;
+        cout << "P: \n" << P << endl;
+
 	}
 
 kalman_filter::kalman_filter() {}
