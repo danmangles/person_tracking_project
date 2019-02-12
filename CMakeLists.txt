@@ -29,6 +29,7 @@ include_directories(
 ## Declare a C++ library
  add_library(${PROJECT_NAME}
    src/kalman_filter.cpp
+#   src/tracker.cpp
    src/Centroid_Estimator.cpp
  )
 
@@ -48,7 +49,6 @@ target_link_libraries (passthrough ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 add_executable (clustering src/clustering.cpp)
 target_link_libraries (clustering ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
-
 add_executable (velodyne_tracker src/velodyne_tracker.cpp)
 target_link_libraries (velodyne_tracker ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
@@ -61,5 +61,10 @@ target_link_libraries (kalman_test ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${PROJEC
 add_executable (kalman_filter_tracker src/kalman_filter_tracker.cpp)
 target_link_libraries (kalman_filter_tracker ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${PROJECT_NAME})
 
-add_executable (nearest_cluster_tracker src/nearest_cluster_tracker.cpp)
-target_link_libraries (nearest_cluster_tracker ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${PROJECT_NAME})
+#add_executable (nearest_cluster_tracker src/nearest_cluster_tracker.cpp)
+#target_link_libraries (nearest_cluster_tracker ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${PROJECT_NAME})
+
+add_executable (tracker_node src/tracker_node.cpp src/tracker.cpp)
+target_link_libraries (tracker_node ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${PROJECT_NAME})
+#add_executable (tracker src/tracker.cpp)
+#target_link_libraries (tracker ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${PROJECT_NAME})
