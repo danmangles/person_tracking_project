@@ -1,30 +1,4 @@
 /*
- * tracker.h
- *
- * this file has a class definition:
- *  - public
- *      - constructor tracker(nh, kf_parmas);
- *      - load_kf() {}
- *      - update_kf() { updates kalman filter) and other get methods
- *  - private has node handle
- *     - THIS ENABLES DIFFERENT THINGS TO TALK TO EACH OTHER.
- *     - void callback(msg);
- *     - kf;
- *     -
- *
- *
- *
- * tracker_node.cpp
- *
- * int main() {
- *
- *
- *  - create nh
- *  - kf_params is kf_params
- *  - create tracker node ( nh, kf_params)
- *  -
- *
- *
  *
  * tracker.cpp
  *
@@ -33,12 +7,30 @@
  *
  * }
  *
- *
- *
- *
- *
- *
- *
- *
- *
- *  -
+ */
+
+#include <ros/ros.h> // because this is a robot
+#include "include/tracker.h"
+
+using namespace std;
+
+tracker::tracker(ros::NodeHandle nh,
+                 double dt,
+                 const Eigen::MatrixXd& A,
+                 const Eigen::MatrixXd& C,
+                 const Eigen::MatrixXd& Q,
+                 const Eigen::MatrixXd& R,
+                 const Eigen::MatrixXd& P
+                 ) :
+    nh_(nh), kf_(dt, A, C, Q, R, P) // initiate the nodehandle and kalman_filter
+{
+    cout<< "tracker constructor called "<<endl;
+}
+
+/*ros::NodeHandle &nh  //setup the tracker constructor
+                 double dt,
+                 const Eigen::MatrixXd& A,
+                 const Eigen::MatrixXd& C,
+                 const Eigen::MatrixXd& Q,
+                 const Eigen::MatrixXd& R,
+                 const Eigen::MatrixXd& P*/
