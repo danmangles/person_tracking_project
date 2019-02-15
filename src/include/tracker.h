@@ -76,11 +76,12 @@ public:
 private:
     void callback(const sensor_msgs::PointCloud2ConstPtr &cloud_msg); // this method is called whenever the tracker sees a new pointcloud
     void apply_passthrough_filter(const sensor_msgs::PointCloud2ConstPtr input_cloud, sensor_msgs::PointCloud2 &output_cloud); // filters points outside of a defined cube
-    void generate_coord_array (pcl::PointCloud<pcl::PointXYZRGB>::Ptr input_cloud, vector<Eigen::VectorXd> &centroid_coord_array);
+    void get_centroids_of_clusters (vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> cloud_cluster_vector, vector<Eigen::VectorXd> &centroid_coord_array);
     void generate_centroid(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cluster_ptr, VectorXd &coord_centroid); //returns a vector of centroid coordinates
     void process_centroids(vector<VectorXd> centroid_coord_array);
     void publish_marker(VectorXd x_hat,double scale_x,double scale_y,double scale_z);
     void publish_transform(VectorXd coordinates, string target_frame_id); // publishes a transform at the 3D coordinate Vector coordinates
+    void get_vector_of_clusters(pcl::PointCloud<pcl::PointXYZRGB>::Ptr input_cloud, vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> &cloud_cluster_vector);
     VectorXd get_state(); // returns the current position estimate
     kalman_filter kf_; // our private copy of a kalman filter
     ros::Subscriber point_cloud_sub_; // private copy of subscriber

@@ -137,11 +137,13 @@ void tracker::callback(const sensor_msgs::PointCloud2ConstPtr &cloud_msg) { // t
     boost::shared_ptr<mytype> prefiltered_cloud_ptr = boost::make_shared <mytype> (prefiltered_cloud);
 
     ////////////////// GET THE CLUSTER CENTROIDS
+    vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> cloud_cluster_vector;
+    get_vector_of_clusters(prefiltered_cloud_ptr, cloud_cluster_vector);
     vector <VectorXd> centroid_coord_array;
-    generate_coord_array(prefiltered_cloud_ptr, centroid_coord_array); // generate a vector of coordinates
+    get_centroids_of_clusters(cloud_cluster_vector, centroid_coord_array); // generate a vector of coordinates
     cout << "There are "<<centroid_coord_array.size()<<" valid clusters in the pcl"<<endl;
     /////////////////////////////// print out the coordinates
-    //if (centroid_coord_array.size() > 1){cout<<"*************************************************************************************************************************"<<endl;}
+    if (centroid_coord_array.size() > 1){cout<<"*************************************************************************************************************************"<<endl;}
     //    cout <<"centroid_coord_array is :\n[";
     //    for (int i = 0; i<centroid_coord_array.size(); i++) { cout <<centroid_coord_array[i]<< "] "<<endl;} // print out the array
 
@@ -154,7 +156,32 @@ void tracker::callback(const sensor_msgs::PointCloud2ConstPtr &cloud_msg) { // t
 
 }
 //void tracker::transform_pointcloud_to_odom()
-void tracker::generate_coord_array (pcl::PointCloud<pcl::PointXYZRGB>::Ptr input_cloud, vector<Eigen::VectorXd> &centroid_coord_array) {
+void tracker::get_centroids_of_clusters (vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> cloud_cluster_vector, vector<Eigen::VectorXd> &centroid_coord_array) {
+    // loops through cloud_cluster vector and gets the centroid
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_cluster;
+    int MAX_CLUSTER_SIZE = 140; // if there are more points than this
+    for (int i = 0; i<cloud_cluster_vector.size(); i++) {
+        cloud_cluster = cloud_cluster_vector[i]; // extract one cluster
+        // publish it!
+        sensor_msgs::PointCloud2 msg_to_publish; // initiate intermediate message variable
+        pcl::toROSMsg(*cloud_cluster,msg_to_publish);
+        msg_to_publish.header.frame_id = "odom"; // CHANGED THIS TO BASE INSTEAD OF ODOM BECAUSE WE WERE PUBLISHING POINTS IN THE WRONG PLACE
+        pub_centroid_.publish (msg_to_publish); // this is not publishing correctly
+
+
+        if (cloud_cluster->points.size() < MAX_CLUSTER_SIZE) { // if there are enough points in the cloud
+            cout << "\n\n** Returning cloud with "<<cloud_cluster->points.size() <<" points in it"<<endl;
+            VectorXd coord_centroid(3); // because we are in 3d
+            generate_centroid(cloud_cluster, coord_centroid);
+            //            cout << "[inside generate_cluster_array()] coord_centroid is \n"<<coord_centroid<<endl;
+            centroid_coord_array.push_back(coord_centroid); // we want to keep this cluster
+        } else {
+            //else just ignore and keep looping
+            cout << "Ditching a cloud with "<<cloud_cluster->points.size() <<" points in it"<<endl;
+        }
+    }
+}
+void tracker::get_vector_of_clusters(pcl::PointCloud<pcl::PointXYZRGB>::Ptr input_cloud, vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> &cloud_cluster_vector){
     // INPUTS: input_cloud: pointer to the pointcloud produced by the velodyne relative to "base"
     //          centroid_cluster_array: pointer to output cloud which contains the clusters
     // This method takes the pcloud input_cloud, downsizes it with a voxel grid, splits up the grid into
@@ -288,26 +315,9 @@ void tracker::generate_coord_array (pcl::PointCloud<pcl::PointXYZRGB>::Ptr input
         cloud_cluster->is_dense = true;
 
         cout << "PointCloud representing the Cluster: " << cloud_cluster->points.size () << " data points." << endl;
+        cloud_cluster_vector.push_back(cloud_cluster); // move cloud_cluster into the vector
+}
 
-
-        // publish it!
-        sensor_msgs::PointCloud2 msg_to_publish; // initiate intermediate message variable
-        pcl::toROSMsg(*cloud_cluster,msg_to_publish);
-        msg_to_publish.header.frame_id = "odom"; // CHANGED THIS TO BASE INSTEAD OF ODOM BECAUSE WE WERE PUBLISHING POINTS IN THE WRONG PLACE
-        pub_centroid_.publish (msg_to_publish); // this is not publishing correctly
-
-
-        if (cloud_cluster->points.size() < MAX_CLUSTER_SIZE) { // if there are enough points in the cloud
-            cout << "\n\n** Returning cloud with "<<cloud_cluster->points.size() <<" points in it"<<endl;
-            VectorXd coord_centroid(3); // because we are in 3d
-            generate_centroid(cloud_cluster, coord_centroid);
-            //            cout << "[inside generate_cluster_array()] coord_centroid is \n"<<coord_centroid<<endl;
-            centroid_coord_array.push_back(coord_centroid); // we want to keep this cluster
-        } else {
-            //else just ignore and keep looping
-            cout << "Ditching a cloud with "<<cloud_cluster->points.size() <<" points in it"<<endl;
-        }
-    }
 }
 void tracker::generate_centroid(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cluster_ptr, VectorXd &coord_centroid) {
     // loop through the point cloud cluster_ptr, adding points to a centroid
