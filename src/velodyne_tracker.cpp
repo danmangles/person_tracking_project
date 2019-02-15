@@ -370,6 +370,24 @@ void cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_msg)
 
   //coords_publisher.publish(centroid_coord_array); // publish the vector to the coordinate publisher, at topic "centroid_coord_array"
   //publish_coord_vector(centroid_coord_array);
+  ////////////////////// PUBLISH THE CENTROID ON A TRANSFORM /////////////////////////////
+
+       // create a transformBroadcaster
+       static tf::TransformBroadcaster br;
+       tf::Transform transform;
+       transform.setOrigin( tf::Vector3(centroid_coord_array[0][0],centroid_coord_array[0][1],centroid_coord_array[0][2]) );
+       tf::Quaternion q; // initialise the quaternion q for the pose angle
+       tf::TransformListener odom_base_ls;
+       //msg = ...?;
+       q.setEulerZYX(0, 0, 0);
+       transform.setRotation(q);
+       //q.setRPY(0, 0, msg->theta);
+       string velodyne_frame_id = "odom";
+       string target_frame_id = "velodyne_person_est";
+       //br.sendTransform(centre_point, q, ros::Time::now(), target_frame_id, velodyne_frame_id);
+       // not sure if i put the ids the right way round
+       br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), velodyne_frame_id, target_frame_id));
+
 
 }
 
