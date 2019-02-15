@@ -43,7 +43,7 @@ int main(int argc, char* argv[]) {
 
   // Construct the filter
   //kalman_filter kf(dt, A, C, Q, R, P);
-  kalman_filter kf(dt, A, C, Q, R, P);
+  kalman_filter kf(dt, A, C, Q, R, P, true);
   // List of noisy position measurements (y)
   //double  measurements[3]=  {4.3, 5.3, 2.1};
 
