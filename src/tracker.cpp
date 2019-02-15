@@ -62,7 +62,7 @@ void tracker::publish_marker(VectorXd x_hat,double scale_x,double scale_y,double
     marker.pose.orientation.w = 1.0;
 
     //
-    double scaler = 10;
+    double scaler = 1;
     // set the marker size as an input params
     marker.scale.x = scale_x*scaler;
     marker.scale.y = scale_y*scaler;
@@ -74,6 +74,21 @@ void tracker::publish_marker(VectorXd x_hat,double scale_x,double scale_y,double
     marker.color.b = 0.0;
     pub_marker_.publish( marker );
 
+
+}
+void tracker::publish_transform(VectorXd coordinates) {
+    // publishes a transform on broadcaster br_ at the 3D coordinate Vector coordinates
+    tf::Transform transform;
+    transform.setOrigin( tf::Vector3(coordinates[0],coordinates[1],coordinates[2]) );
+    tf::Quaternion q; // initialise the quaternion q for the pose angle
+
+    q.setEulerZYX(0, 0, 0);
+    transform.setRotation(q);
+    string velodyne_frame_id = "odom";
+    string target_frame_id = "person_we_are_tracking";
+    //br.sendTransform(centre_point, q, ros::Time::now(), target_frame_id, velodyne_frame_id);
+    // not sure if i put the ids the right way round
+    br_.sendTransform(tf::StampedTransform(transform, ros::Time::now(), velodyne_frame_id, target_frame_id));
 
 }
 void tracker::callback(const sensor_msgs::PointCloud2ConstPtr &cloud_msg) { // the callback fcn
@@ -112,11 +127,11 @@ void tracker::callback(const sensor_msgs::PointCloud2ConstPtr &cloud_msg) { // t
     ////////////////////// DO A WEIRD VARIABLE CONVERSION THING SO WE END UP WITH A  "boost shared pointer"/////////////////////////////
 
     // Take the previously published output message and convert it to a pointcloud called "prefiltered cloud"
-    pcl::PointCloud<pcl::PointXYZ> prefiltered_cloud;  // pcl version of the point cloud
+    pcl::PointCloud<pcl::PointXYZRGB> prefiltered_cloud;  // pcl version of the point cloud
     pcl::fromROSMsg (transformed_cloud, prefiltered_cloud); // wrong: output_msg of type smPC2 and transformed_cloud of
-    pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud (); //convert from an object to a boost shared pointer
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr input_cloud (); //convert from an object to a boost shared pointer
 
-    typedef pcl::PointCloud<pcl::PointXYZ>  mytype;
+    typedef pcl::PointCloud<pcl::PointXYZRGB>  mytype;
     boost::shared_ptr<mytype> prefiltered_cloud_ptr = boost::make_shared <mytype> (prefiltered_cloud);
 
     ////////////////// GET THE CLUSTER CENTROIDS
@@ -136,13 +151,13 @@ void tracker::callback(const sensor_msgs::PointCloud2ConstPtr &cloud_msg) { // t
 
 
 }
-void tracker::generate_coord_array (pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud, vector<Eigen::VectorXd> &centroid_coord_array) {
+void tracker::generate_coord_array (pcl::PointCloud<pcl::PointXYZRGB>::Ptr input_cloud, vector<Eigen::VectorXd> &centroid_coord_array) {
     // INPUTS: input_cloud: pointer to the pointcloud produced by the velodyne relative to "base"
     //          centroid_cluster_array: pointer to output cloud which contains the clusters
     // This method takes the pcloud input_cloud, downsizes it with a voxel grid, splits up the grid into
     // clusters, and returns the largest cluster as "cloud_cluster", a pointer to a PointCloud
     cout << "generate_cluster_array() called" <<endl;
-    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered (new pcl::PointCloud<pcl::PointXYZ>);
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_filtered (new pcl::PointCloud<pcl::PointXYZRGB>);
     /* COMMENTED OUT THE DOWNSAMPLING BECAUSE OUR POINT CLOUD IS ALREADY SPARSE
 
 
@@ -177,10 +192,10 @@ void tracker::generate_coord_array (pcl::PointCloud<pcl::PointXYZ>::Ptr input_cl
 
     cout << "Initiating Segmentation objects" << endl;
     // Create the segmentation object for the planar model and set all the parameters
-    pcl::SACSegmentation<pcl::PointXYZ> seg;
+    pcl::SACSegmentation<pcl::PointXYZRGB> seg;
     pcl::PointIndices::Ptr inliers (new pcl::PointIndices);
     pcl::ModelCoefficients::Ptr coefficients (new pcl::ModelCoefficients);
-    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_plane (new pcl::PointCloud<pcl::PointXYZ> ());
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_plane (new pcl::PointCloud<pcl::PointXYZRGB> ());
     seg.setOptimizeCoefficients (true);
     seg.setModelType (pcl::SACMODEL_PLANE);
     seg.setMethodType (pcl::SAC_RANSAC);
@@ -203,7 +218,7 @@ void tracker::generate_coord_array (pcl::PointCloud<pcl::PointXYZ>::Ptr input_cl
         }
 
         // Extract the planar inliers from the input cloud
-        pcl::ExtractIndices<pcl::PointXYZ> extract;
+        pcl::ExtractIndices<pcl::PointXYZRGB> extract;
         extract.setInputCloud (cloud_filtered);
         extract.setIndices (inliers);
         extract.setNegative (false);
@@ -220,12 +235,12 @@ void tracker::generate_coord_array (pcl::PointCloud<pcl::PointXYZ>::Ptr input_cl
 
     // Create the KdTree object for the search method of the extraction
     //cout << "Creating Kdtree objects" << endl;
-    pcl::search::KdTree<pcl::PointXYZ>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZ>);
+    pcl::search::KdTree<pcl::PointXYZRGB>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZRGB>);
     tree->setInputCloud (cloud_filtered);
 
     //cout << "setting up cluster objects" << endl;
     vector<pcl::PointIndices> cluster_indices;
-    pcl::EuclideanClusterExtraction<pcl::PointXYZ> ec;
+    pcl::EuclideanClusterExtraction<pcl::PointXYZRGB> ec;
     ec.setClusterTolerance (0.3); // 2cm: too small, we split one object into many, too big, we merge objects into one.
     ec.setMinClusterSize (50);
     ec.setMaxClusterSize (10000);
@@ -242,13 +257,30 @@ void tracker::generate_coord_array (pcl::PointCloud<pcl::PointXYZ>::Ptr input_cl
 
     vector<pcl::PointIndices>::const_iterator it;
     ///////////////////////////////////////////////USE XYZ RGB
-    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_cluster (new pcl::PointCloud<pcl::PointXYZ>); // make a local cloud in which to store the outputs
+//    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_cluster (new pcl::PointCloud<pcl::PointXYZ>); // make a local cloud in which to store the outputs
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_cluster (new pcl::PointCloud<pcl::PointXYZRGB>); // make a local cloud in which to store the outputs
+
+    int colour_counter = 0;
+    double new_r,new_g,new_b;
 
     for (it = cluster_indices.begin (); it != cluster_indices.end (); ++it) // loop through the clusters
     {
         //centroid_cluster_array[it]
         for (vector<int>::const_iterator pit = it->indices.begin (); pit != it->indices.end (); ++pit) {
             cloud_cluster->points.push_back (cloud_filtered->points[*pit]); //*
+
+        }
+        new_r = (colour_counter*40)%255;
+        new_g = (255 - colour_counter*60)%255;
+        new_b = (colour_counter*100)%255;
+
+        cout << "Colouring this pointcloud as ("<<new_r<<","<<new_g<<","<<new_b<<")"<<endl;
+        colour_counter += 1; // increment the colour counter
+
+        for (size_t i = 0; i < cloud_cluster->points.size (); i++){
+            cloud_cluster->points[i].r = new_r;
+            cloud_cluster->points[i].g = new_g;
+            cloud_cluster->points[i].b = new_b;
         }
 
         cloud_cluster->width = cloud_cluster->points.size ();
@@ -256,6 +288,11 @@ void tracker::generate_coord_array (pcl::PointCloud<pcl::PointXYZ>::Ptr input_cl
         cloud_cluster->is_dense = true;
 
         cout << "PointCloud representing the Cluster: " << cloud_cluster->points.size () << " data points." << endl;
+
+        // set the colour of cloud_cluster to something unique
+        //start by setting all the cloud clusters to red
+//        cloud_cluster->points
+
 
         // publish it!
         sensor_msgs::PointCloud2 msg_to_publish; // initiate intermediate message variable
@@ -277,18 +314,18 @@ void tracker::generate_coord_array (pcl::PointCloud<pcl::PointXYZ>::Ptr input_cl
         }
     }
 }
-void tracker::generate_centroid(pcl::PointCloud<pcl::PointXYZ>::Ptr cluster_ptr, VectorXd &coord_centroid) {
+void tracker::generate_centroid(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cluster_ptr, VectorXd &coord_centroid) {
     // loop through the point cloud cluster_ptr, adding points to a centroid
 
     cout << "generate_centroid() called" <<endl;
 
-    pcl::CentroidPoint<pcl::PointXYZ> centroid; // Initialise a point to store the centroid inoutput_topic
+    pcl::CentroidPoint<pcl::PointXYZRGB> centroid; // Initialise a point to store the centroid inoutput_topic
     cout<< "adding points to centroid"<<endl;
     for (size_t i = 0; i < cluster_ptr -> points.size (); ++i) {// add all the points to the centroid
         centroid.add (cluster_ptr -> points[i]);
     }
 
-    pcl::PointXYZ c; // the centre point
+    pcl::PointXYZRGB c; // the centre point
     centroid.get (c);// Fetch centroid using `get()`
         cout << "\n Centroid is located at "
                   << c
@@ -392,6 +429,6 @@ void tracker::process_centroids(vector<VectorXd> centroid_coord_array) {
         MatrixXd P;
         P = kf_.get_P(); //get covariance
         publish_marker(get_state(), P(0,0),P(1,1),P(2,2)); // publish the marker
-
+        publish_transform(new_measurement);
     }
 }

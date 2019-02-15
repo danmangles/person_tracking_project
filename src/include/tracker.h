@@ -75,13 +75,16 @@ public:
 private:
     void callback(const sensor_msgs::PointCloud2ConstPtr &cloud_msg); // this method is called whenever the tracker sees a new pointcloud
     void apply_passthrough_filter(const sensor_msgs::PointCloud2ConstPtr input_cloud, sensor_msgs::PointCloud2 &output_cloud); // filters points outside of a defined cube
-    void generate_coord_array (pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud, vector<Eigen::VectorXd> &centroid_coord_array);
-    void generate_centroid(pcl::PointCloud<pcl::PointXYZ>::Ptr cluster_ptr, VectorXd &coord_centroid); //returns a vector of centroid coordinates
+    void generate_coord_array (pcl::PointCloud<pcl::PointXYZRGB>::Ptr input_cloud, vector<Eigen::VectorXd> &centroid_coord_array);
+    void generate_centroid(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cluster_ptr, VectorXd &coord_centroid); //returns a vector of centroid coordinates
     void process_centroids(vector<VectorXd> centroid_coord_array);
     void publish_marker(VectorXd x_hat,double scale_x,double scale_y,double scale_z);
+    void publish_transform(VectorXd coordinates); // publishes a transform at the 3D coordinate Vector coordinates
     VectorXd get_state(); // returns the current position estimate
     kalman_filter kf_; // our private copy of a kalman filter
     ros::Subscriber point_cloud_sub_; // private copy of subscriber
+    // to publish our instantaneous, unfiltered estimates on
+    tf::TransformBroadcaster br_;
     // a billion publishers
     ros::NodeHandle nh_;// setup 5 publishers to display point clouds at each stage
     ros::Publisher pub_raw_; // setup the publisher for the output point cloud
