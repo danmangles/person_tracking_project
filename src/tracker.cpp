@@ -241,6 +241,7 @@ void tracker::generate_coord_array (pcl::PointCloud<pcl::PointXYZ>::Ptr input_cl
     int MAX_CLUSTER_SIZE = 200; // ditch all clusters with more points than this
 
     vector<pcl::PointIndices>::const_iterator it;
+    ///////////////////////////////////////////////USE XYZ RGB
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_cluster (new pcl::PointCloud<pcl::PointXYZ>); // make a local cloud in which to store the outputs
 
     for (it = cluster_indices.begin (); it != cluster_indices.end (); ++it) // loop through the clusters
