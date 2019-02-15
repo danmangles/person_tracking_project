@@ -138,7 +138,7 @@ int main (int argc, char** argv)
 
 	cout<<"\noutput_estimate = ("<<output_estimate[0] <<","<<output_estimate[1] <<","<<output_estimate[2] <<")"<< endl;
     
-    //Now publish the output
+    //////////////////////////////////////////////Now publish the FIRST COORDINATE OF THE OUTPUT ON A TRANSFORM
   	tf::Transform output_tf;
   	output_tf.setOrigin( tf::Vector3(output_estimate[0],output_estimate[1],output_estimate[2]) );
 
@@ -147,7 +147,7 @@ int main (int argc, char** argv)
   	output_tf.setRotation(q);
     //
 
-    br.sendTransform(tf::StampedTransform(output_tf, ros::Time(0), base_frame, output_frame));
+    br.sendTransform(tf::StampedTransform(output_tf, ros::Time::now(), base_frame, output_frame));
   
     rate.sleep();
   }
