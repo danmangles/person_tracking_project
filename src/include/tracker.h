@@ -68,7 +68,8 @@ public:
             const Eigen::MatrixXd& C,
             const Eigen::MatrixXd& Q,
             const Eigen::MatrixXd& R,
-            const Eigen::MatrixXd& P); // initiate a constructor with a nodehandle and parameters for the kalman filter
+            const Eigen::MatrixXd& P,
+            bool verbose); // initiate a constructor with a nodehandle and parameters for the kalman filter
 
         void init_kf(VectorXd x0); // initiate the kalman filter with params x0
         void update_kf(VectorXd y); // update the kalman filter with a new estimate y
@@ -79,7 +80,7 @@ private:
     void generate_centroid(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cluster_ptr, VectorXd &coord_centroid); //returns a vector of centroid coordinates
     void process_centroids(vector<VectorXd> centroid_coord_array);
     void publish_marker(VectorXd x_hat,double scale_x,double scale_y,double scale_z);
-    void publish_transform(VectorXd coordinates); // publishes a transform at the 3D coordinate Vector coordinates
+    void publish_transform(VectorXd coordinates, string target_frame_id); // publishes a transform at the 3D coordinate Vector coordinates
     VectorXd get_state(); // returns the current position estimate
     kalman_filter kf_; // our private copy of a kalman filter
     ros::Subscriber point_cloud_sub_; // private copy of subscriber
@@ -95,5 +96,6 @@ private:
     ros::Publisher pub_marker_; // to publish the markers on
     // HACK: setup the public transform listener so we can listen to the odom_base_tf
     boost::shared_ptr<tf::TransformListener> odom_base_ls_;
+    bool verbose_;
 };
 #endif // tracker_H

@@ -19,11 +19,12 @@ kalman_filter::kalman_filter(
 	const Eigen::MatrixXd& C,
 	const Eigen::MatrixXd& Q,
 	const Eigen::MatrixXd& R,
-	const Eigen::MatrixXd& P)
+    const Eigen::MatrixXd& P,
+    bool verbose)
 
   : A(A), C(C), Q(Q), R(R), P0(P), //populate A,C,Q,R,P0 with values given in constructor
     m(C.rows()), nd(A.rows()), dt(dt), initialized(false), //populate m with number of rows in C, n with number of rows in A
-    I(nd, nd), x_hat(nd), x_hat_new(nd)
+    I(nd, nd), x_hat(nd), x_hat_new(nd), verbose_(verbose)
 	{
         cout << "Kalman_filter_constructor called" << endl;
 		I.setIdentity();
@@ -67,30 +68,30 @@ void kalman_filter::update(const VectorXd& y) {
         cout << "*************\ny = "<<y<<endl;
     x_hat_new = A*x_hat; // PREDICT
 
-        cout << "*PREDICT*\nx_hat_new = "<<x_hat_new<<endl;
 
     P = A*P*A.transpose() + Q; //PREDICT
 
-        cout << "P = "<<P<<endl;
-
-
+    if (verbose_) {
+        cout << "*PREDICT*\nx_hat_new = "<<x_hat_new<<endl;
+        cout << "P = \n"<<P<<endl;}
 
 
     K = P*C.transpose()*(C*P*C.transpose() + R).inverse(); //UPDATE
 
-        cout << "*UPDATE*\nK = "<<K<<endl;
 
 	x_hat_new += K * (y - C*x_hat_new); // predict
 
-        cout << "UPDATED x_hat_new = "<<x_hat_new<<endl;
 
     P = (I - K*C)*P; // UPDATE
-
-        cout << "UPDATED P = "<<P<<endl;
+        if (verbose_) {
+            cout << "*UPDATE*\nK = \n"<<K<<endl;
+            cout << "UPDATED x_hat_new = "<<x_hat_new<<endl;
+            cout << "UPDATED P = "<<P<<endl;}
 
     x_hat = x_hat_new; // UPDATE
 
 	t += dt;
+
 }
 
 void kalman_filter::update(const VectorXd& y, double dt, const MatrixXd A) {

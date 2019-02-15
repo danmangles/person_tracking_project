@@ -26,7 +26,8 @@ public:
 			const MatrixXd& C,
 			const MatrixXd& Q,
 			const MatrixXd& R,
-			const MatrixXd& P
+            const MatrixXd& P,
+            bool verbose
 	);
 	/**
 	  * Create a blank estimator.
@@ -81,4 +82,6 @@ private:
 
           // Estimated states
       VectorXd x_hat, x_hat_new;
+
+      bool verbose_;
 };

@@ -45,8 +45,8 @@ int main (int argc, char** argv) // runs the tracker node
     A = I3; //I3
     C = I3;
 
-    Q << 1, 0, 0, 0, 1, 0, 0, 0, .5; // MAKE THIS A FUNCTION OF TIMESTEP^2
-    R << 5, 0, 0, 0, 5, 0, 0, 0, 1; //I3 * .05 // MAKE THIS A FUNCTION OF TIMESTEP^2
+    Q << 3, 0, 0, 0, 3, 0, 0, 0, .5; // MAKE THIS A FUNCTION OF TIMESTEP^2
+    R << 30, 0, 0, 0, 30, 0, 0, 0, 1; //I3 * .05 // MAKE THIS A FUNCTION OF TIMESTEP^2
     P << 2, 0, 0, 0, 2, 0, 0, 0, 2; //I3
     ////////////////////////////////////////////////
 
@@ -55,7 +55,7 @@ int main (int argc, char** argv) // runs the tracker node
 //    ros::Rate r(10); // 10 hz
 
     ros::NodeHandle nh;
-    tracker our_tracker(nh,dt,A,C,Q,R,P); // construct a tracker called our_tracker
+    tracker our_tracker(nh,dt,A,C,Q,R,P, false); // construct a tracker called our_tracker
     ros::spin ();// spin ros
 
     return 0;

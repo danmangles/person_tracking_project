@@ -108,7 +108,7 @@ int main (int argc, char** argv)
     cout << "P: \n" << P << endl;
 
     // create the filter x
-    kalman_filter kf(dt, A, C, Q, R, P);
+    kalman_filter kf(dt, A, C, Q, R, P, true);
     VectorXd x0(n);
     VectorXd x_hat(3);
     x0 << 0, 0, 0;
