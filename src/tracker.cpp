@@ -1,31 +1,58 @@
 #include "include/tracker.h"
-
-#include <cmath>
 using namespace std;
 //using namespace Eigen;
 
 tracker::tracker(ros::NodeHandle nh,
-                 double dt,
-                 const Eigen::MatrixXd& A,
-                 const Eigen::MatrixXd& C,
-                 const Eigen::MatrixXd& Q,
-                 const Eigen::MatrixXd& R,
-                 const Eigen::MatrixXd& P,
+                 int max_cluster_size,
+                 int min_cluster_size,
+                 double cluster_tolerance,
+                 double seg_dist_threshold,
                  bool verbose
                  ) :
-    nh_(nh), verbose_(verbose), kf_(dt, A, C, Q, R, P, false) // initiate the nodehandle and kalman_filter
-{
-    cout<< "tracker constructor called "<<endl;    // initiate the subscriber which calls the callback
+    nh_(nh), max_cluster_size_(max_cluster_size), min_cluster_size_(min_cluster_size),cluster_tolerance_(cluster_tolerance), seg_dist_threshold_(seg_dist_threshold), verbose_(verbose) // initiate the nodehandle
+{   // Constructor: sets up
+    cout<< "tracker constructor called "<<endl;
+    initialise_subscribers_publishers(); //initialise the subscribers and publishers
+}
+
+void tracker::setup_kalman_filter(VectorXd x0,double dt,const Eigen::MatrixXd& A, const Eigen::MatrixXd& C, const Eigen::MatrixXd& Q, const Eigen::MatrixXd& R, const Eigen::MatrixXd& P) { // initialises the kalman filter with initial vector x0
+    cout<< "initiating kalman_filter"<<endl;
+    // call the kalman filter constructor
+    kf_ = kalman_filter(dt, A, C, Q, R, P, verbose_);
+    kf_.init(0, x0); // initialise the kalman filter
+    cout<<"kalman filter initiated"<<endl;
+    return;
+}
+
+void tracker::update_kf(VectorXd y) { //update our state estimate with measurement y
+    cout<<"update_kf()"<<endl;
+    kf_.update(y); // call the update method of our (private) kalman filter
+
+    // now publish the latest output of kf
+}
+
+VectorXd tracker::get_state() { // talks to our kalman filter
+    return kf_.get_state();
+
+}
+
+void tracker::convert_sm2_to_pcl_ptr(sensor_msgs::PointCloud2 input_cloud, pcl::PointCloud<pcl::PointXYZRGB>::Ptr &output_ptr){
+    // converts a sensor_msgs::PointCloud2 to pcl::PointCloud<pcl::PointXYZRGB>::Ptr
+    if (verbose_)
+        cout << "converting sensor_msgs::pointcloud2 into a pointer"<<endl;
+    pcl::PointCloud<pcl::PointXYZRGB> input_cloud_pcl;  // pcl version of the point cloud
+    pcl::fromROSMsg (input_cloud, input_cloud_pcl); // convert from sm to pcl version
+    // change to a boost shared pointer so we can use pcl::VoxelGrid
+    typedef pcl::PointCloud<pcl::PointXYZRGB>  mytype;
+    output_ptr = boost::make_shared <mytype> (input_cloud_pcl);
+    return;
+}
+
+void tracker::initialise_subscribers_publishers() {
     string input_topic = "/velodyne/point_cloud_filtered"; // topic is the pointcloud from the velodyne
-    point_cloud_sub_ = nh_.subscribe(input_topic, 1, &tracker::callback, this); // Create a ROS subscriber for the input point cloud
+    point_cloud_sub_ = nh_.subscribe(input_topic, 1, &tracker::callback, this); // Create a ROS subscriber for the input point cloud that calls the callback
 
-    //*****************************************8
-    // initialise the kalman filter NEED TO MAKE THIS INITIALISE FROM THE REALSENSE
-    VectorXd x0(3);
-    x0 << 0,0,0;
-    init_kf(x0);
-
-    // Create a ROS publisher for the output point cloud
+    // Create ROS publishers for the output point clouds
     string topic_raw = "pcl_raw", topic_trans = "pcl_trans", topic_zfilt = "pcl_zfilt", topic_ds = "pcl_ds", topic_centroid = "pcl_centroid";
 
     pub_raw_ = nh_.advertise<sensor_msgs::PointCloud2> (topic_raw, 1);
@@ -33,11 +60,13 @@ tracker::tracker(ros::NodeHandle nh,
     pub_zfilt_ = nh_.advertise<sensor_msgs::PointCloud2> (topic_zfilt, 1);
     pub_ds_ = nh_.advertise<sensor_msgs::PointCloud2> (topic_ds, 1);
     pub_centroid_ = nh_.advertise<sensor_msgs::PointCloud2> (topic_centroid, 1);
-    pub_marker_ = nh.advertise<visualization_msgs::Marker>( "tracker_marker", 0 ); // this name shows up in RVIZ
-
+    // Create a publisher for the kf marker
+    pub_marker_ = nh_.advertise<visualization_msgs::Marker>( "tracker_marker", 0 ); // this name shows up in RVIZ
+    // Create a transformListener to enable translation from odom to base frames with our pointcloud.
     odom_base_ls_.reset(new tf::TransformListener); // initialise the odom_base transform listener- so we can transform our output into odom coords
-
+    return;
 }
+
 void tracker::publish_marker(VectorXd x_hat,double scale_x,double scale_y,double scale_z) {
     ///
     /// This publishes a box of scales set by vector onto publisher vis_pub at location x_hat
@@ -78,6 +107,7 @@ void tracker::publish_marker(VectorXd x_hat,double scale_x,double scale_y,double
 
 
 }
+
 void tracker::publish_transform(VectorXd coordinates, string target_frame_id) {
     // publishes a transform on broadcaster br_ at the 3D coordinate Vector coordinates
     tf::Transform transform;
@@ -91,71 +121,147 @@ void tracker::publish_transform(VectorXd coordinates, string target_frame_id) {
     // not sure if i put the ids the right way round
     br_.sendTransform(tf::StampedTransform(transform, ros::Time::now(), velodyne_frame_id, target_frame_id));
 }
-void tracker::callback(const sensor_msgs::PointCloud2ConstPtr &cloud_msg) { // the callback fcn
 
-    cout<< "************************************\nInitiating Callback\n***********************************"<<endl;
+void tracker::remove_out_of_plane_points(pcl::PointCloud<pcl::PointXYZRGB>::Ptr &cloud_ptr) {
+    //////// Create a planar segmentation model <- NOT SURE WHAT THIS DOES EXACTLY, SEE http://pointclouds.org/documentation/tutorials/planar_segmentation.php#id1
+    if(verbose_)
+        cout << "Initiating Segmentation objects" << endl;
+    // Create the segmentation object for the planar model and set all the parameters
+    pcl::SACSegmentation<pcl::PointXYZRGB> seg;
+    pcl::PointIndices::Ptr inliers (new pcl::PointIndices);
+    pcl::ModelCoefficients::Ptr coefficients (new pcl::ModelCoefficients);
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_plane (new pcl::PointCloud<pcl::PointXYZRGB> ()); // create a new pointcloud pointer to hold the planar cloud
+    seg.setOptimizeCoefficients (true);
+    seg.setModelType (pcl::SACMODEL_PLANE);
+    seg.setMethodType (pcl::SAC_RANSAC); // using RANSAC to determine inliers
+    seg.setMaxIterations (100);
+    seg.setDistanceThreshold (seg_dist_threshold_); // how close a point must be to the model in order to be considered an inlier: 3cm in this case
 
-    // Publish the cloud
-    pub_raw_.publish (*cloud_msg); // publish the raw cloud
+    // Loop through the cloud, performing the segmentation operation
+    int i=0, nr_points = (int) cloud_ptr->points.size ();
+    double downsample_factor = 0.3;// downsampling to a factor of 0.3
+    if(verbose_)
+        cout << "Segmenting planar components" << endl;
+    while (cloud_ptr->points.size () > downsample_factor * nr_points) // note
+    {
+        // Segment the largest planar component from the remaining cloud
+        seg.setInputCloud (cloud_ptr);
+        seg.segment (*inliers, *coefficients);
+        if (inliers->indices.size () == 0) { // check that there are inliers
+            cout << "Could not estimate a planar model for the given dataset." << endl;
+            break;}
 
-    // apply a passthrough filter
-    sensor_msgs::PointCloud2 bounded_cloud;
-    apply_passthrough_filter(cloud_msg, bounded_cloud); // remove all points outside of a predefined bod
-
-    pub_zfilt_.publish (bounded_cloud); // Publish the output
-
-    //////////////////////* TRANSFORM THE INPUT CLOUD INTO THE ODOM FRAME  /////////////////////////////
-    string target_frame = "odom", base_frame = "base"; // target frame for transform
-    sensor_msgs::PointCloud2 transformed_cloud;
-    if (verbose_)
-        cout<<"waiting for transform"<<endl;
-    odom_base_ls_->waitForTransform(target_frame, base_frame, ros::Time::now(), ros::Duration(10.0) );
-    cout<<"transforming pcloud using time "<< ros::Time::now()<<endl;
-    pcl_ros::transformPointCloud(target_frame, bounded_cloud, transformed_cloud, *odom_base_ls_); // perform the transformation
-
-    //    transform_cloud(bounded_cloud, transformed_cloud, target_frame, transformed_cloud); // transform
-
-    /////////////////////////////////////
-    // Publish the cloud
-    pub_trans_.publish (transformed_cloud); // this is publishing correctly//////////////////////////////////
-    //   if cloud has less than 10 points, jump out of the callback
-    if (transformed_cloud.width < 10) { // the velodyne reading is invalid- probably an issue with the transform
-        cout << "*** THERE'S SOMETHING WRONG WITH THIS CLOUD. waiting for the next one. ****" << endl;
-        cout << "Width: "<< transformed_cloud.width <<endl;
-        return; // drop out of this callback and come back with the next transform
+        // Extract the planar inliers from the input cloud
+        pcl::ExtractIndices<pcl::PointXYZRGB> extract;
+        extract.setInputCloud (cloud_ptr);
+        extract.setIndices (inliers);
+        extract.setNegative (false);
+        extract.filter (*cloud_plane); // Get the points associated with the planar surface, reject the rest
+        if (verbose_)
+            cout << "PointCloud representing the planar component: " << cloud_plane->points.size () << " data points." << endl;
+        // remove the outlying points from cloud_ptr
+        extract.setNegative(true);
+        extract.filter(*cloud_ptr);
+        if (verbose_)
+            cout << "cloud_ptr has "<<cloud_ptr->points.size ()<<" points left" << endl;
     }
-    cout << "*** LOOKS OK TO ME***"<< endl;
-
-    ////////////////////// DO A WEIRD VARIABLE CONVERSION THING SO WE END UP WITH A  "boost shared pointer"/////////////////////////////
-
-    // Take the previously published output message and convert it to a pointcloud called "prefiltered cloud"
-    pcl::PointCloud<pcl::PointXYZRGB> prefiltered_cloud;  // pcl version of the point cloud
-    pcl::fromROSMsg (transformed_cloud, prefiltered_cloud); // wrong: output_msg of type smPC2 and transformed_cloud of
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr input_cloud (); //convert from an object to a boost shared pointer
-
-    typedef pcl::PointCloud<pcl::PointXYZRGB>  mytype;
-    boost::shared_ptr<mytype> prefiltered_cloud_ptr = boost::make_shared <mytype> (prefiltered_cloud);
-
-    ////////////////// GET THE CLUSTER CENTROIDS
-    vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> cloud_cluster_vector;
-    get_vector_of_clusters(prefiltered_cloud_ptr, cloud_cluster_vector);
-    vector <VectorXd> centroid_coord_array;
-    get_centroids_of_clusters(cloud_cluster_vector, centroid_coord_array); // generate a vector of coordinates
-    cout << "There are "<<centroid_coord_array.size()<<" valid clusters in the pcl"<<endl;
-    /////////////////////////////// print out the coordinates
-    if (centroid_coord_array.size() > 1){cout<<"*************************************************************************************************************************"<<endl;}
-    //    cout <<"centroid_coord_array is :\n[";
-    //    for (int i = 0; i<centroid_coord_array.size(); i++) { cout <<centroid_coord_array[i]<< "] "<<endl;} // print out the array
-
-    //    // nb the old version used to publish centroids here
-
-    /////////////////// PUBLISH THE CLUSTER CENTROIDS
-    process_centroids(centroid_coord_array); // call the process centroids method with our vector of centroids
-
-
-
+    if (verbose_)
+        cout <<"RANSAC filtering complete, returning cloud_ptr with "<<cloud_ptr->points.size ()<<" points"<<endl;
+    return;
 }
-//void tracker::transform_pointcloud_to_odom()
+
+void tracker::apply_voxel_grid(pcl::PointCloud<pcl::PointXYZRGB>::Ptr &cloud_ptr){
+    // applies a
+    pcl::VoxelGrid<pcl::PointXYZRGB> vg; // Create the filtering object:
+    vg.setInputCloud (cloud_ptr); // set vg input to input cloud
+    vg.setLeafSize (0.01f, 0.01f, 0.01f); // downsample the dataset using a leaf size of 1cm
+    vg.filter (*cloud_ptr);
+    if (verbose_)
+        cout << "PointCloud after filtering has: " << cloud_ptr->points.size ()  << " data points." << endl;
+    return;
+}
+
+void tracker::apply_base_odom_transformation(sensor_msgs::PointCloud2 input_cloud, sensor_msgs::PointCloud2 &output_cloud) {
+    // transforms the cloud into the odom frame from base frame
+    if (verbose_)
+        cout<<"Transforming Pointcloud into odom frame. Waiting for transform"<<endl;
+    string target_frame = "odom", base_frame = "base"; // target frame and base frame for transformfor transform
+    odom_base_ls_->waitForTransform(target_frame, base_frame, ros::Time::now(), ros::Duration(1.0) ); // wait until a tf is available before transforming
+
+    if (verbose_)
+        cout<<"transforming pcloud using time "<< ros::Time::now()<<endl;
+    pcl_ros::transformPointCloud(target_frame, input_cloud, output_cloud, *odom_base_ls_); // perform the transformation
+
+    cout << "1"<<endl;
+    return;
+}
+
+void tracker::assign_random_colour(pcl::PointCloud<pcl::PointXYZRGB>::Ptr &input_cloud) {
+    // assigns a random colour to pointcloud ptr input_cloud, colour is set by colour_counter
+    // Create a random colour
+    int colour_counter = rand() % 100; // generate a random number between 0 and 99
+    double new_r,new_g,new_b;
+    new_r = (colour_counter*40)%255;
+    new_g = (255 - colour_counter*60)%255;
+    new_b = (colour_counter*100)%255;
+
+    if (verbose_)
+        cout << "Colouring this pointcloud as ("<<new_r<<","<<new_g<<","<<new_b<<")"<<endl;
+    for (size_t i = 0; i < input_cloud->points.size (); i++){ // colour the points according to this random colour
+        input_cloud->points[i].r = new_r;
+        input_cloud->points[i].g = new_g;
+        input_cloud->points[i].b = new_b;
+    }
+    return;
+}
+
+void tracker::split_cloud_ptr_into_clusters(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_ptr, vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> &cloud_cluster_vector) {
+    if (verbose_)
+        cout << "splitting cloud_ptr with "<< cloud_ptr->points.size ()<<" points into clusters" <<endl;
+    //////// Get a vector of index objects, 1 for each cluster
+    vector<pcl::PointIndices> cluster_indices = get_cluster_indices(cloud_ptr);
+
+    //////// For each item in the index vector, extract the corresponding points into a pointcloud vector
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_cluster (new pcl::PointCloud<pcl::PointXYZRGB>); // make a local cloud_ptr in which to store the outputs
+    vector<pcl::PointIndices>::const_iterator it;
+    for (it = cluster_indices.begin (); it != cluster_indices.end (); ++it) // loop through the clusters
+    {
+        for (vector<int>::const_iterator pit = it->indices.begin (); pit != it->indices.end (); ++pit) { // for this group of indices, move all the points from cloud_ptr into cloud_cluster
+            cloud_cluster->points.push_back (cloud_ptr->points[*pit]); //*
+        }
+        assign_random_colour(cloud_cluster); // give cloud_cluster a random colour
+        cloud_cluster->width = cloud_cluster->points.size ();
+        cloud_cluster->height = 1;
+        cloud_cluster->is_dense = true;
+        cloud_cluster_vector.push_back(cloud_cluster); // move cloud_cluster into the output vector
+        if (verbose_)
+            cout << "PointCloud representing the Cluster: " << cloud_cluster->points.size () << " data points." << endl;
+    }
+    return;
+}
+
+vector<pcl::PointIndices> tracker::get_cluster_indices(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_ptr) {
+    // Create the KdTree object for the search method of the extraction
+    if (verbose_)
+        cout << "getting indices of each cluster from cloud_ptr with "<< cloud_ptr->points.size ()<<" points" << endl;
+
+    pcl::search::KdTree<pcl::PointXYZRGB>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZRGB>);
+    tree->setInputCloud (cloud_ptr);
+
+    //cout << "setting up cluster objects" << endl;
+    vector<pcl::PointIndices> cluster_indices;
+    pcl::EuclideanClusterExtraction<pcl::PointXYZRGB> ec;
+    ec.setClusterTolerance (cluster_tolerance_);
+    ec.setMinClusterSize (min_cluster_size_);
+    ec.setMaxClusterSize (max_cluster_size_);
+    ec.setSearchMethod (tree);
+    ec.setInputCloud (cloud_ptr);
+    ec.extract (cluster_indices);
+    if (verbose_)
+        cout <<"cloud_ptr has been split into clusters, returning cluster_indices with "<< cluster_indices.size() << " elements" <<endl;
+    return cluster_indices;
+}
+
 void tracker::get_centroids_of_clusters (vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> cloud_cluster_vector, vector<Eigen::VectorXd> &centroid_coord_array) {
     // loops through cloud_cluster vector and gets the centroid
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_cluster;
@@ -172,7 +278,7 @@ void tracker::get_centroids_of_clusters (vector<pcl::PointCloud<pcl::PointXYZRGB
         if (cloud_cluster->points.size() < MAX_CLUSTER_SIZE) { // if there are enough points in the cloud
             cout << "\n\n** Returning cloud with "<<cloud_cluster->points.size() <<" points in it"<<endl;
             VectorXd coord_centroid(3); // because we are in 3d
-            generate_centroid(cloud_cluster, coord_centroid);
+            get_cluster_centroid(cloud_cluster, coord_centroid);
             //            cout << "[inside generate_cluster_array()] coord_centroid is \n"<<coord_centroid<<endl;
             centroid_coord_array.push_back(coord_centroid); // we want to keep this cluster
         } else {
@@ -180,146 +286,14 @@ void tracker::get_centroids_of_clusters (vector<pcl::PointCloud<pcl::PointXYZRGB
             cout << "Ditching a cloud with "<<cloud_cluster->points.size() <<" points in it"<<endl;
         }
     }
-}
-void tracker::get_vector_of_clusters(pcl::PointCloud<pcl::PointXYZRGB>::Ptr input_cloud, vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> &cloud_cluster_vector){
-    // INPUTS: input_cloud: pointer to the pointcloud produced by the velodyne relative to "base"
-    //          centroid_cluster_array: pointer to output cloud which contains the clusters
-    // This method takes the pcloud input_cloud, downsizes it with a voxel grid, splits up the grid into
-    // clusters, and returns the largest cluster as "cloud_cluster", a pointer to a PointCloud
-    if(verbose_)
-        cout << "generate_cluster_array() called" <<endl;
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_filtered (new pcl::PointCloud<pcl::PointXYZRGB>);
-    // COMMENTED OUT THE DOWNSAMPLING BECAUSE OUR POINT CLOUD IS ALREADY SPARSE
 
-
-
-    ///////////////// DOWNSAMPLE THE INPUT WITH A VOXEL GRID /////////////////
-
-    // Create the filtering object: downsample the dataset using a leaf size of 1cm
-    pcl::VoxelGrid<pcl::PointXYZRGB> vg;
-    // make new point cloud pointer to contain the filtered point cloud
-    //  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered (new pcl::PointCloud<pcl::PointXYZ>);
-    // set vg input to input cloud
-    vg.setInputCloud (input_cloud);
-
-    vg.setLeafSize (0.01f, 0.01f, 0.01f);
-    // vg.setLeafSize (0.1f, 0.1f, 0.1f);
-    vg.filter (*cloud_filtered);
-    cout << "PointCloud after filtering has: " << cloud_filtered->points.size ()  << " data points." << endl; //*
-
-
-
-    //    cloud_filtered = input_cloud;
-
-    // CONVERT FROM PCL:PC1 TO SM:PC2
-    sensor_msgs::PointCloud2 msg_to_publish; // initiate intermediate message variable
-    pcl::toROSMsg(*cloud_filtered,msg_to_publish ); // con
-    pub_ds_.publish (msg_to_publish);
-
-
-        /////////////////* DECOMPOSE cloud_filtered INTO CLUSTERS */////////////////
-        if(verbose_)
-            cout << "Initiating Segmentation objects" << endl;
-        // Create the segmentation object for the planar model and set all the parameters
-        pcl::SACSegmentation<pcl::PointXYZRGB> seg;
-        pcl::PointIndices::Ptr inliers (new pcl::PointIndices);
-        pcl::ModelCoefficients::Ptr coefficients (new pcl::ModelCoefficients);
-        pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_plane (new pcl::PointCloud<pcl::PointXYZRGB> ());
-        seg.setOptimizeCoefficients (true);
-        seg.setModelType (pcl::SACMODEL_PLANE);
-        seg.setMethodType (pcl::SAC_RANSAC);
-        seg.setMaxIterations (100);
-
-
-        seg.setDistanceThreshold (0.03); //
-        // Loop through the cloud, performing the clustering operation
-        int i=0, nr_points = (int) cloud_filtered->points.size (); // downsampling to a factor of 0.3
-        double downsample_factor = 0.3;// downsampling to a factor of 0.3
-        if(verbose_)
-            cout << "Segmenting planar components" << endl;
-        while (cloud_filtered->points.size () >downsample_factor* nr_points) // note
-        {
-            // Segment the largest planar component from the remaining cloud
-            seg.setInputCloud (cloud_filtered);
-            seg.segment (*inliers, *coefficients);
-            if (inliers->indices.size () == 0)
-            {
-                cout << "Could not estimate a planar model for the given dataset." << endl;
-                break;
-            }
-
-            // Extract the planar inliers from the input cloud
-            pcl::ExtractIndices<pcl::PointXYZRGB> extract;
-            extract.setInputCloud (cloud_filtered);
-            extract.setIndices (inliers);
-            extract.setNegative (false);
-
-            // Get the points associated with the planar surface
-            extract.filter (*cloud_plane);
-            //cout << "PointCloud representing the planar component: " << cloud_plane->points.size () << " data points." << endl;
-
-            //define cloud_f for extracting into
-            // Remove the planar inliers, extract the rest
-            extract.setNegative (true);
-            extract.filter (*cloud_filtered); //extract into cloud_filtered
-        }
-
-    // Create the KdTree object for the search method of the extraction
-    //cout << "Creating Kdtree objects" << endl;
-    pcl::search::KdTree<pcl::PointXYZRGB>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZRGB>);
-    tree->setInputCloud (cloud_filtered);
-
-    //cout << "setting up cluster objects" << endl;
-    vector<pcl::PointIndices> cluster_indices;
-    pcl::EuclideanClusterExtraction<pcl::PointXYZRGB> ec;
-
-    ec.setClusterTolerance (0.3); // 2cm: too small, we split one object into many, too big, we merge objects into one.
-    ec.setMinClusterSize (50);
-    ec.setMaxClusterSize (150);
-    ec.setSearchMethod (tree);
-    ec.setInputCloud (cloud_filtered);
-    ec.extract (cluster_indices);
-
-    //////////////////////* Perform the extraction ////////////////////////////////////////
-
-    cout << "extracting the clusters" << endl;
-    int MAX_CLUSTER_SIZE = 150; // ditch all clusters with more points than this
-    vector<pcl::PointIndices>::const_iterator it;
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_cluster (new pcl::PointCloud<pcl::PointXYZRGB>); // make a local cloud in which to store the outputs
-
-    int colour_counter = 0;
-    double new_r,new_g,new_b;
-
-    for (it = cluster_indices.begin (); it != cluster_indices.end (); ++it) // loop through the clusters
-    {
-        //centroid_cluster_array[it]
-        for (vector<int>::const_iterator pit = it->indices.begin (); pit != it->indices.end (); ++pit) {
-            cloud_cluster->points.push_back (cloud_filtered->points[*pit]); //*
-        }
-
-        // Create a random colour
-        new_r = (colour_counter*40)%255;
-        new_g = (255 - colour_counter*60)%255;
-        new_b = (colour_counter*100)%255;
-
-        cout << "Colouring this pointcloud as ("<<new_r<<","<<new_g<<","<<new_b<<")"<<endl;
-        colour_counter += 1; // increment the colour counter
-        for (size_t i = 0; i < cloud_cluster->points.size (); i++){ // colour the points according to this random colour
-            cloud_cluster->points[i].r = new_r;
-            cloud_cluster->points[i].g = new_g;
-            cloud_cluster->points[i].b = new_b;
-        }
-
-        cloud_cluster->width = cloud_cluster->points.size ();
-        cloud_cluster->height = 1;
-        cloud_cluster->is_dense = true;
-
-        cout << "PointCloud representing the Cluster: " << cloud_cluster->points.size () << " data points." << endl;
-        cloud_cluster_vector.push_back(cloud_cluster); // move cloud_cluster into the vector
-}
+    ///////// Print out a line of stars if there are 2 centroids in the array because this is a
+    cout << "There are "<<centroid_coord_array.size()<<" valid clusters in the pcl"<<endl;
+    if (centroid_coord_array.size() > 1){cout<<"*************************************************************************************************************************"<<endl;}
 
 }
-void tracker::generate_centroid(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cluster_ptr, VectorXd &coord_centroid) {
+
+void tracker::get_cluster_centroid(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cluster_ptr, VectorXd &coord_centroid) {
     // loop through the point cloud cluster_ptr, adding points to a centroid
 
     cout << "generate_centroid() called" <<endl;
@@ -342,8 +316,10 @@ void tracker::generate_centroid(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cluster_p
     coord_centroid << c.x, c.y, c.z; // assign coords to coord_centroid
     cout << "generate_centroid() is returning a coord_centroid at :\n"<<coord_centroid<<endl;
 }
-void tracker::apply_passthrough_filter(const sensor_msgs::PointCloud2ConstPtr input_cloud, sensor_msgs::PointCloud2 &output_cloud) {
 
+void tracker::apply_passthrough_filter(const sensor_msgs::PointCloud2ConstPtr input_cloud, sensor_msgs::PointCloud2 &output_cloud) {
+    if (verbose_)
+        cout <<"Applying Passthrough Filter" << endl;
     // Convert from sensor_msgs::PointCloud2 to pcl::PointCloud2
     pcl::PCLPointCloud2* cloud = new pcl::PCLPointCloud2;
     pcl_conversions::toPCL(*input_cloud, *cloud); // convert cloud_msg into a pcl edition
@@ -382,23 +358,7 @@ void tracker::apply_passthrough_filter(const sensor_msgs::PointCloud2ConstPtr in
     pcl_conversions::moveFromPCL(*output_cloud_z, output_cloud); // convert into the sensor_msgs format
 
 }
-void tracker::init_kf(VectorXd x0) { // initialises the kalman filter with initial vector x0
-    cout<< "initiating kalman_filter"<<endl;
-    kf_.init(0, x0); // initialise the kalman filter
-    cout<<"kalman filter initiated"<<endl;
-    return;
 
-}
-void tracker::update_kf(VectorXd y) { //update our state estimate with measurement y
-    cout<<"update_kf()"<<endl;
-    kf_.update(y); // call the update method of our (private) kalman filter
-
-    // now publish the latest output of kf
-}
-VectorXd tracker::get_state() { // talks to our kalman filter
-    return kf_.get_state();
-
-}
 void tracker::process_centroids(vector<VectorXd> centroid_coord_array) {
     // first get this working
     cout <<"process_centroids() with array :\n[";
@@ -440,10 +400,55 @@ void tracker::process_centroids(vector<VectorXd> centroid_coord_array) {
     if (new_est_index != -1) { // e.g. if we have found a viable coordinate
         cout << "updating the filter with this coordinate"<<endl;
         new_measurement << centroid_coord_array[new_est_index][0],centroid_coord_array[new_est_index][1],centroid_coord_array[new_est_index][2];
-        update_kf(new_measurement); //update the kalman filter with this estimate
-        MatrixXd P;
-        P = kf_.get_P(); //get covariance
-        publish_marker(get_state(), P(0,0),P(1,1),P(2,2)); // publish the marker
+//        update_kf(new_measurement); //update the kalman filter with this estimate
+//        MatrixXd P;
+//        P = kf_.get_P(); //get covariance
+//        publish_marker(get_state(), P(0,0),P(1,1),P(2,2)); // publish the marker
         //        publish_transform(new_measurement);
     }
+}
+
+void tracker::callback(const sensor_msgs::PointCloud2ConstPtr &cloud_msg) { // the callback fcn
+    // this is called by pointclouds from the velodyne, processing them, decomposing into clusters, and publishing cluster coordinates
+    cout<< "************************************\nInitiating Callback\n***********************************"<<endl;
+    // Publish the cloud
+    pub_raw_.publish (*cloud_msg); // publish the raw cloud
+
+    /////////// Apply a passthrough filter and publish the result
+    sensor_msgs::PointCloud2 bounded_cloud;
+    apply_passthrough_filter(cloud_msg, bounded_cloud); // remove all points outside of a predefined bod
+    pub_zfilt_.publish (bounded_cloud); // Publish the output
+
+    ////////// Transform the cloud into the odom frame to eliminate base motion
+    sensor_msgs::PointCloud2 transformed_cloud;
+    apply_base_odom_transformation(bounded_cloud, transformed_cloud);
+    pub_trans_.publish (transformed_cloud); // Publish the cloud
+
+    /////////   if cloud has less than 10 points, jump out of the callback
+    if (transformed_cloud.width < 10) {
+        cout << "*** Cloud has too few points, waiting for the next one. ****" << endl;
+        return;
+    }
+
+    //////// Downsample with a Voxel Grid and publish
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_ptr;
+    convert_sm2_to_pcl_ptr(transformed_cloud, cloud_ptr); // Convert variable to correct type for VoxelGrid
+    apply_voxel_grid(cloud_ptr); // apply the voxel_grid using a leaf size of 1cm
+    sensor_msgs::PointCloud2 msg_to_publish; // initiate intermediate message variable
+    pcl::toROSMsg(*cloud_ptr,msg_to_publish ); // convert from PCL:PC1 to SM:PC2
+    pub_ds_.publish (msg_to_publish);
+
+    //////// Remove non planar points e.g. outliers http://pointclouds.org/documentation/tutorials/planar_segmentation.php#id1
+    remove_out_of_plane_points(cloud_ptr);
+
+    /////////// Split up pointcloud into a vector of pointclouds, 1 for each cluster
+    vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> cloud_cluster_vector;
+    split_cloud_ptr_into_clusters(cloud_ptr,cloud_cluster_vector);
+
+    //////// Loop through clusters and put their centroids into a vector
+    vector <VectorXd> centroid_coord_array;
+    get_centroids_of_clusters(cloud_cluster_vector, centroid_coord_array); // generate a vector of coordinates
+
+    /////// Publish the cluster centroids
+    process_centroids(centroid_coord_array); // call the process centroids method with our vector of centroids
 }
