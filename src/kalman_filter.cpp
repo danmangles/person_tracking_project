@@ -13,59 +13,65 @@ using namespace Eigen;
 using namespace std;
 
 
-kalman_filter::kalman_filter(
-	double dt,
-	const Eigen::MatrixXd& A,
-	const Eigen::MatrixXd& C,
-	const Eigen::MatrixXd& Q,
-	const Eigen::MatrixXd& R,
-    const Eigen::MatrixXd& P,
-    bool verbose)
+KalmanFilter::KalmanFilter(
+        double dt,
+        const Eigen::MatrixXd& A,
+        const Eigen::MatrixXd& C,
+        const Eigen::MatrixXd& Q,
+        const Eigen::MatrixXd& R,
+        const Eigen::MatrixXd& P,
+        bool verbose)
 
-  : A(A), C(C), Q(Q), R(R), P0(P), //populate A,C,Q,R,P0 with values given in constructor
-    m(C.rows()), nd(A.rows()), dt(dt), initialized(false), //populate m with number of rows in C, n with number of rows in A
-    I(nd, nd), x_hat(nd), x_hat_new(nd), verbose_(verbose)
-	{
-        cout << "Kalman_filter_constructor called" << endl;
-		I.setIdentity();
-        //print out the chosen matrices
-        cout << "A: \n" << A << endl;
-        cout << "C: \n" << C << endl;
-        cout << "Q: \n" << Q << endl;
-        cout << "R: \n" << R << endl;
-        cout << "P: \n" << P << endl;
+    : A(A), C(C), Q(Q), R(R), P0(P), //populate A,C,Q,R,P0 with values given in constructor
+      m(C.rows()), n(A.rows()), dt(dt), initialized(false), //populate m with number of rows in C, n with number of rows in A
+      I(n, n), x_hat(n), x_hat_new(n), verbose_(verbose)
+{
+    cout << "KalmanFilter_constructor called" << endl;
+    I.setIdentity();
+    //print out the chosen matrices
+    cout << "A: \n" << A << endl;
+    cout << "C: \n" << C << endl;
+    cout << "Q: \n" << Q << endl;
+    cout << "R: \n" << R << endl;
+    cout << "P: \n" << P << endl;
 
-	}
+}
 
-kalman_filter::kalman_filter() {}
+KalmanFilter::KalmanFilter() {}
 
 //constructor with lots of params
-void kalman_filter::init(double t0, const VectorXd& x0) {
-	//Initialise all values
-	x_hat = x0;
-	P = P0;
-	this->t0 = t0;
-	t = t0;
-	initialized = true;
+void KalmanFilter::init(double t0, const VectorXd& x0) {
+    //Initialise all values
+    if (verbose_)
+        cout << "initialising Kalman Filter" <<endl;
+    x_hat = x0;
+    P = P0;
+    this->t0 = t0;
+    t = t0;
+    initialized = true;
+    if (verbose_) {
+        cout << "P = "<<P <<endl;
+        cout << "A = "<<A <<endl;
+    }
 }
 
 // default constructor
-void kalman_filter::init() {
-	x_hat.setZero();
-	P = P0;
-	t0 = 0;
-	t = t0;
-	initialized = true;
+void KalmanFilter::init() {
+    x_hat.setZero();
+    P = P0;
+    t0 = 0;
+    t = t0;
+    initialized = true;
 }
 
-void kalman_filter::update(const VectorXd& y) {
-	//check if we are initialised
-	if (!initialized)
-		throw std::runtime_error("Filter is not initialised... :3");
+void KalmanFilter::update(const VectorXd& y) {
+    //check if we are initialised
+    if (!initialized)
+        throw std::runtime_error("Filter is not initialised... :3");
 
-
-
-        cout << "*************\ny = "<<y<<endl;
+    if (verbose_) {
+        cout << "A = "<<A <<endl; }
+    cout << "*************\ny = "<<y<<endl;
     x_hat_new = A*x_hat; // PREDICT
 
 
@@ -73,32 +79,33 @@ void kalman_filter::update(const VectorXd& y) {
 
     if (verbose_) {
         cout << "*PREDICT*\nx_hat_new = "<<x_hat_new<<endl;
-        cout << "P = \n"<<P<<endl;}
+        cout << "P = \n"<<P<<endl;} //
 
 
     K = P*C.transpose()*(C*P*C.transpose() + R).inverse(); //UPDATE
 
 
-	x_hat_new += K * (y - C*x_hat_new); // predict
+    x_hat_new += K * (y - C*x_hat_new); // predict
 
 
     P = (I - K*C)*P; // UPDATE
-        if (verbose_) {
-            cout << "*UPDATE*\nK = \n"<<K<<endl;
-            cout << "UPDATED x_hat_new = "<<x_hat_new<<endl;
-            cout << "UPDATED P = "<<P<<endl;}
+    if (verbose_) {
+        cout << "*UPDATE*\nK = \n"<<K<<endl;
+        cout << "UPDATED x_hat_new = "<<x_hat_new<<endl;
+        cout << "UPDATED P = "<<P<<endl;}
 
     x_hat = x_hat_new; // UPDATE
-
-	t += dt;
+    if (verbose_)
+        cout << "x_hat is now\n" << x_hat<<endl;
+    t += dt;
 
 }
 
-void kalman_filter::update(const VectorXd& y, double dt, const MatrixXd A) {
+void KalmanFilter::update(const VectorXd& y, double dt, const MatrixXd A) {
 
-  this->A = A;
-  this->dt = dt;
-  update(y);
+    this->A = A;
+    this->dt = dt;
+    update(y);
 }
 
 

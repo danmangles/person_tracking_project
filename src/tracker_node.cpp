@@ -15,7 +15,7 @@
 #include <ros/ros.h>
 #include "include/tracker.h"
 using namespace std;
-void set_tracker_kf_parameters(tracker our_tracker) {
+void setTrackerKfParams(Tracker &our_tracker) {
     // Sets the tracker's kalman filter kf's parameters dt,A,C,Q,R,P
     // kf params
 
@@ -44,7 +44,7 @@ void set_tracker_kf_parameters(tracker our_tracker) {
     // initialise the kalman filter with the given parameters
     VectorXd x0(3);
     x0 << 0,0,0;
-    our_tracker.setup_kalman_filter(x0, dt,A,C,Q,R,P);
+    our_tracker.setupKalmanFilter(x0, dt,A,C,Q,R,P);
     return;
 }
 int main (int argc, char** argv) // runs the tracker node
@@ -60,8 +60,9 @@ int main (int argc, char** argv) // runs the tracker node
     int min_cluster_size = 50;
     double cluster_tolerance = 0.3; // too small, we split one object into many, too big, we merge objects into one. In metres
     double seg_dist_threshold = 0.03; // how close a point must be to the model in order to be considered an inlier in metres
-    tracker our_tracker(nh, max_cluster_size, min_cluster_size, cluster_tolerance, seg_dist_threshold, true); // construct a tracker called our_tracker
-    set_tracker_kf_parameters(our_tracker); // setup the kalman filter inside the tracker
+
+    Tracker our_tracker(nh, max_cluster_size, min_cluster_size, cluster_tolerance, seg_dist_threshold, true); // construct a tracker called our_tracker
+    setTrackerKfParams(our_tracker); // setup the kalman filter inside the tracker
 
     ros::spin ();// spin ros
 

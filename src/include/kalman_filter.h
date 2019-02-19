@@ -8,7 +8,7 @@
 #define KALMAN_FILTER_H_
 using namespace Eigen;
 
-class kalman_filter {
+class KalmanFilter {
 public:
 	// all public methods and variables go here
 	/**
@@ -20,7 +20,7 @@ public:
 	  *   P - Estimate error covariance
 	  */
 
-	kalman_filter(
+    KalmanFilter(
 			double dt,
 			const MatrixXd& A,
 			const MatrixXd& C,
@@ -32,7 +32,7 @@ public:
 	/**
 	  * Create a blank estimator.
 	  */
-	kalman_filter(); // what does this line do????
+    KalmanFilter(); // what does this line do????
 	void init();
 	/*
 	 * Initial states are zero
@@ -57,8 +57,8 @@ public:
 	/*
 	 * Return current state and time
 	 */
-    VectorXd get_state() { return x_hat; };
-    MatrixXd get_P() { return P; };
+    VectorXd getState() { return x_hat; };
+    MatrixXd getP() { return P; };
 	double time() { return t; };
 
 private:
@@ -66,7 +66,7 @@ private:
 	  MatrixXd A, C, Q, R, P, K, P0;
 
 	  // System dimensions
-      int m, nd;
+      int m, n;
 
 	  // Initial and current time
 	  double t0, t;

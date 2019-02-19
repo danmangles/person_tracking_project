@@ -108,7 +108,7 @@ int main (int argc, char** argv)
     cout << "P: \n" << P << endl;
 
     // create the filter x
-    kalman_filter kf(dt, A, C, Q, R, P, true);
+    KalmanFilter kf(dt, A, C, Q, R, P, true);
     VectorXd x0(n);
     VectorXd x_hat(3);
     x0 << 0, 0, 0;
@@ -160,12 +160,12 @@ int main (int argc, char** argv)
          y << input_vector.getX(), input_vector.getY(), input_vector.getZ();
          //y_ << input_vector.getX();// we are only getting one measurement- put this in y
          kf.update(y, delta.toSec(), A);
-         x_hat << kf.get_state().transpose()[0], kf.get_state().transpose()[1],kf.get_state().transpose()[2];
-         P << kf.get_P();
+         x_hat << kf.getState().transpose()[0], kf.getState().transpose()[1],kf.getState().transpose()[2];
+         P << kf.getP();
          cout << "P:\n" << P<<endl;
 
          cout << "t = " << curr_time << ", dt = "<<delta<<", \n    y =" << y.transpose()
-             << ",\nx_hat = " << kf.get_state().transpose() << endl;
+             << ",\nx_hat = " << kf.getState().transpose() << endl;
 
          //Now publish the output
          output_tf.setOrigin( tf::Vector3(x_hat[0],x_hat[1],x_hat[2]) );

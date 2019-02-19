@@ -2,7 +2,7 @@
 *  - public
 *      - constructor tracker(nh, kf_parmas);
 *      - load_kf() {}
-*      - update_kf() { updates kalman filter) and other get methods
+*      - updateKf() { updates kalman filter) and other get methods
 *  - private has node handle
 *     - THIS ENABLES DIFFERENT THINGS TO TALK TO EACH OTHER.
 *     - void callback(msg);
@@ -62,58 +62,68 @@ using namespace std;
 
 
 
-class tracker {
+class Tracker {
 
 public:
-    tracker(ros::NodeHandle nh,
+    Tracker(ros::NodeHandle nh,
             int max_cluster_size,
             int min_cluster_size,
             double cluster_tolerance,
             double seg_dist_threshold,
             bool verbose); // initiate a constructor with a nodehandle and parameters for the kalman filter
 
-    void setup_kalman_filter(VectorXd x0,
-                             double dt,
-                             const Eigen::MatrixXd& A,
-                             const Eigen::MatrixXd& C,
-                             const Eigen::MatrixXd& Q,
-                             const Eigen::MatrixXd& R,
-                             const Eigen::MatrixXd& P); // call the constructor of and initiate the kalman filter with params x0
-    void update_kf(VectorXd y); // update the kalman filter with a new estimate y
+    void setupKalmanFilter(VectorXd x0,
+                           double dt,
+                           const Eigen::MatrixXd& A,
+                           const Eigen::MatrixXd& C,
+                           const Eigen::MatrixXd& Q,
+                           const Eigen::MatrixXd& R,
+                           const Eigen::MatrixXd& P); // call the constructor of and initiate the kalman filter with params x0
+    void updateKf(VectorXd y); // update the kalman filter with a new estimate y
 
 private:
-    void initialise_subscribers_publishers(); // initialises all the subscribers and publishers
-    void callback(const sensor_msgs::PointCloud2ConstPtr &cloud_msg); // this method is called whenever the tracker sees a new pointcloud
-    void apply_passthrough_filter(const sensor_msgs::PointCloud2ConstPtr input_cloud, sensor_msgs::PointCloud2 &output_cloud); // filters points outside of a defined cube
-    void apply_base_odom_transformation(sensor_msgs::PointCloud2 input_cloud, sensor_msgs::PointCloud2 &output_cloud); // transforms the cloud into the odom frame
-    void get_centroids_of_clusters (vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> cloud_cluster_vector, vector<Eigen::VectorXd> &centroid_coord_array);
-    void get_cluster_centroid(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cluster_ptr, VectorXd &coord_centroid); //returns a vector of centroid coordinates
-    void process_centroids(vector<VectorXd> centroid_coord_array);
-    void publish_marker(VectorXd x_hat,double scale_x,double scale_y,double scale_z);
-    void publish_transform(VectorXd coordinates, string target_frame_id); // publishes a transform at the 3D coordinate Vector coordinates
-    void remove_out_of_plane_points(pcl::PointCloud<pcl::PointXYZRGB>::Ptr &cloud_ptr); // remove non-planar-inlying points
-    void convert_sm2_to_pcl_ptr(sensor_msgs::PointCloud2 input_cloud, pcl::PointCloud<pcl::PointXYZRGB>::Ptr &output_ptr);
-    void apply_voxel_grid(pcl::PointCloud<pcl::PointXYZRGB>::Ptr &cloud_ptr);
-    void assign_random_colour(pcl::PointCloud<pcl::PointXYZRGB>::Ptr &input_cloud);
-    void split_cloud_ptr_into_clusters(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_ptr, vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> &cloud_cluster_vector);
-    vector<pcl::PointIndices> get_cluster_indices(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_ptr);
-    VectorXd get_state(); // returns the current position estimate
-    kalman_filter kf_; // our private copy of a kalman filter
-    ros::Subscriber point_cloud_sub_; // private copy of subscriber
-    // to publish our instantaneous, unfiltered estimates on
-    tf::TransformBroadcaster br_;
-    // a billion publishers
-    ros::NodeHandle nh_;// setup 5 publishers to display point clouds at each stage
-    ros::Publisher pub_raw_; // setup the publisher for the output point cloud
-    ros::Publisher pub_trans_; // setup the publisher for the output point cloud
-    ros::Publisher pub_zfilt_; // setup the publisher for the output point cloud
-    ros::Publisher pub_ds_; // setup the publisher for the output point cloud
-    ros::Publisher pub_centroid_; // setup the publisher for the output point cloud
-    ros::Publisher pub_marker_; // to publish the markers on
-    // HACK: setup the public transform listener so we can listen to the odom_base_tf
-    boost::shared_ptr<tf::TransformListener> odom_base_ls_;
-    int max_cluster_size_, min_cluster_size_;
-    double cluster_tolerance_,seg_dist_threshold_; // how close a point must be to the model in order to be considered an inlier:
-    bool verbose_;
+    ////// General Pointcloud Methods
+    void callback(const sensor_msgs::PointCloud2ConstPtr &cloud_msg); // this method is called whenever the Tracker sees a new pointcloud
+    void applyPassthroughFilter(const sensor_msgs::PointCloud2ConstPtr input_cloud, sensor_msgs::PointCloud2 &output_cloud); // filters points outside of a defined cube
+    void removeOutOfPlanePoints(pcl::PointCloud<pcl::PointXYZRGB>::Ptr &cloud_ptr); // remove non-planar-inlying points
+    void applyBaseOdomTransformation(sensor_msgs::PointCloud2 input_cloud, sensor_msgs::PointCloud2 &output_cloud); // transforms the cloud into the odom frame
+    void convertSM2ToPclPtr(sensor_msgs::PointCloud2 input_cloud, pcl::PointCloud<pcl::PointXYZRGB>::Ptr &output_ptr);
+    void applyVoxelGrid(pcl::PointCloud<pcl::PointXYZRGB>::Ptr &cloud_ptr);
+    void splitCloudPtrIntoClusters(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_ptr, vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> &cloud_cluster_vector);
+    void assignRandomColour(pcl::PointCloud<pcl::PointXYZRGB>::Ptr &input_cloud);
+    vector<pcl::PointIndices> getClusterIndices(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_ptr);
+
+    ////// Centroid Pointcloud Methods
+    void getCentroidsOfClusters (vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> cloud_cluster_vector, vector<Eigen::VectorXd> &centroid_coord_array);
+    void getClusterCentroid(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cluster_ptr, VectorXd &coord_centroid); //returns a vector of centroid coordinates
+    void processCentroidCoords(vector<VectorXd> centroid_coord_array);
+
+    ////// I/O Methods
+    void initialiseSubscribersAndPublishers(); // initialises all the subscribers and publishers
+    void publishMarker(VectorXd x_hat,double scale_x,double scale_y,double scale_z);
+    void publishTransform(VectorXd coordinates, string target_frame_id); // publishes a transform at the 3D coordinate Vector coordinates
+
+    ////// Kalman Filter Methods
+    KalmanFilter kf_; // our private copy of a kalman filter
+    VectorXd getState(); // returns the current position estimate
+
+    ////// I/O Variables
+    ros::Subscriber point_cloud_sub_; // private copy of subscriber for velodyne
+    tf::TransformBroadcaster br_; // to broadcast tfs on
+    ros::NodeHandle nh_; // the nodehandle
+    ros::Publisher pub_raw_; // raw input cloud
+    ros::Publisher pub_trans_; // transformed cloud
+    ros::Publisher pub_zfilt_; // passthrough filtered cloud
+    ros::Publisher pub_ds_; // downsampled cloud
+    ros::Publisher pub_seg_filter_; // downsampled cloud
+    ros::Publisher pub_centroid_; // centroid cluster
+    ros::Publisher pub_marker_; // for markers
+    boost::shared_ptr<tf::TransformListener> odom_base_ls_; // setup the transform listener so we can listen to the odom_base_tf
+    bool verbose_; // do we print?
+
+    ////// Clustering parameters
+    int max_cluster_size_, min_cluster_size_; // clustering parameters
+    double cluster_tolerance_,seg_dist_threshold_; // seg_dist is how close a point must be to the model in order to be considered an inlier:
+
 };
 #endif // tracker_H
