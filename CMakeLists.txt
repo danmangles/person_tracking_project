@@ -30,7 +30,7 @@ include_directories(
  add_library(${PROJECT_NAME}
    src/kalman_filter.cpp
 #   src/tracker.cpp
-   src/Centroid_Estimator.cpp
+   src/centroid_estimator.cpp
  )
 
 link_directories(${PCL_LIBRARY_DIRS})

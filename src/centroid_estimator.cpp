@@ -4,7 +4,7 @@
 #include <sensor_msgs/PointCloud.h>
 
 
-#include "include/Centroid_Estimator.h"
+#include "include/centroid_estimator.h"
 
 
 using namespace Eigen;
