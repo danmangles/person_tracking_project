@@ -58,7 +58,7 @@ int main (int argc, char** argv) // runs the tracker node
     ros::NodeHandle nh; // setup a nodehandle for communication between methods
     int max_cluster_size = 300;
     int min_cluster_size = 50;
-    double cluster_tolerance = 0.3; // too small, we split one object into many, too big, we merge objects into one. In metres
+    double cluster_tolerance = 0.1; // too small, we split one object into many, too big, we merge objects into one. In metres
     double seg_dist_threshold = 0.03; // how close a point must be to the model in order to be considered an inlier in metres
 
     Tracker our_tracker(nh, max_cluster_size, min_cluster_size, cluster_tolerance, seg_dist_threshold, true); // construct a tracker called our_tracker

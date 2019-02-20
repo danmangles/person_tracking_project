@@ -39,13 +39,12 @@ void Tracker::callback(const sensor_msgs::PointCloud2ConstPtr &cloud_msg) { // t
         return;
     }
 
-
     //////// Downsample with a Voxel Grid and publish
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_ptr;
     convertSM2ToPclPtr(transformed_cloud, cloud_ptr); // Convert variable to correct type for VoxelGrid
-//    applyVoxelGrid(cloud_ptr); // apply the voxel_grid using a leaf size of 1cm
-//    pcl::toROSMsg(*cloud_ptr,msg_to_publish ); // convert from PCL:PC1 to SM:PC2
-//    pub_ds_.publish (msg_to_publish);
+    //    applyVoxelGrid(cloud_ptr); // apply the voxel_grid using a leaf size of 1cm
+    //    pcl::toROSMsg(*cloud_ptr,msg_to_publish ); // convert from PCL:PC1 to SM:PC2
+    //    pub_ds_.publish (msg_to_publish);
 
     //////// Remove non planar points e.g. outliers http://pointclouds.org/documentation/tutorials/planar_segmentation.php#id1
     removeOutOfPlanePoints(cloud_ptr);
@@ -201,11 +200,13 @@ void Tracker::splitCloudPtrIntoClusters(pcl::PointCloud<pcl::PointXYZRGB>::Ptr c
     //////// Get a vector of index objects, 1 for each cluster
     vector<pcl::PointIndices> cluster_indices = getClusterIndices(cloud_ptr);
 
-    //////// For each item in the index vector, extract the corresponding points into a pointcloud vector
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_cluster (new pcl::PointCloud<pcl::PointXYZRGB>); // make a local cloud_ptr in which to store the outputs
+
     vector<pcl::PointIndices>::const_iterator it;
     for (it = cluster_indices.begin (); it != cluster_indices.end (); ++it) // loop through the clusters
     {
+        //////// For each item in the index vector, extract the corresponding points into a pointcloud vector
+        pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_cluster (new pcl::PointCloud<pcl::PointXYZRGB>); // make a local cloud_ptr in which to store the outputs
+
         for (vector<int>::const_iterator pit = it->indices.begin (); pit != it->indices.end (); ++pit) { // for this group of indices, move all the points from cloud_ptr into cloud_cluster
             cloud_cluster->points.push_back (cloud_ptr->points[*pit]); //*
         }
@@ -216,6 +217,7 @@ void Tracker::splitCloudPtrIntoClusters(pcl::PointCloud<pcl::PointXYZRGB>::Ptr c
         cloud_cluster_vector.push_back(cloud_cluster); // move cloud_cluster into the output vector
         if (verbose_)
             cout << "PointCloud representing the Cluster: " << cloud_cluster->points.size () << " data points." << endl;
+
     }
     return;
 }
@@ -244,20 +246,26 @@ vector<pcl::PointIndices> Tracker::getClusterIndices(pcl::PointCloud<pcl::PointX
     if (verbose_)
         cout << "getting indices of each cluster from cloud_ptr with "<< cloud_ptr->points.size ()<<" points" << endl;
 
-    pcl::search::KdTree<pcl::PointXYZRGB>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZRGB>);
+    pcl::search::KdTree<pcl::PointXYZRGB>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZRGB>); //http://pointclouds.org/documentation/tutorials/kdtree_search.php
+
     tree->setInputCloud (cloud_ptr);
 
     //cout << "setting up cluster objects" << endl;
     vector<pcl::PointIndices> cluster_indices;
+
     pcl::EuclideanClusterExtraction<pcl::PointXYZRGB> ec;
-    ec.setClusterTolerance (cluster_tolerance_);
-    ec.setMinClusterSize (min_cluster_size_);
-    ec.setMaxClusterSize (max_cluster_size_);
+    //    ec.setClusterTolerance (cluster_tolerance_);
+    //    ec.setMinClusterSize (min_cluster_size_);
+    //    ec.setMaxClusterSize (max_cluster_size_);
+    ec.setClusterTolerance (.4); //40cm
+    ec.setMinClusterSize (40);
+    ec.setMaxClusterSize (150);
+
     ec.setSearchMethod (tree);
     ec.setInputCloud (cloud_ptr);
     ec.extract (cluster_indices);
     if (verbose_)
-        cout <<"cloud_ptr has been split into clusters, returning cluster_indices with "<< cluster_indices.size() << " elements" <<endl;
+        cout <<"cloud_ptr has been split into "<< cluster_indices.size() << " clusters, returning cluster_indices" <<endl;
     return cluster_indices;
 }
 
@@ -265,7 +273,10 @@ vector<pcl::PointIndices> Tracker::getClusterIndices(pcl::PointCloud<pcl::PointX
 void Tracker::getCentroidsOfClusters (vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> cloud_cluster_vector, vector<Eigen::VectorXd> &centroid_coord_array) {
     // loops through cloud_cluster vector and gets the centroid
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_cluster;
-    int MAX_CLUSTER_SIZE = 140; // if there are more points than this
+
+    if (verbose_)
+        cout << "investigating a vector with "<<cloud_cluster_vector.size()<<" clusters"<<endl;
+
     for (int i = 0; i<cloud_cluster_vector.size(); i++) {
         cloud_cluster = cloud_cluster_vector[i]; // extract one cluster
         // publish it!
@@ -274,17 +285,12 @@ void Tracker::getCentroidsOfClusters (vector<pcl::PointCloud<pcl::PointXYZRGB>::
         msg_to_publish.header.frame_id = "odom"; // CHANGED THIS TO BASE INSTEAD OF ODOM BECAUSE WE WERE PUBLISHING POINTS IN THE WRONG PLACE
         pub_centroid_.publish (msg_to_publish); // this is not publishing correctly
 
+        cout << "\n\n** Returning cloud with "<<cloud_cluster->points.size() <<" points in it"<<endl;
+        VectorXd coord_centroid(3); // because we are in 3d
+        getClusterCentroid(cloud_cluster, coord_centroid);
+        //            cout << "[inside generate_cluster_array()] coord_centroid is \n"<<coord_centroid<<endl;
+        centroid_coord_array.push_back(coord_centroid); // we want to keep this cluster
 
-        if (cloud_cluster->points.size() < MAX_CLUSTER_SIZE) { // if there are enough points in the cloud
-            cout << "\n\n** Returning cloud with "<<cloud_cluster->points.size() <<" points in it"<<endl;
-            VectorXd coord_centroid(3); // because we are in 3d
-            getClusterCentroid(cloud_cluster, coord_centroid);
-            //            cout << "[inside generate_cluster_array()] coord_centroid is \n"<<coord_centroid<<endl;
-            centroid_coord_array.push_back(coord_centroid); // we want to keep this cluster
-        } else {
-            //else just ignore and keep looping
-            cout << "Ditching a cloud with "<<cloud_cluster->points.size() <<" points in it"<<endl;
-        }
     }
 
     ///////// Print out a line of stars if there are 2 centroids in the array because this is a
@@ -354,8 +360,7 @@ void Tracker::processCentroidCoords(vector<VectorXd> centroid_coord_array) {
                 cout << "distances_from_prev_est["<<i<<"] = "<< distances_from_prev_est[i]<<"m"<<endl;
         }
         ///// Set index of our centroid as the one with the smallest distance
-        new_est_index = min_element(distances_from_prev_est.begin(),distances_from_prev_est.end()) - distances_from_prev_est.begin();
-//        new_est_index = *min_element(distances_from_prev_est.begin(),distances_from_prev_est.end()); // take the minimum distance from the array
+        new_est_index = min_element(distances_from_prev_est.begin(),distances_from_prev_est.end()) - distances_from_prev_est.begin(); // take the minimum distance from the array
         distances_from_prev_est.clear(); // remove all the elements from the vector for next time
     }
 
@@ -376,7 +381,7 @@ void Tracker::processCentroidCoords(vector<VectorXd> centroid_coord_array) {
             cout << "New measurement covariance is\n"<<P <<endl;
             cout << "new Kf state is\n"<<kf_prev_state <<endl; }
         publishMarker(kf_prev_state, P(0,0),P(1,1),P(2,2)); // publish the marker
-        publishTransform(new_measurement, "kalman_filter_state");
+//        publishTransform(kf_prev_state, "kalman_filter_state");
     }
 }
 
@@ -459,7 +464,7 @@ void Tracker::setupKalmanFilter(VectorXd x0,double dt,const Eigen::MatrixXd& A, 
 }
 
 void Tracker::updateKf(VectorXd y) { //update our state estimate with measurement y
-//    cout<<"updateKf()"<<endl;
+    //    cout<<"updateKf()"<<endl;
     kf_.update(y); // call the update method of our (private) kalman filter
 }
 
