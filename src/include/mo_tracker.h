@@ -56,7 +56,7 @@
 //using namespace Eigen;
 using namespace std;
 
-#include "kalman_filter.h"
+#include "tracklet.h" // this includes pairing.h , kalman_filter.h
 #ifndef tracker_H
 #define tracker_H
 
@@ -97,7 +97,7 @@ private:
     ////// Centroid Pointcloud Methods
     void getCentroidsOfClusters (vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> cloud_cluster_vector, vector<Eigen::VectorXd> &centroid_coord_array);
     void getClusterCentroid(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cluster_ptr, VectorXd &coord_centroid); //returns a vector of centroid coordinates
-    void processCentroidCoords(vector<VectorXd> centroid_coord_array);
+    void processCentroidCoords(vector<VectorXd> unpaired_detections);
 
     ////// I/O Methods
     void initialiseSubscribersAndPublishers(); // initialises all the subscribers and publishers
@@ -105,8 +105,10 @@ private:
     void publishTransform(VectorXd coordinates, string target_frame_id); // publishes a transform at the 3D coordinate Vector coordinates
 
     ////// Kalman Filter Methods
-    KalmanFilter kf_; // our private copy of a kalman filter
+    //vector <KalmanFilter> kf_vector_; // our private copy of a kalman filter
+    KalmanFilter kf_;
     VectorXd getState(); // returns the current position estimate
+    int getIndexOfClosestKf(VectorXd centroid_coord); // returns the index of the coordinate
 
     ////// I/O Variables
     ros::Subscriber point_cloud_sub_; // private copy of subscriber for velodyne
@@ -126,6 +128,10 @@ private:
     ////// Clustering parameters
     int max_cluster_size_, min_cluster_size_; // clustering parameters
     double cluster_tolerance_,seg_dist_threshold_; // seg_dist is how close a point must be to the model in order to be considered an inlier:
+
+    ////// Tracklet variables
+    vector <Tracklet> tracklet_vector_;
+    vector <Pairing> pairing_vector_;
 
 };
 #endif // tracker_H

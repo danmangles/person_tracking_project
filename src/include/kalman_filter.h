@@ -6,8 +6,8 @@
  */
 #include <Eigen/Dense>
 #define KALMAN_FILTER_H_
-using namespace Eigen;
 
+using namespace Eigen;
 class KalmanFilter {
 public:
 	// all public methods and variables go here

@@ -66,5 +66,6 @@ target_link_libraries (kalman_filter_tracker ${catkin_LIBRARIES} ${PCL_LIBRARIES
 
 add_executable (tracker_node src/tracker_node.cpp src/tracker.cpp)
 target_link_libraries (tracker_node ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${PROJECT_NAME})
-#add_executable (tracker src/tracker.cpp)
-#target_link_libraries (tracker ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${PROJECT_NAME})
+
+add_executable (mo_tracker_node src/mo_tracker_node.cpp src/mo_tracker.cpp)
+target_link_libraries (mo_tracker_node ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${PROJECT_NAME})
