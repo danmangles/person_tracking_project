@@ -70,7 +70,8 @@ public:
             int min_cluster_size,
             double cluster_tolerance,
             double seg_dist_threshold,
-            bool verbose); // initiate a constructor with a nodehandle and parameters for the kalman filter
+            bool verbose,
+            bool publishing); // initiate a constructor with a nodehandle and parameters for the kalman filter
 
     void setupKalmanFilter(VectorXd x0,
                            double dt,
@@ -104,8 +105,10 @@ private:
     void publishTransform(VectorXd coordinates, string target_frame_id); // publishes a transform at the 3D coordinate Vector coordinates
 
     ////// Kalman Filter Methods
-    KalmanFilter kf_; // our private copy of a kalman filter
+    //vector <KalmanFilter> kf_vector_; // our private copy of a kalman filter
+    KalmanFilter kf_;
     VectorXd getState(); // returns the current position estimate
+    int getIndexOfClosestKf(VectorXd centroid_coord); // returns the index of the coordinate
 
     ////// I/O Variables
     ros::Subscriber point_cloud_sub_; // private copy of subscriber for velodyne
@@ -119,7 +122,8 @@ private:
     ros::Publisher pub_centroid_; // centroid cluster
     ros::Publisher pub_marker_; // for markers
     boost::shared_ptr<tf::TransformListener> odom_base_ls_; // setup the transform listener so we can listen to the odom_base_tf
-    bool verbose_; // do we print?
+    bool verbose_, publishing_; // do we print? do we publish pointclouds>?
+
 
     ////// Clustering parameters
     int max_cluster_size_, min_cluster_size_; // clustering parameters

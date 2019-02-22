@@ -69,12 +69,12 @@ void KalmanFilter::update(const VectorXd& y) {
     if (!initialized)
         throw std::runtime_error("Filter is not initialised... :3");
 
-    if (verbose_) {
-        cout << "A = "<<A <<endl; }
-    cout << "*************\ny = "<<y<<endl;
+    if (verbose_)
+    {
+        cout << "A = "<<A <<endl;
+        cout << "*************\ny = "<<y<<endl;
+    }
     x_hat_new = A*x_hat; // PREDICT
-
-
     P = A*P*A.transpose() + Q; //PREDICT
 
     if (verbose_) {

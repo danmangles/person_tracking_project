@@ -7,9 +7,10 @@ Tracker::Tracker(ros::NodeHandle nh,
                  int min_cluster_size,
                  double cluster_tolerance,
                  double seg_dist_threshold,
-                 bool verbose
+                 bool verbose,
+                 bool publishing
                  ) :
-    nh_(nh), max_cluster_size_(max_cluster_size), min_cluster_size_(min_cluster_size),cluster_tolerance_(cluster_tolerance), seg_dist_threshold_(seg_dist_threshold), verbose_(verbose) // initiate the nodehandle
+    nh_(nh), max_cluster_size_(max_cluster_size), min_cluster_size_(min_cluster_size),cluster_tolerance_(cluster_tolerance), seg_dist_threshold_(seg_dist_threshold), verbose_(verbose), publishing_(publishing) // initiate the nodehandle
 {   // Constructor: sets up
     cout<< "Tracker constructor called "<<endl;
     initialiseSubscribersAndPublishers(); //initialise the subscribers and publishers
@@ -21,17 +22,20 @@ void Tracker::callback(const sensor_msgs::PointCloud2ConstPtr &cloud_msg) { // t
     cout<< "************************************\nInitiating Callback\n***********************************"<<endl;
     sensor_msgs::PointCloud2 msg_to_publish; // we will use this for all the pointclouds we need to publish
     // Publish the cloud
-    pub_raw_.publish (*cloud_msg); // publish the raw cloud
+    if (publishing_)
+        pub_raw_.publish (*cloud_msg); // publish the raw cloud
 
     /////////// Apply a passthrough filter and publish the result
     sensor_msgs::PointCloud2 bounded_cloud;
     applyPassthroughFilter(cloud_msg, bounded_cloud); // remove all points outside of a predefined bod
-    pub_zfilt_.publish (bounded_cloud); // Publish the output
+    if (publishing_)
+        pub_zfilt_.publish (bounded_cloud); // Publish the output
 
     ////////// Transform the cloud into the odom frame to eliminate base motion
     sensor_msgs::PointCloud2 transformed_cloud;
     applyBaseOdomTransformation(bounded_cloud, transformed_cloud);
-    pub_trans_.publish (transformed_cloud); // Publish the cloud
+    if (publishing_)
+        pub_trans_.publish (transformed_cloud); // Publish the cloud
 
     /////////   if cloud has less than 10 points, jump out of the callback
     if (transformed_cloud.width < 10) {
@@ -48,8 +52,11 @@ void Tracker::callback(const sensor_msgs::PointCloud2ConstPtr &cloud_msg) { // t
 
     //////// Remove non planar points e.g. outliers http://pointclouds.org/documentation/tutorials/planar_segmentation.php#id1
     removeOutOfPlanePoints(cloud_ptr);
-    pcl::toROSMsg(*cloud_ptr,msg_to_publish ); // convert from PCL:PC1 to SM:PC2
-    pub_seg_filter_.publish (msg_to_publish);
+    if (publishing_)
+    {
+        pcl::toROSMsg(*cloud_ptr,msg_to_publish ); // convert from PCL:PC1 to SM:PC2
+        pub_seg_filter_.publish (msg_to_publish);
+    }
 
     /////////// Split up pointcloud into a vector of pointclouds, 1 for each cluster
     vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> cloud_cluster_vector;
@@ -113,7 +120,7 @@ void Tracker::applyBaseOdomTransformation(sensor_msgs::PointCloud2 input_cloud, 
     if (verbose_)
         cout<<"Transforming Pointcloud into odom frame. Waiting for transform"<<endl;
     string target_frame = "odom", base_frame = "base"; // target frame and base frame for transformfor transform
-    odom_base_ls_->waitForTransform(target_frame, base_frame, ros::Time::now(), ros::Duration(1.0) ); // wait until a tf is available before transforming
+    odom_base_ls_->waitForTransform(target_frame, base_frame, ros::Time::now(), ros::Duration(.1) ); // wait until a tf is available before transforming
 
     if (verbose_)
         cout<<"transforming pcloud using time "<< ros::Time::now()<<endl;
@@ -254,12 +261,12 @@ vector<pcl::PointIndices> Tracker::getClusterIndices(pcl::PointCloud<pcl::PointX
     vector<pcl::PointIndices> cluster_indices;
 
     pcl::EuclideanClusterExtraction<pcl::PointXYZRGB> ec;
-    //    ec.setClusterTolerance (cluster_tolerance_);
-    //    ec.setMinClusterSize (min_cluster_size_);
-    //    ec.setMaxClusterSize (max_cluster_size_);
-    ec.setClusterTolerance (.4); //40cm
-    ec.setMinClusterSize (40);
-    ec.setMaxClusterSize (150);
+    ec.setClusterTolerance (cluster_tolerance_);
+    ec.setMinClusterSize (min_cluster_size_);
+    ec.setMaxClusterSize (max_cluster_size_);
+    //    ec.setClusterTolerance (.4);
+    //    ec.setMinClusterSize (40);
+    //    ec.setMaxClusterSize (150);
 
     ec.setSearchMethod (tree);
     ec.setInputCloud (cloud_ptr);
@@ -280,12 +287,15 @@ void Tracker::getCentroidsOfClusters (vector<pcl::PointCloud<pcl::PointXYZRGB>::
     for (int i = 0; i<cloud_cluster_vector.size(); i++) {
         cloud_cluster = cloud_cluster_vector[i]; // extract one cluster
         // publish it!
-        sensor_msgs::PointCloud2 msg_to_publish; // initiate intermediate message variable
-        pcl::toROSMsg(*cloud_cluster,msg_to_publish);
-        msg_to_publish.header.frame_id = "odom"; // CHANGED THIS TO BASE INSTEAD OF ODOM BECAUSE WE WERE PUBLISHING POINTS IN THE WRONG PLACE
-        pub_centroid_.publish (msg_to_publish); // this is not publishing correctly
-
-        cout << "\n\n** Returning cloud with "<<cloud_cluster->points.size() <<" points in it"<<endl;
+        if (publishing_)
+        {
+            sensor_msgs::PointCloud2 msg_to_publish; // initiate intermediate message variable
+            pcl::toROSMsg(*cloud_cluster,msg_to_publish);
+            msg_to_publish.header.frame_id = "odom"; // CHANGED THIS TO BASE INSTEAD OF ODOM BECAUSE WE WERE PUBLISHING POINTS IN THE WRONG PLACE
+            pub_centroid_.publish (msg_to_publish); // this is not publishing correctly
+        }
+        if (verbose_)
+            cout << "\n\n** Returning cloud with "<<cloud_cluster->points.size() <<" points in it"<<endl;
         VectorXd coord_centroid(3); // because we are in 3d
         getClusterCentroid(cloud_cluster, coord_centroid);
         //            cout << "[inside generate_cluster_array()] coord_centroid is \n"<<coord_centroid<<endl;
@@ -331,17 +341,22 @@ void Tracker::processCentroidCoords(vector<VectorXd> centroid_coord_array) {
     int new_est_index = -1; // stores the index of the centroid to use. -1 indicates that no suitable estimate has been found
     VectorXd kf_prev_state; // for previous kalman filter state
 
-    if (verbose_) {
+    if (verbose_)
+    {
         cout <<"processCentroids() with array :\n[";
-        for (int i = 0; i<num_centroids; i++) { cout <<centroid_coord_array[i]<< "] "<<endl;}} // print out the array
+        for (int i = 0; i<num_centroids; i++) { cout <<centroid_coord_array[i]<< "] "<<endl;}
+    } // print out the array
 
     ////// If there is only 1 centroid, update kf with that
     if (num_centroids < 2) { // 1 centroid
-
-        publishTransform(centroid_coord_array[0], "centroid_0"); // publish a transform
+        if (publishing_)
+            publishTransform(centroid_coord_array[0], "centroid_0"); // publish a transform
         new_est_index = 0; // use the 1st index
 
     } else { ///// If there are more than one centroid
+        // for each kalman filter, loop through centroids, get closest one, update that filter with that estimate
+
+
 
         VectorXd innovation_vector(3); //new_measurement stores last kf output, innovation_vector stores distance between this and new measurement
         vector <double> distances_from_prev_est; // stores the distances between measurements and prior estimate in a vector
@@ -349,10 +364,12 @@ void Tracker::processCentroidCoords(vector<VectorXd> centroid_coord_array) {
 
         for (int i = 0; i<num_centroids; i++) { // loop through the centroids
             ////// publish a transform with an id based on i
-            stringstream target_frame_id;
-            target_frame_id << "centroid_"<<i;
-            publishTransform(centroid_coord_array[i], target_frame_id.str());
-
+            if (publishing_)
+            {
+                stringstream target_frame_id;
+                target_frame_id << "centroid_"<<i;
+                publishTransform(centroid_coord_array[i], target_frame_id.str());
+            }
             ///// update distance vector
             innovation_vector = centroid_coord_array[i] - kf_prev_state; // get difference vector between new measurement and previous
             distances_from_prev_est.push_back(sqrt(innovation_vector.squaredNorm())); // this value is in metres
@@ -381,9 +398,45 @@ void Tracker::processCentroidCoords(vector<VectorXd> centroid_coord_array) {
             cout << "New measurement covariance is\n"<<P <<endl;
             cout << "new Kf state is\n"<<kf_prev_state <<endl; }
         publishMarker(kf_prev_state, P(0,0),P(1,1),P(2,2)); // publish the marker
-//        publishTransform(kf_prev_state, "kalman_filter_state");
+        //        publishTransform(kf_prev_state, "kalman_filter_state");
     }
 }
+/*
+void Tracker::processCentroidCoords(vector<VectorXd> centroid_coord_array) {
+    // Loops through a vector of centroids and updates the kalman filter with the one closest to previous estimate.
+    // Publishes transforms for all estimates
+
+    int num_centroids = centroid_coord_array.size();
+    int num_kalman_filters = kf_vector_.size();
+    int new_est_index = -1; // stores the index of the centroid to use. -1 indicates that no suitable estimate has been found
+    VectorXd kf_prev_state; // for previous kalman filter state
+
+    if (verbose_)
+    {
+        cout <<"processCentroids() with array :\n[";
+        for (int i = 0; i<num_centroids; i++) { cout <<centroid_coord_array[i]<< "] "<<endl;}
+    } // print out the array
+
+    for (int i = 0; i< num_centroids; i++)
+    {
+        // get the index of the coordinate that's closest to that estimate
+        int index_of_kf_to_update = getIndexOfClosestKf(centroid_coord_array[i]);
+
+    }
+}
+int Tracker::getIndexOfClosestKf(VectorXd centroid_coord)
+{ // returns the index of the coordinate that's closest to the kf's state
+    vector <double> distances_from_prev_est; // stores the distances between measurements and prior estimate in a vector
+    for (int i = 0; i<kf_vector_.size(); i ++)
+    {
+        distances_from_prev_est.push_back(sqrt((centroid_coord - kf_vector_[i].getState()).squaredNorm())); // this value is in metres
+        if (verbose_)
+            cout << "distances_from_prev_est["<<i<<"] = "<< distances_from_prev_est[i]<<"m"<<endl;
+    }
+    return min_element(distances_from_prev_est.begin(),distances_from_prev_est.end()) - distances_from_prev_est.begin(); // take the minimum distance from the array
+//    centroid_coord_array.erase(index); // remove this coordinate from the centroid array so that it doesn't get claimed by some other kalman filter
+}
+*/
 
 ///// I/O Methods
 void Tracker::publishTransform(VectorXd coordinates, string target_frame_id) {
@@ -404,16 +457,19 @@ void Tracker::initialiseSubscribersAndPublishers() {
 
     // Create ROS publishers for the output point clouds
     string topic_raw = "pcl_raw", topic_trans = "pcl_trans", topic_zfilt = "pcl_zfilt", topic_ds = "pcl_ds", topic_seg_filt = "pcl_seg_filter", topic_centroid = "pcl_centroid";
-
-    pub_raw_ = nh_.advertise<sensor_msgs::PointCloud2> (topic_raw, 1);
-    pub_trans_ = nh_.advertise<sensor_msgs::PointCloud2> (topic_trans, 1);
-    pub_zfilt_ = nh_.advertise<sensor_msgs::PointCloud2> (topic_zfilt, 1);
-    pub_ds_ = nh_.advertise<sensor_msgs::PointCloud2> (topic_ds, 1);
-    pub_seg_filter_ = nh_.advertise<sensor_msgs::PointCloud2> (topic_seg_filt, 1);
-    pub_centroid_ = nh_.advertise<sensor_msgs::PointCloud2> (topic_centroid, 1);
+    if (publishing_)
+    {
+        pub_raw_ = nh_.advertise<sensor_msgs::PointCloud2> (topic_raw, 1);
+        pub_trans_ = nh_.advertise<sensor_msgs::PointCloud2> (topic_trans, 1);
+        pub_zfilt_ = nh_.advertise<sensor_msgs::PointCloud2> (topic_zfilt, 1);
+        pub_ds_ = nh_.advertise<sensor_msgs::PointCloud2> (topic_ds, 1);
+        pub_seg_filter_ = nh_.advertise<sensor_msgs::PointCloud2> (topic_seg_filt, 1);
+        pub_centroid_ = nh_.advertise<sensor_msgs::PointCloud2> (topic_centroid, 1);
+    }
     // Create a publisher for the kf marker
     pub_marker_ = nh_.advertise<visualization_msgs::Marker>( "Tracker_marker", 0 ); // this name shows up in RVIZ
     // Create a transformListener to enable translation from odom to base frames with our pointcloud.
+
     odom_base_ls_.reset(new tf::TransformListener); // initialise the odom_base transform listener- so we can transform our output into odom coords
     return;
 }
@@ -440,10 +496,12 @@ void Tracker::publishMarker(VectorXd x_hat,double scale_x,double scale_y,double 
     marker.pose.orientation.z = 0.0;
     marker.pose.orientation.w = 1.0;
 
-    double scaler = .3; // the overall marker size
+    double scaler = .5; // the overall marker size
     // set the marker size as an input params
-    marker.scale.x = scale_x*scaler;
-    marker.scale.y = scale_y*scaler;
+//    marker.scale.x = scale_x*scaler;
+//    marker.scale.y = scale_y*scaler;
+    marker.scale.x = sqrt(scale_x)*scaler;
+    marker.scale.y = sqrt(scale_y)*scaler;
     //    marker.scale.z = scale_z*scaler;
     marker.scale.z = 2; // keeping z at a constant 2 metres tall
 
@@ -459,6 +517,12 @@ void Tracker::setupKalmanFilter(VectorXd x0,double dt,const Eigen::MatrixXd& A, 
     cout<< "initiating kalman_filter"<<endl;
     kf_ = KalmanFilter(dt, A, C, Q, R, P, false); // call the kalman filter constructor
     kf_.init(0, x0); // initialise the kalman filter
+
+    /*
+    KalmanFilter new_kf = KalmanFilter(dt, A, C, Q, R, P, false); // call the kalman filter constructor
+    new_kf.init(0, x0); // initialise the kalman filter
+    kf_vector_.push_back(new_kf); // add to our vector of kalman filters
+    */
     cout<<"kalman filter initiated"<<endl;
     return;
 }

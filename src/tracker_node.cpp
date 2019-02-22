@@ -37,9 +37,9 @@ void setTrackerKfParams(Tracker &our_tracker) {
     A = I3; //I3
     C = I3;
 
-    Q << 3, 0, 0, 0, 3, 0, 0, 0, .5; // MAKE THIS A FUNCTION OF TIMESTEP^2
-    R << 30, 0, 0, 0, 30, 0, 0, 0, 1; //I3 * .05 // MAKE THIS A FUNCTION OF TIMESTEP^2
-    P << 2, 0, 0, 0, 2, 0, 0, 0, 2; //I3
+    Q << 2, 0, 0, 0, 2, 0, 0, 0, .5; // MAKE THIS A FUNCTION OF TIMESTEP^2
+    R << 20, 0, 0, 0, 20, 0, 0, 0, 1; //I3 * .05 // MAKE THIS A FUNCTION OF TIMESTEP^2
+    P << 3, 0, 0, 0, 3, 0, 0, 0, 3; //I3
 
     // initialise the kalman filter with the given parameters
     VectorXd x0(3);
@@ -53,17 +53,17 @@ int main (int argc, char** argv) // runs the tracker node
 
     // Initialize ROS
     ros::init (argc, argv, "tracker_node"); // initialise the node
-    // ros::Rate r(10); // 10 hz
 
     ros::NodeHandle nh; // setup a nodehandle for communication between methods
-    int max_cluster_size = 300;
-    int min_cluster_size = 50;
-    double cluster_tolerance = 0.1; // too small, we split one object into many, too big, we merge objects into one. In metres
+    int max_cluster_size = 150;
+    int min_cluster_size = 40;
+    double cluster_tolerance = .4; // too small, we split one object into many, too big, we merge objects into one. In metres
     double seg_dist_threshold = 0.03; // how close a point must be to the model in order to be considered an inlier in metres
 
-    Tracker our_tracker(nh, max_cluster_size, min_cluster_size, cluster_tolerance, seg_dist_threshold, true); // construct a tracker called our_tracker
+    Tracker our_tracker(nh, max_cluster_size, min_cluster_size, cluster_tolerance, seg_dist_threshold, true, false); // construct a tracker called our_tracker
     setTrackerKfParams(our_tracker); // setup the kalman filter inside the tracker
 
+    ros::Rate r(10); // 10 hz
     ros::spin ();// spin ros
 
     return 0;
