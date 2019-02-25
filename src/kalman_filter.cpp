@@ -26,7 +26,7 @@ KalmanFilter::KalmanFilter(
       m(C.rows()), n(A.rows()), dt(dt), initialized(false), //populate m with number of rows in C, n with number of rows in A
       I(n, n), x_hat(n), x_hat_new(n), verbose_(verbose)
 {
-    cout << "KalmanFilter_constructor called" << endl;
+    cout << "KalmanFilter constructor called" << endl;
     I.setIdentity();
     //print out the chosen matrices
     cout << "A: \n" << A << endl;
@@ -100,7 +100,21 @@ void KalmanFilter::update(const VectorXd& y) {
     t += dt;
 
 }
+MatrixXd KalmanFilter::getP()
+{
 
+    if (!initialized)
+        throw std::runtime_error("Filter is not initialised... :3");
+    if (verbose_)
+        cout << "KalmanFilter::getP() P =" <<P<<endl;
+    return P;
+}
+VectorXd KalmanFilter::getState()
+{
+    if (!initialized)
+        throw std::runtime_error("Filter is not initialised... :3");
+    return x_hat;
+}
 void KalmanFilter::update(const VectorXd& y, double dt, const MatrixXd A) {
 
     this->A = A;
