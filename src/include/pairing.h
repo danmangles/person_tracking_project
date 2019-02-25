@@ -1,5 +1,7 @@
 
 #include <Eigen/Dense>
+#include <iostream> // for couts
+using namespace Eigen;
 using namespace std;
 
 #ifndef PAIRING_H

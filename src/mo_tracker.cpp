@@ -1,23 +1,25 @@
-#include "include/mo_tracker.h"
+#include "include/mo_tracker.h" // includes a bunch of stuff inc kalman filter, tracklet and pairing
+
 using namespace std;
 //using namespace Eigen;
 
-Tracker::Tracker(ros::NodeHandle nh,
+MOTracker::MOTracker(ros::NodeHandle nh,
                  int max_cluster_size,
                  int min_cluster_size,
                  double cluster_tolerance,
                  double seg_dist_threshold,
+                 kf_param_struct kf_params,
                  bool verbose,
                  bool publishing
                  ) :
-    nh_(nh), max_cluster_size_(max_cluster_size), min_cluster_size_(min_cluster_size),cluster_tolerance_(cluster_tolerance), seg_dist_threshold_(seg_dist_threshold), verbose_(verbose), publishing_(publishing) // initiate the nodehandle
+    nh_(nh), max_cluster_size_(max_cluster_size), min_cluster_size_(min_cluster_size),cluster_tolerance_(cluster_tolerance), seg_dist_threshold_(seg_dist_threshold), kf_params_(kf_params), verbose_(verbose), publishing_(publishing) // initiate the nodehandle
 {   // Constructor: sets up
-    cout<< "Tracker constructor called "<<endl;
+    cout<< "MOTracker constructor called "<<endl;
     initialiseSubscribersAndPublishers(); //initialise the subscribers and publishers
 }
 
 ///// General Pointcloud Methods
-void Tracker::callback(const sensor_msgs::PointCloud2ConstPtr &cloud_msg) { // the callback fcn
+void MOTracker::callback(const sensor_msgs::PointCloud2ConstPtr &cloud_msg) { // the callback fcn
     // this is called by pointclouds from the velodyne, processing them, decomposing into clusters, and publishing cluster coordinates
     cout<< "************************************\nInitiating Callback\n***********************************"<<endl;
     sensor_msgs::PointCloud2 msg_to_publish; // we will use this for all the pointclouds we need to publish
@@ -73,7 +75,7 @@ void Tracker::callback(const sensor_msgs::PointCloud2ConstPtr &cloud_msg) { // t
         cout << "No valid clusters visible after getCentroidsOfClusters()"<<endl;
 }
 
-void Tracker::applyPassthroughFilter(const sensor_msgs::PointCloud2ConstPtr input_cloud, sensor_msgs::PointCloud2 &output_cloud) {
+void MOTracker::applyPassthroughFilter(const sensor_msgs::PointCloud2ConstPtr input_cloud, sensor_msgs::PointCloud2 &output_cloud) {
     if (verbose_)
         cout <<"Applying Passthrough Filter" << endl;
     // Convert from sensor_msgs::PointCloud2 to pcl::PointCloud2
@@ -115,7 +117,7 @@ void Tracker::applyPassthroughFilter(const sensor_msgs::PointCloud2ConstPtr inpu
 
 }
 
-void Tracker::applyBaseOdomTransformation(sensor_msgs::PointCloud2 input_cloud, sensor_msgs::PointCloud2 &output_cloud) {
+void MOTracker::applyBaseOdomTransformation(sensor_msgs::PointCloud2 input_cloud, sensor_msgs::PointCloud2 &output_cloud) {
     // transforms the cloud into the odom frame from base frame
     if (verbose_)
         cout<<"Transforming Pointcloud into odom frame. Waiting for transform"<<endl;
@@ -130,7 +132,7 @@ void Tracker::applyBaseOdomTransformation(sensor_msgs::PointCloud2 input_cloud, 
     return;
 }
 
-void Tracker::removeOutOfPlanePoints(pcl::PointCloud<pcl::PointXYZRGB>::Ptr &cloud_ptr) {
+void MOTracker::removeOutOfPlanePoints(pcl::PointCloud<pcl::PointXYZRGB>::Ptr &cloud_ptr) {
     //////// Create a planar segmentation model <- NOT SURE WHAT THIS DOES EXACTLY, SEE http://pointclouds.org/documentation/tutorials/planar_segmentation.php#id1
     if(verbose_)
         cout << "Initiating Segmentation objects" << endl;
@@ -178,7 +180,7 @@ void Tracker::removeOutOfPlanePoints(pcl::PointCloud<pcl::PointXYZRGB>::Ptr &clo
     return;
 }
 
-void Tracker::convertSM2ToPclPtr(sensor_msgs::PointCloud2 input_cloud, pcl::PointCloud<pcl::PointXYZRGB>::Ptr &output_ptr){
+void MOTracker::convertSM2ToPclPtr(sensor_msgs::PointCloud2 input_cloud, pcl::PointCloud<pcl::PointXYZRGB>::Ptr &output_ptr){
     // converts a sensor_msgs::PointCloud2 to pcl::PointCloud<pcl::PointXYZRGB>::Ptr
     if (verbose_)
         cout << "converting sensor_msgs::pointcloud2 into a pointer"<<endl;
@@ -190,7 +192,7 @@ void Tracker::convertSM2ToPclPtr(sensor_msgs::PointCloud2 input_cloud, pcl::Poin
     return;
 }
 
-void Tracker::applyVoxelGrid(pcl::PointCloud<pcl::PointXYZRGB>::Ptr &cloud_ptr){
+void MOTracker::applyVoxelGrid(pcl::PointCloud<pcl::PointXYZRGB>::Ptr &cloud_ptr){
     // applies a
     pcl::VoxelGrid<pcl::PointXYZRGB> vg; // Create the filtering object:
     vg.setInputCloud (cloud_ptr); // set vg input to input cloud
@@ -201,7 +203,7 @@ void Tracker::applyVoxelGrid(pcl::PointCloud<pcl::PointXYZRGB>::Ptr &cloud_ptr){
     return;
 }
 
-void Tracker::splitCloudPtrIntoClusters(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_ptr, vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> &cloud_cluster_vector) {
+void MOTracker::splitCloudPtrIntoClusters(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_ptr, vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> &cloud_cluster_vector) {
     if (verbose_)
         cout << "splitting cloud_ptr with "<< cloud_ptr->points.size ()<<" points into clusters" <<endl;
     //////// Get a vector of index objects, 1 for each cluster
@@ -229,7 +231,7 @@ void Tracker::splitCloudPtrIntoClusters(pcl::PointCloud<pcl::PointXYZRGB>::Ptr c
     return;
 }
 
-void Tracker::assignRandomColour(pcl::PointCloud<pcl::PointXYZRGB>::Ptr &input_cloud) {
+void MOTracker::assignRandomColour(pcl::PointCloud<pcl::PointXYZRGB>::Ptr &input_cloud) {
     // assigns a random colour to pointcloud ptr input_cloud, colour is set by colour_counter
     // Create a random colour
     int colour_counter = rand() % 100; // generate a random number between 0 and 99
@@ -248,7 +250,7 @@ void Tracker::assignRandomColour(pcl::PointCloud<pcl::PointXYZRGB>::Ptr &input_c
     return;
 }
 
-vector<pcl::PointIndices> Tracker::getClusterIndices(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_ptr) {
+vector<pcl::PointIndices> MOTracker::getClusterIndices(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_ptr) {
     // Create the KdTree object for the search method of the extraction
     if (verbose_)
         cout << "getting indices of each cluster from cloud_ptr with "<< cloud_ptr->points.size ()<<" points" << endl;
@@ -277,7 +279,7 @@ vector<pcl::PointIndices> Tracker::getClusterIndices(pcl::PointCloud<pcl::PointX
 }
 
 ////// Centroid Pointcloud Methods
-void Tracker::getCentroidsOfClusters (vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> cloud_cluster_vector, vector<Eigen::VectorXd> &centroid_coord_array) {
+void MOTracker::getCentroidsOfClusters (vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> cloud_cluster_vector, vector<Eigen::VectorXd> &centroid_coord_array) {
     // loops through cloud_cluster vector and gets the centroid
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_cluster;
 
@@ -309,7 +311,7 @@ void Tracker::getCentroidsOfClusters (vector<pcl::PointCloud<pcl::PointXYZRGB>::
 
 }
 
-void Tracker::getClusterCentroid(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cluster_ptr, VectorXd &coord_centroid) {
+void MOTracker::getClusterCentroid(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cluster_ptr, VectorXd &coord_centroid) {
     // loop through the point cloud cluster_ptr, adding points to a centroid
 
     cout << "generate_centroid() called" <<endl;
@@ -333,107 +335,59 @@ void Tracker::getClusterCentroid(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cluster_
     cout << "generate_centroid() is returning a coord_centroid at :\n"<<coord_centroid<<endl;
 }
 
-/* REWRITING THIS METHOD
-void Tracker::processCentroidCoords(vector<VectorXd> centroid_coord_array) {
-    // Loops through a vector of centroids and updates the kalman filter with the one closest to previous estimate.
-    // Publishes transforms for all estimates
-
-    int num_centroids = centroid_coord_array.size();
-    int new_est_index = -1; // stores the index of the centroid to use. -1 indicates that no suitable estimate has been found
-    VectorXd kf_prev_state; // for previous kalman filter state
-
+void MOTracker::updatePairings(vector<VectorXd> &unpaired_detections)
+{
     if (verbose_)
-    {
-        cout <<"processCentroids() with array :\n[";
-        for (int i = 0; i<num_centroids; i++) { cout <<centroid_coord_array[i]<< "] "<<endl;}
-    } // print out the array
-
-    ////// If there is only 1 centroid, update kf with that
-    if (num_centroids < 2) { // 1 centroid
-        if (publishing_)
-            publishTransform(centroid_coord_array[0], "centroid_0"); // publish a transform
-        new_est_index = 0; // use the 1st index
-
-    } else { ///// If there are more than one centroid
-        // for each kalman filter, loop through centroids, get closest one, update that filter with that estimate
-
-
-
-        VectorXd innovation_vector(3); //new_measurement stores last kf output, innovation_vector stores distance between this and new measurement
-        vector <double> distances_from_prev_est; // stores the distances between measurements and prior estimate in a vector
-        kf_prev_state = getState(); // get the previous estimate from the Kalman Filter to compare against
-
-        for (int i = 0; i<num_centroids; i++) { // loop through the centroids
-            ////// publish a transform with an id based on i
-            if (publishing_)
-            {
-                stringstream target_frame_id;
-                target_frame_id << "centroid_"<<i;
-                publishTransform(centroid_coord_array[i], target_frame_id.str());
-            }
-            ///// update distance vector
-            innovation_vector = centroid_coord_array[i] - kf_prev_state; // get difference vector between new measurement and previous
-            distances_from_prev_est.push_back(sqrt(innovation_vector.squaredNorm())); // this value is in metres
-            if (verbose_)
-                cout << "distances_from_prev_est["<<i<<"] = "<< distances_from_prev_est[i]<<"m"<<endl;
-        }
-        ///// Set index of our centroid as the one with the smallest distance
-        new_est_index = min_element(distances_from_prev_est.begin(),distances_from_prev_est.end()) - distances_from_prev_est.begin(); // take the minimum distance from the array
-        distances_from_prev_est.clear(); // remove all the elements from the vector for next time
-    }
-
-    ////// update kf with new_est_index
-    VectorXd new_measurement(3); // stores the measurement we will use
-    MatrixXd P; // stores Kalman Filter Variance
-    if (new_est_index != -1) { // e.g. if we have found a viable coordinate
-        if (verbose_)
-            cout << "updating the filter with coordinate at index "<<new_est_index<<endl;
-        new_measurement << centroid_coord_array[new_est_index][0],centroid_coord_array[new_est_index][1],centroid_coord_array[new_est_index][2]; // extract the coordinate
-
-        ///// Update the kalman_filter
-        updateKf(new_measurement); //update the kalman filter with this estimate
-
-        P = kf_.getP(); //get covariance
-        kf_prev_state = getState();
-        if (verbose_) {
-            cout << "New measurement covariance is\n"<<P <<endl;
-            cout << "new Kf state is\n"<<kf_prev_state <<endl; }
-        publishMarker(kf_prev_state, P(0,0),P(1,1),P(2,2)); // publish the marker
-        //        publishTransform(kf_prev_state, "kalman_filter_state");
-    }
-} */
-
-void Tracker::processCentroidCoords(vector<VectorXd> unpaired_detections) {
-    // Loops through a vector of centroids and updates the kalman filter with the one closest to previous estimate.
-    // Publishes transforms for all estimates
-    double MAX_GATING_DISTANCE = 3; //m
-    bool isPaired; // specific for each tracklet
-    double new_distance; // specific for each tracklet
-
-    /*for each tracklet
-            for each pairing with this tracklet ID
-               1. get the pairing with shortest distance to tracklet.getState()
-                    1. update the tracklet with this pairing
-                    2. delete this pairing
+        cout << "\nupdatePairings() with "<<unpaired_detections.size()<<" unpaired_detections"<<endl;
+    /*4. for each tracklet
+            for each unpaired detection < gating_threshold (a max radius)
+                create a pairing instance with tracklet ID and detection
+                delete this detection (so we only have a pairing OR a detection)
+                    num_consectutive_misses = 0
+            if no detections paired
+                tracklet.num_consecutive_misses ++
     */
+    double MAX_GATING_DISTANCE = 1; //m
+    double new_distance; // specific for each tracklet
+    bool isPaired;
     for (int i = 0; i < tracklet_vector_.size(); i++) // loop through all live tracklets. if none, may cause an error?
     {
+
+        if (unpaired_detections.empty())
+        {
+            if (verbose_)
+                cout << "All detections have been paired"<<endl;
+            return; // break out of loop (and therefore method)
+        }
+
         isPaired = false; // not paired this iteration
+        if (verbose_)
+            cout << "*****assessing tracklet "<<i<<endl;
 
         for (int j = 0; j < unpaired_detections.size(); j++) // loop through all unpaired detections
         {
-            new_distance = tracklet_vector_[i].getDistance(unpaired_detections[j]); // get distance of detection from tracklet
-
+            if (verbose_)
+                cout << "assessing detection "<<j<<endl;
+            VectorXd new_detection = unpaired_detections[j];
+            new_distance = tracklet_vector_[i].getDistance(new_detection); // get distance of detection from tracklet
+            if (verbose_)
+                cout << "detection "<<j<<" is at distance "<<new_distance<<"m"<<endl;
             if (new_distance < MAX_GATING_DISTANCE) // if detection is within range
             {
+                if (verbose_)
+                    cout << "detection "<<j<<" in range, creating a new pairing"<<endl;
                 //create a pairing instance with tracklet ID and detection
 
-                Pairing new_pairing (tracklet_vector_[i].getID(), unpaired_detections[j], new_distance); // make a new pairing with tracker ID and detection coord
+                Pairing new_pairing (tracklet_vector_[i].getID(), unpaired_detections[j], new_distance); // make a new pairing with MOTracker ID and detection coord
 
                 unpaired_detections.erase(unpaired_detections.begin() + j); // move this one out of the array
 
                 isPaired = true; // we have paired this tracklet
+
                 pairing_vector_.push_back(new_pairing); // add to pairing vector
+                if (verbose_)
+                    cout << "MOTracker "<<tracklet_vector_[i].getID()<<" has been paired"<<endl;
+                cout << "pairing vector has length "<<pairing_vector_.size()<<endl;
             }
 
         }
@@ -441,48 +395,179 @@ void Tracker::processCentroidCoords(vector<VectorXd> unpaired_detections) {
         {
             cout << "Couldn't find a detection for tracklet "<< tracklet_vector_[i].getID()<<endl;
             tracklet_vector_[i].recordMiss();
+        } else {
+            cout << "this tracklet is paired" <<endl;
         }
     }
-/*5. for each tracklet
-        1. for each pairing with this tracklet ID
-            1. get the pairing with shortest distance to tracklet.getState()
-                1. update the tracklet with this pairing
-                2. delete this pairing
-*/
-    for (int i = 0; i < tracklet_vector_.size(); i++) // loop through all live tracklets. if none, may cause an error?
+}
+void MOTracker::updateTracklets(vector<VectorXd> &unpaired_detections)
+{
+    /*5. for each tracklet
+            1. for each pairing with this tracklet ID
+                1. get the pairing with shortest distance to tracklet.getState()
+                    1. update the tracklet with this pairing
+                    2. delete this pairing
+    */
+    if (verbose_)
+        cout << "\nupdateTracklets()"<<endl;
+
+    for (int i = 0; i < tracklet_vector_.size(); i++) // loop through all live tracklets.
     {
+        Tracklet *this_tracklet = &tracklet_vector_[i]; // create a pointer to current tracklet
+
+        if (verbose_)
+            cout << "Looping through "<<pairing_vector_.size()<<" pairings for tracklet "<<i<<endl;
         double best_distance = 100; //in m. try and beat this
+        int best_pairing_index = -1; // index for pairing with shortest distance
+
         for (int j = 0; j < pairing_vector_.size(); j++) // loop through all paired detections
         {
-            // are we shorter than best_distance?
-            if (pairing_vector_[j].getDistanceToTracklet() < best_distance) //if this pairing is closer than previous one
+            if (pairing_vector_[j].getAssociatedTrackletID() == this_tracklet->getID()) // if the pairing is associated with this tracklet (same ID)
             {
-                // update the tracklet with this pairing
-                //delete this pairing
+                if (verbose_)
+                    cout << "found a pairing that matches, at distance "<<pairing_vector_[j].getDistanceToTracklet()<<"m"<<endl;
+                // are we shorter than best_distance?
+                if (pairing_vector_[j].getDistanceToTracklet() < best_distance) //if this pairing is closer than previous one
+                {
+                    best_pairing_index = j; // set the best pairing index
+//                    cout << "updating best distance, best_pairing_index = "<<best_pairing_index<<endl;
+                    best_distance = pairing_vector_[j].getDistanceToTracklet(); // update best distance
+                } else {
+                    cout << "not better than best distance" <<endl;
+                }
             }
+
+        }
+        if(best_pairing_index != -1) // if we've paired this one
+        {
+            ///// using the best_pairing_index we've just found, update the tracklet and remove this pairing from the vector
+            /// so it doesn't get associated with another tracker
+            if (verbose_)
+                cout << "Updating Tracklet "<<this_tracklet->getID()<< " with pairing at index "<<best_pairing_index<<endl;
+
+            tracklet_vector_[i].updateTracklet(pairing_vector_[best_pairing_index]); // update the tracklet with this pairing
+            pairing_vector_.erase(pairing_vector_.begin() + best_pairing_index); // delete this pairing from pairing_vector_
+
+            ///// now publish the output of this tracklet with a marker
+
+            stringstream tracklet_name;
+            tracklet_name << "tracklet_"<<this_tracklet->getID(); // identify this marker with the tracklet id
+            publishTransform(pairing_vector_[best_pairing_index].getDetectionCoord(),tracklet_name.str()); // publish a transform even if we are not initialised
+
+            if (tracklet_vector_[i].isInitialised()) // start publishing if we are initialised
+            {
+
+                KalmanFilter kf = this_tracklet->getKf(); // get the Kf from this tracklet vector
+                MatrixXd P = kf.getP(); //get covariance
+                VectorXd xhat = kf.getState();
+                if (verbose_) {
+                    cout << "New measurement covariance is\n"<<P <<endl;
+                    cout << "new Kf state is\n"<<xhat <<endl; }
+
+                /// create a title for this marker
+                publishMarker(xhat,tracklet_name.str(), P(0,0),P(1,1),P(2,2)); // publish the marker
+            }
+
+        }
+        else
+        {
+            if (verbose_)
+                cout << "No pairings match this tracker"<<endl;
         }
     }
+    ///// put any remaining pairings back in the unpaired detections
+    if (verbose_)
+        cout << "Putting "<<pairing_vector_.size()<<" remaining pairings back into unpaired_detections"<<endl;
+    for (int i = 0; i < pairing_vector_.size(); i++)
+        unpaired_detections.push_back(pairing_vector_[i].getDetectionCoord()); // move the detection coordinate back onto detections
+    pairing_vector_.clear(); // remove all elements from pairing_vector_, since we've just copied them across
 
-        /*
-//6. put any remaining pairings back in the unpaired detections
+}
+void MOTracker::createNewTracklets(vector<VectorXd> &unpaired_detections)
+{
+    ////// birth
+    //    7. for unpaired detections
+    //        1. create a new tracklet for each, with a unique id
+    if (verbose_)
+        cout << "creating "<<unpaired_detections.size()<<" new Tracklets"<<endl;
 
-// birth
-7. for unpaired detections
-    1. create a new tracklet for each, with a unique id
-// death
-8. for each tracklet
-    1. if num_consecutive_misses > 3
-        1. delete this tracker
+    for (int i = 0; i < unpaired_detections.size(); i++) // loop though the unpaired detections
+    {
+        // create a new tracklet with a KF initialised at the last detection
 
-// kf initiation if tracklet reaches sufficient length
-9. for each tracklet
-    1. if detections_vector.size() > 2
-        1. initiate the kalman filter
-*/
+        //        cout << "Kf_params.A is " << kf_params_.A << endl;
 
+        Tracklet new_tracklet(next_tracklet_ID_,
+                              unpaired_detections[i],
+                              KalmanFilter(kf_params_.dt, kf_params_.A, kf_params_.C, kf_params_.Q, kf_params_.R, kf_params_.P, false));
+        tracklet_vector_.push_back(new_tracklet);
+        if (verbose_)
+            cout << "Tracklet with ID "<<next_tracklet_ID_<<" added to tracklet_vector_"<<endl;
 
+        next_tracklet_ID_++; // update the next_tracklet_ID
+        if (next_tracklet_ID_ > 20) // prevent the program getting an overflow after a really long time
+            next_tracklet_ID_ = 0;
+    }
+}
+void MOTracker::deleteDeadTracklets()
+{
+    //    // death
+    //    8. for each tracklet
+    //        1. if num_consecutive_misses > 3
+    //            1. delete this tracker
+    int max_consecutive_misses = 4; // start this at 4 and see what happens
 
+    for (int i = 0; i < tracklet_vector_.size(); i++) // loop through all live tracklets.
+    {
+        if (verbose_)
+            cout << "Tracklet "<<tracklet_vector_[i].getID()<<" has had "<<tracklet_vector_[i].getNumConsecutiveMisses()<<" consecutive misses."<<endl;
+        if (tracklet_vector_[i].getNumConsecutiveMisses() > max_consecutive_misses) // if we've missed this tracklet too many times in a row
+        {
+            tracklet_vector_.erase(tracklet_vector_.begin() + i); // delete this tracklet from tracklet_vector_
+            if(verbose_)
+                cout<<"******************************************************\n!!!!!!!deleting this tracker!!!!!!!!!"<<endl;
+        }
+    }
+}
+void MOTracker::initiateLongTracklets()
+{
+    //    // kf initiation if tracklet reaches sufficient length
+    //    9. for each tracklet
+    //        1. if detections_vector.size() > 2
+    //            1. initiate the kalman filter
+    int min_initialisation_length = 5; // min number of detections needed to start the kalman filter
+    for (int i = 0; i < tracklet_vector_.size(); i++) // loop through all live tracklets.
+    {
+        if (verbose_)
+            cout << "Tracklet "<<tracklet_vector_[i].getID()<<" has had "<<tracklet_vector_[i].getLength()<<" detections."<<endl;
+        if (tracklet_vector_[i].getLength() > min_initialisation_length && !tracklet_vector_[i].isInitialised()) // if this tracklet is long enough and not initialised
+        {
+            if (verbose_)
+                cout << "initiating kf."<<endl;
+            tracklet_vector_[i].initKf(); // initialise this tracklet's kalman filter
+        }
+    }
+}
+void MOTracker::processCentroidCoords(vector<VectorXd> unpaired_detections) {
+    // Loops through a vector of centroids and updates the kalman filter with the one closest to previous estimate.
+    // Publishes transforms for all estimates
+    if (verbose_)
+        cout << "***********************************************\nprocessCentroidCoords()"<<endl;
+    if (verbose_)
+        cout << "There are "<<tracklet_vector_.size()<<" live tracklets."<<endl;
 
+    //// PUBLISH A TRANSFORM FOR EACH DETECTION
+    ///
+    for (int i = 0; i < unpaired_detections.size(); i++){
+        stringstream ss;
+        ss << "detection_"<<i;
+        publishTransform(unpaired_detections[i], ss.str());
+    }
+    updatePairings(unpaired_detections); // get a bunch of pairings
+    updateTracklets(unpaired_detections); // update each tracklet with the best pairing for that tracklet, increment the misses for tracklets without pairings
+    createNewTracklets(unpaired_detections); // generate new tracklets from any unassociated pairings
+    deleteDeadTracklets(); // delete any tracklets that have been missed too many times
+    initiateLongTracklets(); // initiate the kalman filters and publisher for any tracklets with a long sequence of detections
 }
 /* THIS WAS FOR PREVIOUS ATTEMPT AT NEAREST CLUSTER TRACKER
 int Tracker::getIndexOfClosestKf(VectorXd centroid_coord)
@@ -500,7 +585,7 @@ int Tracker::getIndexOfClosestKf(VectorXd centroid_coord)
 */
 
 ///// I/O Methods
-void Tracker::publishTransform(VectorXd coordinates, string target_frame_id) {
+void MOTracker::publishTransform(VectorXd coordinates, string target_frame_id) {
     // publishes a transform on broadcaster br_ at the 3D coordinate Vector coordinates
     tf::Transform transform;
     transform.setOrigin( tf::Vector3(coordinates[0],coordinates[1],coordinates[2]) );
@@ -508,13 +593,14 @@ void Tracker::publishTransform(VectorXd coordinates, string target_frame_id) {
     q.setEulerZYX(0, 0, 0);
     transform.setRotation(q);
 
+//    string base_frame_id = "map"; // we are based in the odom frame
     string base_frame_id = "odom"; // we are based in the odom frame
     br_.sendTransform(tf::StampedTransform(transform, ros::Time::now(), base_frame_id, target_frame_id));
 }
 
-void Tracker::initialiseSubscribersAndPublishers() {
+void MOTracker::initialiseSubscribersAndPublishers() {
     string input_topic = "/velodyne/point_cloud_filtered"; // topic is the pointcloud from the velodyne
-    point_cloud_sub_ = nh_.subscribe(input_topic, 1, &Tracker::callback, this); // Create a ROS subscriber for the input point cloud that calls the callback
+    point_cloud_sub_ = nh_.subscribe(input_topic, 1, &MOTracker::callback, this); // Create a ROS subscriber for the input point cloud that calls the callback
 
     // Create ROS publishers for the output point clouds
     string topic_raw = "pcl_raw", topic_trans = "pcl_trans", topic_zfilt = "pcl_zfilt", topic_ds = "pcl_ds", topic_seg_filt = "pcl_seg_filter", topic_centroid = "pcl_centroid";
@@ -528,21 +614,22 @@ void Tracker::initialiseSubscribersAndPublishers() {
         pub_centroid_ = nh_.advertise<sensor_msgs::PointCloud2> (topic_centroid, 1);
     }
     // Create a publisher for the kf marker
-    pub_marker_ = nh_.advertise<visualization_msgs::Marker>( "Tracker_marker", 0 ); // this name shows up in RVIZ
+    pub_marker_ = nh_.advertise<visualization_msgs::Marker>( "Tracklet_markers", 0 ); // this name shows up in RVIZ
     // Create a transformListener to enable translation from odom to base frames with our pointcloud.
 
     odom_base_ls_.reset(new tf::TransformListener); // initialise the odom_base transform listener- so we can transform our output into odom coords
     return;
 }
 
-void Tracker::publishMarker(VectorXd x_hat,double scale_x,double scale_y,double scale_z) {
+void MOTracker::publishMarker(VectorXd x_hat, string marker_name,double scale_x,double scale_y,double scale_z) {
     /// This publishes a cylinder, size set by scale_* onto publisher vis_pub at location x_hat
 
     visualization_msgs::Marker marker; // initiate the marker
 
     marker.header.frame_id = "odom"; // we want to publish relative to the odom frame
     marker.header.stamp = ros::Time();
-    marker.ns = "kalman_filter_marker";  // call our marker kalman_filter_marker
+//    marker.ns = "kalman_filter_marker";  // call our marker kalman_filter_marker
+    marker.ns = marker_name;
     marker.id = 0;
     marker.type = visualization_msgs::Marker::CYLINDER; // make it a CYLINDER. CUBE and SPHERE also work
     marker.action = visualization_msgs::Marker::ADD;
@@ -574,25 +661,20 @@ void Tracker::publishMarker(VectorXd x_hat,double scale_x,double scale_y,double 
 }
 
 ////// Kalman Filter Methods
-void Tracker::setupKalmanFilter(VectorXd x0,double dt,const Eigen::MatrixXd& A, const Eigen::MatrixXd& C, const Eigen::MatrixXd& Q, const Eigen::MatrixXd& R, const Eigen::MatrixXd& P) { // initialises the kalman filter with initial vector x0
-    cout<< "initiating kalman_filter"<<endl;
-    kf_ = KalmanFilter(dt, A, C, Q, R, P, false); // call the kalman filter constructor
-    kf_.init(0, x0); // initialise the kalman filter
-
-    /*
-    KalmanFilter new_kf = KalmanFilter(dt, A, C, Q, R, P, false); // call the kalman filter constructor
-    new_kf.init(0, x0); // initialise the kalman filter
-    kf_vector_.push_back(new_kf); // add to our vector of kalman filters
-    */
-    cout<<"kalman filter initiated"<<endl;
-    return;
+/*
+KalmanFilter MOTracker::getNewKalmanFilter() { // THIS MAY GIVE US AN ERROR
+    // returns a new Kalman Filter initialised at x0
+    //KalmanFilter kf(kf_params_.dt, kf_params_.A, kf_params_.C, kf_params_.Q, kf_params_.R, kf_params_.P, false);
+    //kf.init(0,x0); // initialise the kalman filter ////POSSIBLY SHOULD USE ACTUAL TIME TO INITIALISE- NOT SURE IT MAKES A DIFFERENCE
+    return KalmanFilter(kf_params_.dt, kf_params_.A, kf_params_.C, kf_params_.Q, kf_params_.R, kf_params_.P, false);
 }
 
-void Tracker::updateKf(VectorXd y) { //update our state estimate with measurement y
+void MOTracker::updateKf(VectorXd y) { //update our state estimate with measurement y
     //    cout<<"updateKf()"<<endl;
     kf_.update(y); // call the update method of our (private) kalman filter
 }
 
-VectorXd Tracker::getState() { // talks to our kalman filter
+VectorXd MOTracker::getState() { // talks to our kalman filter
     return kf_.getState();
 }
+*/

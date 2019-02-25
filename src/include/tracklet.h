@@ -24,12 +24,18 @@ public:
     int getID(){return ID_;};
 
     double getDistance(VectorXd detection);// return the distance to this detection
+    int getLength(){return tracklet_length_;}; // return the number of detections registered with this tracklet
+    bool isInitialised() {return isInitialised_;}; // have we started the kalman_filter?
+    void initKf(); // initialise the kalman filter at the last observation
+    KalmanFilter getKf() {return kf_;}; // get the private kalman filter
 
 private:
     KalmanFilter kf_; // private copy of kalman filter
     int ID_;
     int num_consecutive_misses = 0;
+    int tracklet_length_ = 1; // number of detections registered with this tracklet. We start with 1 detection
     vector <VectorXd> detection_vector_;
+    bool isInitialised_ = false; // have we started the kalman_filter?
 
 };
 

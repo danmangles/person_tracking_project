@@ -31,6 +31,8 @@ include_directories(
    src/kalman_filter.cpp
 #   src/tracker.cpp
    src/centroid_estimator.cpp
+   src/pairing.cpp
+   src/tracklet.cpp
  )
 
 link_directories(${PCL_LIBRARY_DIRS})

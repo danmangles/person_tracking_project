@@ -15,9 +15,15 @@
 #include <ros/ros.h>
 #include "include/mo_tracker.h"
 using namespace std;
-void setTrackerKfParams(Tracker &our_tracker) {
+//struct kf_param_struct {VectorXd x0; double dt; MatrixXd A; MatrixXd C; MatrixXd Q; MatrixXd R; MatrixXd P;}; // define this type of structure
+
+kf_param_struct getTrackerKfParams() {
     // Sets the tracker's kalman filter kf's parameters dt,A,C,Q,R,P
     // kf params
+
+
+//    struct kf_param_struct {VectorXd x0; double dt; MatrixXd A; MatrixXd C; MatrixXd Q; MatrixXd R; MatrixXd P;}; // define this type of structure
+
 
     int n = 3; // Number of states
     int m = 3; // Number of measurements
@@ -42,11 +48,15 @@ void setTrackerKfParams(Tracker &our_tracker) {
     P << 3, 0, 0, 0, 3, 0, 0, 0, 3; //I3
 
     // initialise the kalman filter with the given parameters
-    VectorXd x0(3);
-    x0 << 0,0,0;
-    our_tracker.setupKalmanFilter(x0, dt,A,C,Q,R,P);
-    return;
+//    VectorXd x0(3);
+//    x0 << 0,0,0;
+
+    kf_param_struct kf_params = {.dt = dt,.A = A,.C = C,.Q = Q,.R = R,.P = P}; // move all the params into the struct
+
+//    our_tracker.setupKalmanFilter(x0, dt,A,C,Q,R,P);
+    return kf_params; // return the parameters
 }
+
 int main (int argc, char** argv) // runs the tracker node
 {
     cout << "Initiating tracker node"<<endl;
@@ -59,9 +69,10 @@ int main (int argc, char** argv) // runs the tracker node
     int min_cluster_size = 40;
     double cluster_tolerance = .4; // too small, we split one object into many, too big, we merge objects into one. In metres
     double seg_dist_threshold = 0.03; // how close a point must be to the model in order to be considered an inlier in metres
+    MOTracker our_tracker(nh, max_cluster_size, min_cluster_size, cluster_tolerance, seg_dist_threshold, getTrackerKfParams(), true, true); // construct a tracker called our_tracker
 
-    Tracker our_tracker(nh, max_cluster_size, min_cluster_size, cluster_tolerance, seg_dist_threshold, true, false); // construct a tracker called our_tracker
-    setTrackerKfParams(our_tracker); // setup the kalman filter inside the tracker
+
+//    setTrackerKfParams(our_tracker); // setup the kalman filter inside the tracker
 
     ros::Rate r(10); // 10 hz
     ros::spin ();// spin ros

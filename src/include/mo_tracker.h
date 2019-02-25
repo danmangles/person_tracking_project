@@ -57,19 +57,22 @@
 using namespace std;
 
 #include "tracklet.h" // this includes pairing.h , kalman_filter.h
-#ifndef tracker_H
-#define tracker_H
+#ifndef mo_tracker_H
+#define mo_tracker_H
 
 
+struct kf_param_struct {double dt; MatrixXd A; MatrixXd C; MatrixXd Q; MatrixXd R; MatrixXd P;}; // define this type of structure
 
-class Tracker {
+
+class MOTracker {
 
 public:
-    Tracker(ros::NodeHandle nh,
+    MOTracker(ros::NodeHandle nh,
             int max_cluster_size,
             int min_cluster_size,
             double cluster_tolerance,
             double seg_dist_threshold,
+            kf_param_struct kf_params,
             bool verbose,
             bool publishing); // initiate a constructor with a nodehandle and parameters for the kalman filter
 
@@ -99,15 +102,25 @@ private:
     void getClusterCentroid(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cluster_ptr, VectorXd &coord_centroid); //returns a vector of centroid coordinates
     void processCentroidCoords(vector<VectorXd> unpaired_detections);
 
+
+    ////// Tracklet methods
+    void updatePairings(vector<VectorXd> &unpaired_detections);
+    void updateTracklets(vector<VectorXd> &unpaired_detections);
+    void createNewTracklets(vector<VectorXd> &unpaired_detections);
+    void deleteDeadTracklets();
+    void initiateLongTracklets();
+
     ////// I/O Methods
     void initialiseSubscribersAndPublishers(); // initialises all the subscribers and publishers
-    void publishMarker(VectorXd x_hat,double scale_x,double scale_y,double scale_z);
+    void publishMarker(VectorXd x_hat,string marker_name, double scale_x,double scale_y,double scale_z);
     void publishTransform(VectorXd coordinates, string target_frame_id); // publishes a transform at the 3D coordinate Vector coordinates
 
     ////// Kalman Filter Methods
     //vector <KalmanFilter> kf_vector_; // our private copy of a kalman filter
-    KalmanFilter kf_;
+    vector <KalmanFilter> kf_vector_;
+    kf_param_struct kf_params_; // holds the parameters for a new kalman filter
     VectorXd getState(); // returns the current position estimate
+    //KalmanFilter getNewKalmanFilter(); // returns a new Kalman Filter initialised at x0
     int getIndexOfClosestKf(VectorXd centroid_coord); // returns the index of the coordinate
 
     ////// I/O Variables
@@ -132,6 +145,8 @@ private:
     ////// Tracklet variables
     vector <Tracklet> tracklet_vector_;
     vector <Pairing> pairing_vector_;
+    int next_tracklet_ID_ = 0; // unique id for tracklets
+
 
 };
-#endif // tracker_H
+#endif // mo_tracker_h

@@ -2,20 +2,32 @@
 
 Tracklet::Tracklet(int ID,
                    VectorXd initial_detection,
-                   KalmanFilter kf) : ID_(ID), kf_(kf)
+                   KalmanFilter kf) :
+    ID_(ID), kf_(kf)
 {
+    cout << "Tracklet constructor called" <<endl;
     detection_vector_.push_back(initial_detection); // add the first detection to detection_vector_
 }
 
-Tracklet::updateTracklet(Pairing pairing) {
+void Tracklet::updateTracklet(Pairing pairing) {
     // Update the tracklet with a new pairing
-    detection_vector_.push_back(pairing.detection_coord_);
+    detection_vector_.push_back(pairing.getDetectionCoord()); // update this tracklet with the detection coord from the pairing
+    tracklet_length_++; // increase tracklet length
+    num_consecutive_misses = 0; // reset num of consecutive misses
 
-    // DELETE THE PAIRING (how do I do this?)
+    if (isInitialised_)
+    {
+        cout << "updating kf for Tracklet_"<<ID_<<endl;
+        kf_.update(pairing.getDetectionCoord());
+    }
 }
-Tracklet::getDistance(VectorXd detection)
+double Tracklet::getDistance(VectorXd detection)
 {
     // add check if KF initialised functionality
     VectorXd state = detection_vector_.back(); // use last detection in vector
     return sqrt((detection - state).squaredNorm()); // return euclidean norm
+}
+void Tracklet::initKf(){
+    kf_.init(0, detection_vector_.back());
+    isInitialised_ = true;
 }
