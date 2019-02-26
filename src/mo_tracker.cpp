@@ -335,9 +335,9 @@ void MOTracker::getClusterCentroid(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cluste
     cout << "generate_centroid() is returning a coord_centroid at :\n"<<coord_centroid<<endl;
 }
 
-void MOTracker::updatePairings(vector<VectorXd> &unpaired_detections)
+void MOTracker::updatePairings(vector<VectorXd> &unpaired_detections, bool verbose)
 {
-    if (verbose_)
+    if (verbose)
         cout << "\nupdatePairings() with "<<unpaired_detections.size()<<" unpaired_detections"<<endl;
     /*4. for each tracklet
             for each unpaired detection < gating_threshold (a max radius)
@@ -355,26 +355,26 @@ void MOTracker::updatePairings(vector<VectorXd> &unpaired_detections)
 
         if (unpaired_detections.empty())
         {
-            if (verbose_)
+            if (verbose)
                 cout << "All detections have been paired"<<endl;
             return; // break out of loop (and therefore method)
         }
 
         isPaired = false; // not paired this iteration
-        if (verbose_)
+        if (verbose)
             cout << "*****assessing tracklet "<<i<<endl;
 
         for (int j = 0; j < unpaired_detections.size(); j++) // loop through all unpaired detections
         {
-            if (verbose_)
+            if (verbose)
                 cout << "assessing detection "<<j<<endl;
             VectorXd new_detection = unpaired_detections[j];
             new_distance = tracklet_vector_[i].getDistance(new_detection); // get distance of detection from tracklet
-            if (verbose_)
+            if (verbose)
                 cout << "detection "<<j<<" is at distance "<<new_distance<<"m"<<endl;
             if (new_distance < MAX_GATING_DISTANCE) // if detection is within range
             {
-                if (verbose_)
+                if (verbose)
                     cout << "detection "<<j<<" in range, creating a new pairing"<<endl;
                 //create a pairing instance with tracklet ID and detection
 
@@ -385,7 +385,7 @@ void MOTracker::updatePairings(vector<VectorXd> &unpaired_detections)
                 isPaired = true; // we have paired this tracklet
 
                 pairing_vector_.push_back(new_pairing); // add to pairing vector
-                if (verbose_)
+                if (verbose)
                     cout << "MOTracker "<<tracklet_vector_[i].getID()<<" has been paired"<<endl;
                 cout << "pairing vector has length "<<pairing_vector_.size()<<endl;
             }
@@ -400,7 +400,7 @@ void MOTracker::updatePairings(vector<VectorXd> &unpaired_detections)
         }
     }
 }
-void MOTracker::updateTracklets(vector<VectorXd> &unpaired_detections)
+void MOTracker::updateTracklets(vector<VectorXd> &unpaired_detections, bool verbose)
 {
     /*5. for each tracklet
             1. for each pairing with this tracklet ID
@@ -408,14 +408,14 @@ void MOTracker::updateTracklets(vector<VectorXd> &unpaired_detections)
                     1. update the tracklet with this pairing
                     2. delete this pairing
     */
-    if (verbose_)
+    if (verbose)
         cout << "\nupdateTracklets()"<<endl;
 
     for (int i = 0; i < tracklet_vector_.size(); i++) // loop through all live tracklets.
     {
         Tracklet *this_tracklet = &tracklet_vector_[i]; // create a pointer to current tracklet
 
-        if (verbose_)
+        if (verbose)
             cout << "Looping through "<<pairing_vector_.size()<<" pairings for tracklet "<<i<<endl;
         double best_distance = 100; //in m. try and beat this
         int best_pairing_index = -1; // index for pairing with shortest distance
@@ -424,7 +424,7 @@ void MOTracker::updateTracklets(vector<VectorXd> &unpaired_detections)
         {
             if (pairing_vector_[j].getAssociatedTrackletID() == this_tracklet->getID()) // if the pairing is associated with this tracklet (same ID)
             {
-                if (verbose_)
+                if (verbose)
                     cout << "found a pairing that matches, at distance "<<pairing_vector_[j].getDistanceToTracklet()<<"m"<<endl;
                 // are we shorter than best_distance?
                 if (pairing_vector_[j].getDistanceToTracklet() < best_distance) //if this pairing is closer than previous one
@@ -442,17 +442,20 @@ void MOTracker::updateTracklets(vector<VectorXd> &unpaired_detections)
         {
             ///// using the best_pairing_index we've just found, update the tracklet and remove this pairing from the vector
             /// so it doesn't get associated with another tracker
-            if (verbose_)
+            if (verbose)
                 cout << "Updating Tracklet "<<this_tracklet->getID()<< " with pairing at index "<<best_pairing_index<<endl;
 
-            tracklet_vector_[i].updateTracklet(pairing_vector_[best_pairing_index]); // update the tracklet with this pairing
-            pairing_vector_.erase(pairing_vector_.begin() + best_pairing_index); // delete this pairing from pairing_vector_
-
+            this_tracklet->updateTracklet(pairing_vector_[best_pairing_index]); // update the tracklet with this pairing
             ///// now publish the output of this tracklet with a marker
 
             stringstream tracklet_name;
             tracklet_name << "tracklet_"<<this_tracklet->getID(); // identify this marker with the tracklet id
             publishTransform(pairing_vector_[best_pairing_index].getDetectionCoord(),tracklet_name.str()); // publish a transform even if we are not initialised
+
+            cout <<" publishing a transform at \n"<<pairing_vector_[best_pairing_index].getDetectionCoord()<<" with name "<<tracklet_name.str()<<endl;
+
+
+            pairing_vector_.erase(pairing_vector_.begin() + best_pairing_index); // delete this pairing from pairing_vector_
 
             if (tracklet_vector_[i].isInitialised()) // start publishing if we are initialised
             {
@@ -460,7 +463,7 @@ void MOTracker::updateTracklets(vector<VectorXd> &unpaired_detections)
                 KalmanFilter kf = this_tracklet->getKf(); // get the Kf from this tracklet vector
                 MatrixXd P = kf.getP(); //get covariance
                 VectorXd xhat = kf.getState();
-                if (verbose_) {
+                if (verbose) {
                     cout << "New measurement covariance is\n"<<P <<endl;
                     cout << "new Kf state is\n"<<xhat <<endl; }
 
@@ -471,24 +474,24 @@ void MOTracker::updateTracklets(vector<VectorXd> &unpaired_detections)
         }
         else
         {
-            if (verbose_)
+            if (verbose)
                 cout << "No pairings match this tracker"<<endl;
         }
     }
     ///// put any remaining pairings back in the unpaired detections
-    if (verbose_)
+    if (verbose)
         cout << "Putting "<<pairing_vector_.size()<<" remaining pairings back into unpaired_detections"<<endl;
     for (int i = 0; i < pairing_vector_.size(); i++)
         unpaired_detections.push_back(pairing_vector_[i].getDetectionCoord()); // move the detection coordinate back onto detections
     pairing_vector_.clear(); // remove all elements from pairing_vector_, since we've just copied them across
 
 }
-void MOTracker::createNewTracklets(vector<VectorXd> &unpaired_detections)
+void MOTracker::createNewTracklets(vector<VectorXd> &unpaired_detections, bool verbose)
 {
     ////// birth
     //    7. for unpaired detections
     //        1. create a new tracklet for each, with a unique id
-    if (verbose_)
+    if (verbose)
         cout << "creating "<<unpaired_detections.size()<<" new Tracklets"<<endl;
 
     for (int i = 0; i < unpaired_detections.size(); i++) // loop though the unpaired detections
@@ -501,7 +504,7 @@ void MOTracker::createNewTracklets(vector<VectorXd> &unpaired_detections)
                               unpaired_detections[i],
                               KalmanFilter(kf_params_.dt, kf_params_.A, kf_params_.C, kf_params_.Q, kf_params_.R, kf_params_.P, false));
         tracklet_vector_.push_back(new_tracklet);
-        if (verbose_)
+        if (verbose)
             cout << "Tracklet with ID "<<next_tracklet_ID_<<" added to tracklet_vector_"<<endl;
 
         next_tracklet_ID_++; // update the next_tracklet_ID
@@ -509,7 +512,7 @@ void MOTracker::createNewTracklets(vector<VectorXd> &unpaired_detections)
             next_tracklet_ID_ = 0;
     }
 }
-void MOTracker::deleteDeadTracklets()
+void MOTracker::deleteDeadTracklets(bool verbose)
 {
     //    // death
     //    8. for each tracklet
@@ -519,17 +522,17 @@ void MOTracker::deleteDeadTracklets()
 
     for (int i = 0; i < tracklet_vector_.size(); i++) // loop through all live tracklets.
     {
-        if (verbose_)
+        if (verbose)
             cout << "Tracklet "<<tracklet_vector_[i].getID()<<" has had "<<tracklet_vector_[i].getNumConsecutiveMisses()<<" consecutive misses."<<endl;
         if (tracklet_vector_[i].getNumConsecutiveMisses() > max_consecutive_misses) // if we've missed this tracklet too many times in a row
         {
             tracklet_vector_.erase(tracklet_vector_.begin() + i); // delete this tracklet from tracklet_vector_
-            if(verbose_)
+            if(verbose)
                 cout<<"******************************************************\n!!!!!!!deleting this tracker!!!!!!!!!"<<endl;
         }
     }
 }
-void MOTracker::initiateLongTracklets()
+void MOTracker::initiateLongTracklets(bool verbose)
 {
     //    // kf initiation if tracklet reaches sufficient length
     //    9. for each tracklet
@@ -538,11 +541,11 @@ void MOTracker::initiateLongTracklets()
     int min_initialisation_length = 5; // min number of detections needed to start the kalman filter
     for (int i = 0; i < tracklet_vector_.size(); i++) // loop through all live tracklets.
     {
-        if (verbose_)
+        if (verbose)
             cout << "Tracklet "<<tracklet_vector_[i].getID()<<" has had "<<tracklet_vector_[i].getLength()<<" detections."<<endl;
         if (tracklet_vector_[i].getLength() > min_initialisation_length && !tracklet_vector_[i].isInitialised()) // if this tracklet is long enough and not initialised
         {
-            if (verbose_)
+            if (verbose)
                 cout << "initiating kf."<<endl;
             tracklet_vector_[i].initKf(); // initialise this tracklet's kalman filter
         }
@@ -563,11 +566,11 @@ void MOTracker::processCentroidCoords(vector<VectorXd> unpaired_detections) {
         ss << "detection_"<<i;
         publishTransform(unpaired_detections[i], ss.str());
     }
-    updatePairings(unpaired_detections); // get a bunch of pairings
-    updateTracklets(unpaired_detections); // update each tracklet with the best pairing for that tracklet, increment the misses for tracklets without pairings
-    createNewTracklets(unpaired_detections); // generate new tracklets from any unassociated pairings
-    deleteDeadTracklets(); // delete any tracklets that have been missed too many times
-    initiateLongTracklets(); // initiate the kalman filters and publisher for any tracklets with a long sequence of detections
+    updatePairings(unpaired_detections, false); // get a bunch of pairings
+    updateTracklets(unpaired_detections, true); // update each tracklet with the best pairing for that tracklet, increment the misses for tracklets without pairings
+    createNewTracklets(unpaired_detections, true); // generate new tracklets from any unassociated pairings
+    deleteDeadTracklets(false); // delete any tracklets that have been missed too many times
+    initiateLongTracklets(false); // initiate the kalman filters and publisher for any tracklets with a long sequence of detections
 }
 /* THIS WAS FOR PREVIOUS ATTEMPT AT NEAREST CLUSTER TRACKER
 int Tracker::getIndexOfClosestKf(VectorXd centroid_coord)
@@ -628,6 +631,7 @@ void MOTracker::publishMarker(VectorXd x_hat, string marker_name,double scale_x,
 
     marker.header.frame_id = "odom"; // we want to publish relative to the odom frame
     marker.header.stamp = ros::Time();
+    marker.lifetime = ros::Duration(2);
 //    marker.ns = "kalman_filter_marker";  // call our marker kalman_filter_marker
     marker.ns = marker_name;
     marker.id = 0;
@@ -658,6 +662,8 @@ void MOTracker::publishMarker(VectorXd x_hat, string marker_name,double scale_x,
     marker.color.g = 1.0; // making it green
     marker.color.b = 0.0;
     pub_marker_.publish( marker ); // publish
+
+
 }
 
 ////// Kalman Filter Methods

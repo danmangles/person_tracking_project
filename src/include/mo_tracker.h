@@ -104,11 +104,11 @@ private:
 
 
     ////// Tracklet methods
-    void updatePairings(vector<VectorXd> &unpaired_detections);
-    void updateTracklets(vector<VectorXd> &unpaired_detections);
-    void createNewTracklets(vector<VectorXd> &unpaired_detections);
-    void deleteDeadTracklets();
-    void initiateLongTracklets();
+    void updatePairings(vector<VectorXd> &unpaired_detections, bool verbose);
+    void updateTracklets(vector<VectorXd> &unpaired_detections, bool verbose);
+    void createNewTracklets(vector<VectorXd> &unpaired_detections, bool verbose);
+    void deleteDeadTracklets( bool verbose);
+    void initiateLongTracklets(bool verbose);
 
     ////// I/O Methods
     void initialiseSubscribersAndPublishers(); // initialises all the subscribers and publishers
