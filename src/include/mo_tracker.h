@@ -107,6 +107,7 @@ private:
     void updatePairings(vector<VectorXd> &unpaired_detections, bool verbose);
     void updateTracklets(vector<VectorXd> &unpaired_detections, bool verbose);
     void createNewTracklets(vector<VectorXd> &unpaired_detections, bool verbose);
+    int getNextTrackletID(bool verbose);
     void deleteDeadTracklets( bool verbose);
     void initiateLongTracklets(bool verbose);
 
@@ -145,7 +146,8 @@ private:
     ////// Tracklet variables
     vector <Tracklet> tracklet_vector_;
     vector <Pairing> pairing_vector_;
-    int next_tracklet_ID_ = 0; // unique id for tracklets
+//    int next_tracklet_ID_ = 0; // unique id for tracklets
+    vector <int> dead_tracklet_IDs_; // a vector of tracklet IDs that have been deleted
 
 
 };

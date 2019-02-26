@@ -339,6 +339,7 @@ void MOTracker::updatePairings(vector<VectorXd> &unpaired_detections, bool verbo
 {
     if (verbose)
         cout << "\nupdatePairings() with "<<unpaired_detections.size()<<" unpaired_detections"<<endl;
+        cout << "and "<<tracklet_vector_.size()<<" live tracklets"<<endl;
     /*4. for each tracklet
             for each unpaired detection < gating_threshold (a max radius)
                 create a pairing instance with tracklet ID and detection
@@ -350,19 +351,19 @@ void MOTracker::updatePairings(vector<VectorXd> &unpaired_detections, bool verbo
     double MAX_GATING_DISTANCE = 1; //m
     double new_distance; // specific for each tracklet
     bool isPaired;
-    for (int i = 0; i < tracklet_vector_.size(); i++) // loop through all live tracklets. if none, may cause an error?
+    for (int i = 0; i < tracklet_vector_.size(); i++) // loop through all live tracklets
     {
 
-        if (unpaired_detections.empty())
-        {
-            if (verbose)
-                cout << "All detections have been paired"<<endl;
-            return; // break out of loop (and therefore method)
-        }
+//        if (unpaired_detections.empty())
+//        {
+//            if (verbose)
+//                cout << "All detections have been paired"<<endl;
+//            return; // break out of loop (and therefore method)
+//        }
 
         isPaired = false; // not paired this iteration
         if (verbose)
-            cout << "*****assessing tracklet "<<i<<endl;
+            cout << "*****assessing tracklet "<<tracklet_vector_[i].getID()<<endl;
 
         for (int j = 0; j < unpaired_detections.size(); j++) // loop through all unpaired detections
         {
@@ -486,6 +487,35 @@ void MOTracker::updateTracklets(vector<VectorXd> &unpaired_detections, bool verb
     pairing_vector_.clear(); // remove all elements from pairing_vector_, since we've just copied them across
 
 }
+
+
+int MOTracker::getNextTrackletID(bool verbose)
+{
+    // Generates an ID for a new tracker
+    if(verbose)
+        cout <<" **************************\nDead Tracklet IDs are ";
+    for (int i = 0; i< dead_tracklet_IDs_.size(); i++){cout<<dead_tracklet_IDs_[i];}
+    cout<<endl;
+
+    if (!dead_tracklet_IDs_.empty())
+    {
+        if (verbose)
+            cout << "getting a discarded ID"<<endl;
+        // take the minimum ID from discarded ID array
+//        int min_pos = distance(dead_tracklet_IDs_.begin(),dead_tracklet_IDs_.end()
+//        int new_ID = min_element(dead_tracklet_IDs_.begin(),dead_tracklet_IDs_.end()) - dead_tracklet_IDs_.begin();
+        int min_pos = distance(dead_tracklet_IDs_.begin(),min_element(dead_tracklet_IDs_.begin(),dead_tracklet_IDs_.end()));
+//        cout << "The distance is: " << min_pos << "|value is "<<*min_element(myvec.begin(),myvec.end())<<endl;
+        int new_ID = *min_element(dead_tracklet_IDs_.begin(),dead_tracklet_IDs_.end());
+        dead_tracklet_IDs_.erase(dead_tracklet_IDs_.begin()+min_pos); // erase this value
+        return new_ID;
+
+    } else {
+        if (verbose)
+            cout << "getting a new ID"<<endl;
+        return tracklet_vector_.size(); // return an ID 1 greater than current one
+    }
+}
 void MOTracker::createNewTracklets(vector<VectorXd> &unpaired_detections, bool verbose)
 {
     ////// birth
@@ -499,17 +529,18 @@ void MOTracker::createNewTracklets(vector<VectorXd> &unpaired_detections, bool v
         // create a new tracklet with a KF initialised at the last detection
 
         //        cout << "Kf_params.A is " << kf_params_.A << endl;
+        int next_tracklet_ID = getNextTrackletID(true);
 
-        Tracklet new_tracklet(next_tracklet_ID_,
+        Tracklet new_tracklet(next_tracklet_ID,
                               unpaired_detections[i],
                               KalmanFilter(kf_params_.dt, kf_params_.A, kf_params_.C, kf_params_.Q, kf_params_.R, kf_params_.P, false));
         tracklet_vector_.push_back(new_tracklet);
         if (verbose)
-            cout << "Tracklet with ID "<<next_tracklet_ID_<<" added to tracklet_vector_"<<endl;
+            cout << "Tracklet with ID "<<next_tracklet_ID<<" added to tracklet_vector_"<<endl;
 
-        next_tracklet_ID_++; // update the next_tracklet_ID
-        if (next_tracklet_ID_ > 20) // prevent the program getting an overflow after a really long time
-            next_tracklet_ID_ = 0;
+//        next_tracklet_ID_++; // update the next_tracklet_ID
+//        if (next_tracklet_ID_ > 20) // prevent the program getting an overflow after a really long time
+//            next_tracklet_ID_ = 0;
     }
 }
 void MOTracker::deleteDeadTracklets(bool verbose)
@@ -526,6 +557,7 @@ void MOTracker::deleteDeadTracklets(bool verbose)
             cout << "Tracklet "<<tracklet_vector_[i].getID()<<" has had "<<tracklet_vector_[i].getNumConsecutiveMisses()<<" consecutive misses."<<endl;
         if (tracklet_vector_[i].getNumConsecutiveMisses() > max_consecutive_misses) // if we've missed this tracklet too many times in a row
         {
+            dead_tracklet_IDs_.push_back(tracklet_vector_[i].getID()); // move ID back into tracklet vector
             tracklet_vector_.erase(tracklet_vector_.begin() + i); // delete this tracklet from tracklet_vector_
             if(verbose)
                 cout<<"******************************************************\n!!!!!!!deleting this tracker!!!!!!!!!"<<endl;
@@ -566,10 +598,10 @@ void MOTracker::processCentroidCoords(vector<VectorXd> unpaired_detections) {
         ss << "detection_"<<i;
         publishTransform(unpaired_detections[i], ss.str());
     }
-    updatePairings(unpaired_detections, false); // get a bunch of pairings
-    updateTracklets(unpaired_detections, true); // update each tracklet with the best pairing for that tracklet, increment the misses for tracklets without pairings
+    updatePairings(unpaired_detections, true); // get a bunch of pairings
+    updateTracklets(unpaired_detections, false); // update each tracklet with the best pairing for that tracklet, increment the misses for tracklets without pairings
     createNewTracklets(unpaired_detections, true); // generate new tracklets from any unassociated pairings
-    deleteDeadTracklets(false); // delete any tracklets that have been missed too many times
+    deleteDeadTracklets(true); // delete any tracklets that have been missed too many times
     initiateLongTracklets(false); // initiate the kalman filters and publisher for any tracklets with a long sequence of detections
 }
 /* THIS WAS FOR PREVIOUS ATTEMPT AT NEAREST CLUSTER TRACKER
