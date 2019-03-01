@@ -47,7 +47,7 @@ class RealsenseDetector:
         self.skipping = True # are we skipping frames?
         self.skip = 0
         self.YOLO_IMAGE_DIMENSION = 416 # we are using a CNN which takes inputs of size 416x416
-        self.REALSENSE_IMAGE_WIDTH, self.REALSENSE_IMAGE_HEIGHT = 640, 480 # dimensions of image to output on
+        self.REALSENSE_IMAGE_WIDTH, self.REALSENSE_IMAGE_HEIGHT = 430, 300 # affect where we draw the bounding box
         self.score_threshold = 0.3 # threshold for picking true positives in our image
         self.iou_threshold = 0.3 #another cnn threshold
 
@@ -346,10 +346,6 @@ class RealsenseDetector:
         '''
         horiz_dev_from_normal = 0.5 - (l+r)/(2.0*self.REALSENSE_IMAGE_WIDTH) # horizontal deviation from normal (kinda an angle)
         vert_dev_from_normal = 0.5 - (t+b)/(2.0*self.REALSENSE_IMAGE_HEIGHT) # horizontal deviation from normal (kinda an angle)
-
-        #realsense_half_fov_angle = 69.4/2
-#        realsense_half_fov_angle = 220/2
-#        realsense_half_fov_angle_vert = 220*42.5/69.4/2 #????????????????????????????????????????
 
         target_yaw = self.realsense_half_fov_angle*horiz_dev_from_normal*np.pi/180.0 # in radians
         target_pitch = self.realsense_half_fov_angle_vert*vert_dev_from_normal*np.pi/180.0 # in radians
