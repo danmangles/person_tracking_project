@@ -76,8 +76,8 @@ public:
             kf_param_struct kf_params,
             bool verbose,
             bool publishing,
-            bool write_to_csv,
-            ofstream &results_file  ); // initiate a constructor with a nodehandle and parameters for the kalman filter
+            bool write_to_csv);
+//            ofstream &results_file  ); // initiate a constructor with a nodehandle and parameters for the kalman filter
 
     void setupKalmanFilter(VectorXd x0,
                            double dt,

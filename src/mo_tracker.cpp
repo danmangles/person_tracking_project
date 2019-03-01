@@ -11,15 +11,17 @@ MOTracker::MOTracker(ros::NodeHandle nh,
                      kf_param_struct kf_params,
                      bool verbose,
                      bool publishing,
-                     bool write_to_csv,
-                     ofstream &results_file
+                     bool write_to_csv
                      ) :
     nh_(nh), max_cluster_size_(max_cluster_size), min_cluster_size_(min_cluster_size),cluster_tolerance_(cluster_tolerance),
     seg_dist_threshold_(seg_dist_threshold), kf_params_(kf_params), verbose_(verbose), publishing_(publishing),
-    write_to_csv_(write_to_csv), results_file_(results_file) // initiate the nodehandle
+    write_to_csv_(write_to_csv) // initiate the nodehandle
 {   // Constructor: sets up
     cout<< "MOTracker constructor called "<<endl;
     initialiseSubscribersAndPublishers(); //initialise the subscribers and publishers
+    results_file_.open("tracking_results.csv");
+    results_file_ << "Detection_X,Detection_Y,Detection_Z,Tracklet_ID,KF_X,KF_Y,KF_Z,KF_cov_X,KF_cov_Y,KF_cov_Z\n";
+//    results_file_.close();
 }
 
 ///// General Pointcloud Methods
@@ -482,7 +484,7 @@ void MOTracker::updateTracklets(vector<VectorXd> &unpaired_detections, bool verb
                 {
                     VectorXd det_coord = pairing_vector_[best_pairing_index].getDetectionCoord();
                  // order : detection XYZ, kf XYZ, kf covariance XYZ
-                    results_file_ <<det_coord[0]<<","<<det_coord[1]<<","<<det_coord[2]<<","<< xhat[0]<<","<<xhat[1]<<","<<xhat[2]<<","<<P(0,0)<<","<<P(1,1)<<","<<P(2,2)<<"\n";
+                    results_file_ <<det_coord[0]<<","<<det_coord[1]<<","<<det_coord[2]<<","<<this_tracklet->getID()<<","<< xhat[0]<<","<<xhat[1]<<","<<xhat[2]<<","<<P(0,0)<<","<<P(1,1)<<","<<P(2,2)<<"\n";
                 }
 
                 /////////////////

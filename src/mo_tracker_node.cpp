@@ -75,7 +75,7 @@ int main (int argc, char** argv) // runs the tracker node
     // write the csv file headers
     results_file << "Detection_X, Detection_Y, Detection_Z, KF_X, KF_Y, KF_Z, KF_cov_X, KF_cov_Y, KF_cov_Z\n";
 
-    MOTracker our_tracker(nh, max_cluster_size, min_cluster_size, cluster_tolerance, seg_dist_threshold, getTrackerKfParams(), true, true, true, results_file); // construct a tracker called our_tracker
+    MOTracker our_tracker(nh, max_cluster_size, min_cluster_size, cluster_tolerance, seg_dist_threshold, getTrackerKfParams(), true, true, true); // construct a tracker called our_tracker
 
 
 //    setTrackerKfParams(our_tracker); // setup the kalman filter inside the tracker
