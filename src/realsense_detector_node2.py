@@ -7,7 +7,7 @@ import realsense_detector
 def main():
 
     rospy.init_node('realsense_person_detector', anonymous=True)
-    rd = realsense_detector.RealsenseDetector(True, True) # create a new realsense detector
+    rd = realsense_detector.RealsenseDetector(in_simulator = False, verbose = True) # create a new realsense detector
 
     rospy.spin()
 

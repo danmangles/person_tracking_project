@@ -19,6 +19,8 @@ import roslib
 from std_msgs.msg import String
 from sensor_msgs.msg import Image
 from sensor_msgs.msg import CompressedImage
+#from sensor_msgs.msg import compressedDepth
+
 from geometry_msgs.msg import Point
 from visualization_msgs.msg import Marker
 from cv_bridge import CvBridge, CvBridgeError
@@ -94,6 +96,7 @@ class RealsenseDetector:
         frame = self.bridge.compressed_imgmsg_to_cv2(rgb_image_msg, "bgr8") #frame is a new image in cv2 format
         if self.verbose:
             print('we have an input frame with shape'+str(frame.shape[:2]))
+
         preprocessed_image = self.preprocessing(frame) #input height and width are fixed dimensions
         if self.verbose:
             print('resized it to shape '+str(preprocessed_image.shape))
@@ -125,7 +128,6 @@ class RealsenseDetector:
             pitch 'target_pitch'
         between the forward realsense and the target. These are then sent to the tf topic using 'sendtransform'
         '''
-
         if self.skipping:
             if self.skip % 5 != 0:
                 return
@@ -138,8 +140,10 @@ class RealsenseDetector:
 
         # convert the image into cv2 format
         depth_image = self.bridge.imgmsg_to_cv2(depth_image_msg, desired_encoding="passthrough")
+
         if self.verbose:
-           print("depth shape is "+str(depth_image.shape))
+            #check it worked
+            print("depth shape is "+str(depth_image.shape))
 
         # get distance, yaw and pitch to the target id'd in bounding box from depth image
         target_dist, target_yaw, target_pitch = self.get_dist_yaw_pitch(depth_image, show_cropped_image = True)
@@ -339,6 +343,8 @@ class RealsenseDetector:
         # remove zero values to leave a valid array of depths of the person
         values = list(filter(lambda y: y!=0, cropped_depth_image.flatten()))
         target_dist = np.nanmean(values)
+        if not self.in_simulator:
+            target_dist = target_dist/1000 # because it uses mm
         print("dist = %s"%str(target_dist))
 
         '''
@@ -352,10 +358,11 @@ class RealsenseDetector:
 
         if show_cropped_image:
             print("Left: %d\n Right: %d\n Top: %d\n bottom: %d"%(l,r,t,b))
-            cv2.imshow('original image',depth_image)
-            cv2.waitKey(100)
-            cv2.imshow('Cropped image',cropped_depth_image)
-            cv2.waitKey(100)
+#            cv2.imshow('original image',depth_image)
+#            cv2.waitKey(100)
+#            cv2.imshow('Cropped image',cropped_depth_image)
+            self.depth_pub.publish(self.bridge.cv2_to_imgmsg(cropped_depth_image, "16UC1"))
+#            cv2.waitKey(100)
             print('angle (0.5 (left) to -0.5 (right): '+str(horiz_dev_from_normal))
 
         return target_dist, target_yaw, target_pitch
@@ -431,8 +438,10 @@ class RealsenseDetector:
             weights_path = 'yolov2-tiny-voc.weights'
             ckpt_folder_path = '/catkin_ws/src/multi_sensor_tracker/drs-main/code/src/personal/person_tracker/scripts/ckpt/'
         else:
-            weights_path = 'multi_sensor_tracker/src/yolo_weights/yolov2-tiny-voc.weights'
-            ckpt_folder_path = '../drs-main/code/src/personal/person_tracker/scripts/ckpt/' # change this to a more reasonable folder
+            weights_path = 'yolov2-tiny-voc.weights'
+            ckpt_folder_path = '/catkin_ws/src/multi_sensor_tracker/drs-main/code/src/personal/person_tracker/scripts/ckpt/'
+            #weights_path = 'multi_sensor_tracker/src/yolo_weights/yolov2-tiny-voc.weights'
+            #ckpt_folder_path = '../drs-main/code/src/personal/person_tracker/scripts/ckpt/' # change this to a more reasonable folder
 
         # Check for an existing checkpoint and load the weights (if it exists) or do it from binary file
         saver = tensorflow.train.Saver()
@@ -452,19 +461,25 @@ class RealsenseDetector:
         # set the correct topic names based on our situation
         if self.in_simulator:
             image_topic = "/realsense_d435_forward/rgb/image_raw/compressed"
+            self.rgb_sub = rospy.Subscriber(image_topic, CompressedImage,self.rgb_callback) # every time we get an RGB image, call self.rgb_callback
             depth_topic = "/realsense_d435_forward/depth/image_raw"
-        else:
-            image_topic = "realsense_d435_forward/color/image_raw/compressed"
-            depth_topic = "/realsense_d435_forward/aligned_depth_to_color/image_raw/compressedDepth"
+            self.depth_sub = rospy.Subscriber(depth_topic, Image, self.depth_callback) # same for depth images
 
-        #set them up!
-        self.rgb_sub = rospy.Subscriber(image_topic, CompressedImage,self.rgb_callback) # every time we get an RGB image, call self.rgb_callback
-        self.depth_sub = rospy.Subscriber(depth_topic, Image, self.depth_callback) # same for depth images
+        else:
+            image_topic = "/realsense_d435_forward/color/image_raw/compressed"
+            self.rgb_sub = rospy.Subscriber(image_topic, CompressedImage,self.rgb_callback) # every time we get an RGB image, call self.rgb_callback
+            depth_topic = "/realsense_d435_forward/aligned_depth_to_color/image_raw"
+            self.depth_sub = rospy.Subscriber(depth_topic, Image, self.depth_callback) # same for depth images
 
         # create the publisher to output our prediction images on
         image_pub_topic = "/camera/person_detection_bounding_boxes" # publishing to this topic
         self.image_pub = rospy.Publisher(image_pub_topic,Image)
+        # create the publisher to output our cropped images on
+        depth_pub_topic = "/camera/cropped_depth_image" # publishing to this topic
+        self.depth_pub = rospy.Publisher(depth_pub_topic,Image)
+
         self.br = tf.TransformBroadcaster()
+
     def publish_transform(self, target_dist, target_yaw, target_pitch):
         '''
         publishes a transform at the given coordinates
