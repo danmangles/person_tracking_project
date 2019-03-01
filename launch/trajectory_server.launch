@@ -1,0 +1,58 @@
+<launch>
+  <node name="hector_trajectory_server_0" pkg="hector_trajectory_server" type="hector_trajectory_server" output="screen">
+    <param name="target_frame_name" value="/odom" />
+    <param name="source_frame_name" value="/tracklet_0" />
+    <param name="trajectory_publish_rate" value="10" />
+    <remap from="/trajectory" to="/trajectory_0" />
+  </node>
+
+<node name="hector_trajectory_server_1" pkg="hector_trajectory_server" type="hector_trajectory_server" output="screen">
+    <param name="target_frame_name" value="/odom" />
+    <param name="source_frame_name" value="/tracklet_1" />
+    <param name="trajectory_publish_rate" value="10" />
+    <remap from="/trajectory" to="/trajectory_1" />
+  </node>
+<node name="hector_trajectory_server_2" pkg="hector_trajectory_server" type="hector_trajectory_server" output="screen">
+    <param name="target_frame_name" value="/odom" />
+    <param name="source_frame_name" value="/tracklet_2" />
+    <param name="trajectory_publish_rate" value="10" />
+    <remap from="/trajectory" to="/trajectory_2" />
+  </node>
+
+<node name="hector_trajectory_server_3" pkg="hector_trajectory_server" type="hector_trajectory_server" output="screen">
+    <param name="target_frame_name" value="/odom" />
+    <param name="source_frame_name" value="/tracklet_3" />
+    <param name="trajectory_publish_rate" value="10" />
+    <remap from="/trajectory" to="/trajectory_3" />
+  </node>
+<node name="hector_trajectory_server_4" pkg="hector_trajectory_server" type="hector_trajectory_server" output="screen">
+    <param name="target_frame_name" value="/odom" />
+    <param name="source_frame_name" value="/tracklet_4" />
+    <param name="trajectory_publish_rate" value="10" />
+    <remap from="/trajectory" to="/trajectory_4" />
+  </node>
+<node name="hector_trajectory_server_5" pkg="hector_trajectory_server" type="hector_trajectory_server" output="screen">
+    <param name="target_frame_name" value="/odom" />
+    <param name="source_frame_name" value="/tracklet_5" />
+    <param name="trajectory_publish_rate" value="10" />
+    <remap from="/trajectory" to="/trajectory_5" />
+  </node>
+<node name="hector_trajectory_server_6" pkg="hector_trajectory_server" type="hector_trajectory_server" output="screen">
+    <param name="target_frame_name" value="/odom" />
+    <param name="source_frame_name" value="/tracklet_6" />
+    <param name="trajectory_publish_rate" value="10" />
+    <remap from="/trajectory" to="/trajectory_3" />
+  </node>
+<node name="hector_trajectory_server_7" pkg="hector_trajectory_server" type="hector_trajectory_server" output="screen">
+    <param name="target_frame_name" value="/odom" />
+    <param name="source_frame_name" value="/tracklet_7" />
+    <param name="trajectory_publish_rate" value="10" />
+    <remap from="/trajectory" to="/trajectory_7" />
+  </node>
+<node name="hector_trajectory_server_8" pkg="hector_trajectory_server" type="hector_trajectory_server" output="screen">
+    <param name="target_frame_name" value="/odom" />
+    <param name="source_frame_name" value="/tracklet_8" />
+    <param name="trajectory_publish_rate" value="10" />
+    <remap from="/trajectory" to="/trajectory_8" />
+  </node>
+</launch>
