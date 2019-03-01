@@ -69,14 +69,21 @@ int main (int argc, char** argv) // runs the tracker node
     int min_cluster_size = 40;
     double cluster_tolerance = .4; // too small, we split one object into many, too big, we merge objects into one. In metres
     double seg_dist_threshold = 0.03; // how close a point must be to the model in order to be considered an inlier in metres
-    MOTracker our_tracker(nh, max_cluster_size, min_cluster_size, cluster_tolerance, seg_dist_threshold, getTrackerKfParams(), true, true); // construct a tracker called our_tracker
+    // setup a results file
+    ofstream results_file;
+    results_file.open("tracking_results.csv");
+    // write the csv file headers
+    results_file << "Detection_X, Detection_Y, Detection_Z, KF_X, KF_Y, KF_Z, KF_cov_X, KF_cov_Y, KF_cov_Z\n";
+
+    MOTracker our_tracker(nh, max_cluster_size, min_cluster_size, cluster_tolerance, seg_dist_threshold, getTrackerKfParams(), true, true, true, results_file); // construct a tracker called our_tracker
 
 
 //    setTrackerKfParams(our_tracker); // setup the kalman filter inside the tracker
 
     ros::Rate r(10); // 10 hz
     ros::spin ();// spin ros
-
+    cout<<"closing results file"<<endl;
+    results_file.close();
     return 0;
 }
 

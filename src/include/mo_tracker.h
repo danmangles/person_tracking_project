@@ -52,7 +52,8 @@
 #include <cmath> // used for euclidean norm
 ////////////////////////////////
 
-
+#include <fstream> // for csv files
+#include <iostream> // also for csv files
 //using namespace Eigen;
 using namespace std;
 
@@ -74,7 +75,9 @@ public:
             double seg_dist_threshold,
             kf_param_struct kf_params,
             bool verbose,
-            bool publishing); // initiate a constructor with a nodehandle and parameters for the kalman filter
+            bool publishing,
+            bool write_to_csv,
+            ofstream &results_file  ); // initiate a constructor with a nodehandle and parameters for the kalman filter
 
     void setupKalmanFilter(VectorXd x0,
                            double dt,
@@ -136,8 +139,9 @@ private:
     ros::Publisher pub_centroid_; // centroid cluster
     ros::Publisher pub_marker_; // for markers
     boost::shared_ptr<tf::TransformListener> odom_base_ls_; // setup the transform listener so we can listen to the odom_base_tf
-    bool verbose_, publishing_; // do we print? do we publish pointclouds>?
-
+    boost::shared_ptr<tf::TransformListener> rs_detector_ls_; // setup the transform listener so we can listen to the realsense_detcetor
+    bool verbose_, publishing_, write_to_csv_; // do we print? do we publish pointclouds>? do we write results to a csv?
+    ofstream results_file_; // stores output results in
 
     ////// Clustering parameters
     int max_cluster_size_, min_cluster_size_; // clustering parameters
@@ -146,7 +150,7 @@ private:
     ////// Tracklet variables
     vector <Tracklet> tracklet_vector_;
     vector <Pairing> pairing_vector_;
-//    int next_tracklet_ID_ = 0; // unique id for tracklets
+    int next_tracklet_ID_ = 0; // unique id for tracklets
     vector <int> dead_tracklet_IDs_; // a vector of tracklet IDs that have been deleted
 
 

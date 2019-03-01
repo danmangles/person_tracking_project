@@ -4,15 +4,19 @@ using namespace std;
 //using namespace Eigen;
 
 MOTracker::MOTracker(ros::NodeHandle nh,
-                 int max_cluster_size,
-                 int min_cluster_size,
-                 double cluster_tolerance,
-                 double seg_dist_threshold,
-                 kf_param_struct kf_params,
-                 bool verbose,
-                 bool publishing
-                 ) :
-    nh_(nh), max_cluster_size_(max_cluster_size), min_cluster_size_(min_cluster_size),cluster_tolerance_(cluster_tolerance), seg_dist_threshold_(seg_dist_threshold), kf_params_(kf_params), verbose_(verbose), publishing_(publishing) // initiate the nodehandle
+                     int max_cluster_size,
+                     int min_cluster_size,
+                     double cluster_tolerance,
+                     double seg_dist_threshold,
+                     kf_param_struct kf_params,
+                     bool verbose,
+                     bool publishing,
+                     bool write_to_csv,
+                     ofstream &results_file
+                     ) :
+    nh_(nh), max_cluster_size_(max_cluster_size), min_cluster_size_(min_cluster_size),cluster_tolerance_(cluster_tolerance),
+    seg_dist_threshold_(seg_dist_threshold), kf_params_(kf_params), verbose_(verbose), publishing_(publishing),
+    write_to_csv_(write_to_csv), results_file_(results_file) // initiate the nodehandle
 {   // Constructor: sets up
     cout<< "MOTracker constructor called "<<endl;
     initialiseSubscribersAndPublishers(); //initialise the subscribers and publishers
@@ -131,6 +135,7 @@ void MOTracker::applyBaseOdomTransformation(sensor_msgs::PointCloud2 input_cloud
     cout << "1"<<endl;
     return;
 }
+
 
 void MOTracker::removeOutOfPlanePoints(pcl::PointCloud<pcl::PointXYZRGB>::Ptr &cloud_ptr) {
     //////// Create a planar segmentation model <- NOT SURE WHAT THIS DOES EXACTLY, SEE http://pointclouds.org/documentation/tutorials/planar_segmentation.php#id1
@@ -339,7 +344,7 @@ void MOTracker::updatePairings(vector<VectorXd> &unpaired_detections, bool verbo
 {
     if (verbose)
         cout << "\nupdatePairings() with "<<unpaired_detections.size()<<" unpaired_detections"<<endl;
-        cout << "and "<<tracklet_vector_.size()<<" live tracklets"<<endl;
+    cout << "and "<<tracklet_vector_.size()<<" live tracklets"<<endl;
     /*4. for each tracklet
             for each unpaired detection < gating_threshold (a max radius)
                 create a pairing instance with tracklet ID and detection
@@ -354,12 +359,12 @@ void MOTracker::updatePairings(vector<VectorXd> &unpaired_detections, bool verbo
     for (int i = 0; i < tracklet_vector_.size(); i++) // loop through all live tracklets
     {
 
-//        if (unpaired_detections.empty())
-//        {
-//            if (verbose)
-//                cout << "All detections have been paired"<<endl;
-//            return; // break out of loop (and therefore method)
-//        }
+        //        if (unpaired_detections.empty())
+        //        {
+        //            if (verbose)
+        //                cout << "All detections have been paired"<<endl;
+        //            return; // break out of loop (and therefore method)
+        //        }
 
         isPaired = false; // not paired this iteration
         if (verbose)
@@ -431,7 +436,7 @@ void MOTracker::updateTracklets(vector<VectorXd> &unpaired_detections, bool verb
                 if (pairing_vector_[j].getDistanceToTracklet() < best_distance) //if this pairing is closer than previous one
                 {
                     best_pairing_index = j; // set the best pairing index
-//                    cout << "updating best distance, best_pairing_index = "<<best_pairing_index<<endl;
+                    //                    cout << "updating best distance, best_pairing_index = "<<best_pairing_index<<endl;
                     best_distance = pairing_vector_[j].getDistanceToTracklet(); // update best distance
                 } else {
                     cout << "not better than best distance" <<endl;
@@ -470,6 +475,17 @@ void MOTracker::updateTracklets(vector<VectorXd> &unpaired_detections, bool verb
 
                 /// create a title for this marker
                 publishMarker(xhat,tracklet_name.str(), P(0,0),P(1,1),P(2,2)); // publish the marker
+                /////////////// write to excel file
+
+                //              // write
+                if (write_to_csv_)
+                {
+                    VectorXd det_coord = pairing_vector_[best_pairing_index].getDetectionCoord();
+                 // order : detection XYZ, kf XYZ, kf covariance XYZ
+                    results_file_ <<det_coord[0]<<","<<det_coord[1]<<","<<det_coord[2]<<","<< xhat[0]<<","<<xhat[1]<<","<<xhat[2]<<","<<P(0,0)<<","<<P(1,1)<<","<<P(2,2)<<"\n";
+                }
+
+                /////////////////
             }
 
         }
@@ -502,10 +518,10 @@ int MOTracker::getNextTrackletID(bool verbose)
         if (verbose)
             cout << "getting a discarded ID"<<endl;
         // take the minimum ID from discarded ID array
-//        int min_pos = distance(dead_tracklet_IDs_.begin(),dead_tracklet_IDs_.end()
-//        int new_ID = min_element(dead_tracklet_IDs_.begin(),dead_tracklet_IDs_.end()) - dead_tracklet_IDs_.begin();
+        //        int min_pos = distance(dead_tracklet_IDs_.begin(),dead_tracklet_IDs_.end()
+        //        int new_ID = min_element(dead_tracklet_IDs_.begin(),dead_tracklet_IDs_.end()) - dead_tracklet_IDs_.begin();
         int min_pos = distance(dead_tracklet_IDs_.begin(),min_element(dead_tracklet_IDs_.begin(),dead_tracklet_IDs_.end()));
-//        cout << "The distance is: " << min_pos << "|value is "<<*min_element(myvec.begin(),myvec.end())<<endl;
+        //        cout << "The distance is: " << min_pos << "|value is "<<*min_element(myvec.begin(),myvec.end())<<endl;
         int new_ID = *min_element(dead_tracklet_IDs_.begin(),dead_tracklet_IDs_.end());
         dead_tracklet_IDs_.erase(dead_tracklet_IDs_.begin()+min_pos); // erase this value
         return new_ID;
@@ -529,18 +545,20 @@ void MOTracker::createNewTracklets(vector<VectorXd> &unpaired_detections, bool v
         // create a new tracklet with a KF initialised at the last detection
 
         //        cout << "Kf_params.A is " << kf_params_.A << endl;
-        int next_tracklet_ID = getNextTrackletID(true);
-
-        Tracklet new_tracklet(next_tracklet_ID,
+        //        int next_tracklet_ID = getNextTrackletID(true);
+        //        int next_tracklet_ID = next_tracklet_ID_;
+        Tracklet new_tracklet(next_tracklet_ID_,
                               unpaired_detections[i],
                               KalmanFilter(kf_params_.dt, kf_params_.A, kf_params_.C, kf_params_.Q, kf_params_.R, kf_params_.P, false));
         tracklet_vector_.push_back(new_tracklet);
         if (verbose)
-            cout << "Tracklet with ID "<<next_tracklet_ID<<" added to tracklet_vector_"<<endl;
+            cout << "Tracklet with ID "<<next_tracklet_ID_<<" added to tracklet_vector_"<<endl;
 
-//        next_tracklet_ID_++; // update the next_tracklet_ID
-//        if (next_tracklet_ID_ > 20) // prevent the program getting an overflow after a really long time
-//            next_tracklet_ID_ = 0;
+        //        next_tracklet_ID_++; // update the next_tracklet_ID
+        next_tracklet_ID_ ++;
+        if (next_tracklet_ID_ > 20) // prevent the program getting an overflow after a really long time
+            next_tracklet_ID_ = 0;
+
     }
 }
 void MOTracker::deleteDeadTracklets(bool verbose)
@@ -628,7 +646,7 @@ void MOTracker::publishTransform(VectorXd coordinates, string target_frame_id) {
     q.setEulerZYX(0, 0, 0);
     transform.setRotation(q);
 
-//    string base_frame_id = "map"; // we are based in the odom frame
+    //    string base_frame_id = "map"; // we are based in the odom frame
     string base_frame_id = "odom"; // we are based in the odom frame
     br_.sendTransform(tf::StampedTransform(transform, ros::Time::now(), base_frame_id, target_frame_id));
 }
@@ -636,7 +654,8 @@ void MOTracker::publishTransform(VectorXd coordinates, string target_frame_id) {
 void MOTracker::initialiseSubscribersAndPublishers() {
     string input_topic = "/velodyne/point_cloud_filtered"; // topic is the pointcloud from the velodyne
     point_cloud_sub_ = nh_.subscribe(input_topic, 1, &MOTracker::callback, this); // Create a ROS subscriber for the input point cloud that calls the callback
-
+    //string rs_input_topic =
+    //realsense_tf_sub_ = nh_.subscribe(rs_input_topic, 1, &MOTracker::realsenseCallback, this);
     // Create ROS publishers for the output point clouds
     string topic_raw = "pcl_raw", topic_trans = "pcl_trans", topic_zfilt = "pcl_zfilt", topic_ds = "pcl_ds", topic_seg_filt = "pcl_seg_filter", topic_centroid = "pcl_centroid";
     if (publishing_)
@@ -653,6 +672,7 @@ void MOTracker::initialiseSubscribersAndPublishers() {
     // Create a transformListener to enable translation from odom to base frames with our pointcloud.
 
     odom_base_ls_.reset(new tf::TransformListener); // initialise the odom_base transform listener- so we can transform our output into odom coords
+    rs_detector_ls_.reset(new tf::TransformListener); // initialise the rs_detector_ls_ transform listener- so we can listen to the realsense
     return;
 }
 
@@ -664,7 +684,7 @@ void MOTracker::publishMarker(VectorXd x_hat, string marker_name,double scale_x,
     marker.header.frame_id = "odom"; // we want to publish relative to the odom frame
     marker.header.stamp = ros::Time();
     marker.lifetime = ros::Duration(2);
-//    marker.ns = "kalman_filter_marker";  // call our marker kalman_filter_marker
+    //    marker.ns = "kalman_filter_marker";  // call our marker kalman_filter_marker
     marker.ns = marker_name;
     marker.id = 0;
     marker.type = visualization_msgs::Marker::CYLINDER; // make it a CYLINDER. CUBE and SPHERE also work
