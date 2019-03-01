@@ -84,10 +84,11 @@ def load_conv_layer(name,loaded_weights,shape,offset):
 
 
 def load(sess,weights_path,ckpt_folder_path,saver):
-
-    if(os.path.exists(ckpt_folder_path)):
+    full_ckpt_folder_path = os.getcwd()+'/'+ckpt_folder_path
+    print (full_ckpt_folder_path)
+    if(os.path.exists(full_ckpt_folder_path)):
         print('Found a checkpoint!') 
-        checkpoint_files_path = os.path.join(ckpt_folder_path,"model.ckpt")
+        checkpoint_files_path = os.path.join(full_ckpt_folder_path,"model.ckpt")
         saver.restore(sess,checkpoint_files_path)
         print('Loaded weights from checkpoint!') 
         return True
@@ -163,6 +164,8 @@ def load(sess,weights_path,ckpt_folder_path,saver):
     # Saving checkpoint!
     if not os.path.exists(ckpt_folder_path):
         print('Saving new checkpoint to the new checkpoint directory ./ckpt/ !')
+        print('currentdir '+ os.getcwd())
+        print('attempting to create a new folder in '+ckpt_folder_path)
         os.makedirs(ckpt_folder_path)
 	print('new directory created: '+ckpt_folder_path)
 	print('currentdir '+ os.getcwd())

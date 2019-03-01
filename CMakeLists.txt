@@ -42,6 +42,7 @@ include_directories(
    src/centroid_estimator.cpp
    src/pairing.cpp
    src/tracklet.cpp
+   src/realsense_detector.py
  )
 
 link_directories(${PCL_LIBRARY_DIRS})
@@ -80,3 +81,6 @@ target_link_libraries (tracker_node ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${PROJE
 
 add_executable (mo_tracker_node src/mo_tracker_node.cpp src/mo_tracker.cpp)
 target_link_libraries (mo_tracker_node ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${PROJECT_NAME})
+
+#add_executable (mo_tracker_node src/mo_tracker_node.cpp src/mo_tracker.cpp)
+#target_link_libraries (mo_tracker_node ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${PROJECT_NAME})
