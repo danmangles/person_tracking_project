@@ -63,10 +63,13 @@ class RealsenseDetector:
         #stores the image bounding box
         self.bounding_box = []
 
+        # define camera fov angles to calculate direction from an image
         if self.in_simulator:
-            self.realsense_half_fov_angle = 220/2
+            self.realsense_half_fov_angle = 220/2 # found this number by experiment
+            self.realsense_half_fov_angle_vert = (220/69.4)*42.5/2 # scaling other number by same amount
         else:
             self.realsense_half_fov_angle = 69.4/2
+            self.realsense_half_fov_angle_vert = 42.5/2
         return
 
     """
@@ -139,7 +142,7 @@ class RealsenseDetector:
            print("depth shape is "+str(depth_image.shape))
 
         # get distance, yaw and pitch to the target id'd in bounding box from depth image
-        target_dist, target_yaw, target_pitch = self.get_dist_yaw_pitch(depth_image)
+        target_dist, target_yaw, target_pitch = self.get_dist_yaw_pitch(depth_image, show_cropped_image = True)
 
         if np.isnan(target_dist):
            print('something wrong with distance, waiting for next one')
@@ -227,10 +230,10 @@ class RealsenseDetector:
                     #final_coordinates = parametrized_coordinates * 32.0 ( You can see other EQUIVALENT ways to do this...)
                     if self.in_simulator:
                         center_x = (float(col) + self.sigmoid(tx)) * 32.0 # magic number, think it needs to be proportional to input_image.width
+                        center_y = (float(row) + self.sigmoid(ty)) * 24.0 # see above but for height
                     else:
                         center_x = (float(col) + self.sigmoid(tx)) * 48.0 # magic number, think it needs to be proportional to input_image.width
-
-                    center_y = (float(row) + self.sigmoid(ty)) * 32.0 # see above but for height
+                        center_y = (float(row) + self.sigmoid(ty)) * 32.0 # see above but for height
 
                     roi_w = np.exp(tw) * anchors[2*b + 0] * 32.0
                     roi_h = np.exp(th) * anchors[2*b + 1] * 32.0
@@ -326,7 +329,7 @@ class RealsenseDetector:
         return l,r,t,b
 
 
-    def get_dist_yaw_pitch(self, depth_image):
+    def get_dist_yaw_pitch(self, depth_image, show_cropped_image):
         '''
         Returns the distance, yaw and pitch to a target in depth image, located by self.bounding_box
         '''
@@ -345,11 +348,19 @@ class RealsenseDetector:
         vert_dev_from_normal = 0.5 - (t+b)/(2.0*self.REALSENSE_IMAGE_HEIGHT) # horizontal deviation from normal (kinda an angle)
 
         #realsense_half_fov_angle = 69.4/2
-        realsense_half_fov_angle = 220/2
-        realsense_half_fov_angle_vert = 220*42.5/69.4/2 #????????????????????????????????????????
+#        realsense_half_fov_angle = 220/2
+#        realsense_half_fov_angle_vert = 220*42.5/69.4/2 #????????????????????????????????????????
 
-        target_yaw = realsense_half_fov_angle*horiz_dev_from_normal*np.pi/180.0 # in radians
-        target_pitch = realsense_half_fov_angle_vert*vert_dev_from_normal*np.pi/180.0 # in radians
+        target_yaw = self.realsense_half_fov_angle*horiz_dev_from_normal*np.pi/180.0 # in radians
+        target_pitch = self.realsense_half_fov_angle_vert*vert_dev_from_normal*np.pi/180.0 # in radians
+
+        if show_cropped_image:
+            print("Left: %d\n Right: %d\n Top: %d\n bottom: %d"%(l,r,t,b))
+            cv2.imshow('original image',depth_image)
+            cv2.waitKey(100)
+            cv2.imshow('Cropped image',cropped_depth_image)
+            cv2.waitKey(100)
+            print('angle (0.5 (left) to -0.5 (right): '+str(horiz_dev_from_normal))
 
         return target_dist, target_yaw, target_pitch
     '''
