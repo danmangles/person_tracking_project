@@ -9,9 +9,16 @@ find_package(catkin REQUIRED COMPONENTS
   pcl_ros
   roscpp
   sensor_msgs
-
+#from Rob's code
+  compressed_image_transport
+  cv_bridge
+  image_transport
+  rospy
+  std_msgs
+  apriltags
+  tf_conversions
 )
-
+find_package(Eigen3 REQUIRED) # from Rob's code
 
 
 catkin_package(
@@ -23,6 +30,8 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
   ${PCL_INCLUDE_DIRS}
   ${PROJECT_NAME}
+
+  ${EIGEN3_INCLUDE_DIRS} # from Rob's code
   INCLUDE_DIRS include
 )
 
