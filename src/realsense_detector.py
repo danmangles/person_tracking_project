@@ -24,7 +24,8 @@ from sensor_msgs.msg import CompressedImage
 import message_filters # for syncing up RGB and Depth images
 
 from geometry_msgs.msg import Point
-from geometry_msgs.msg import PoseStamped
+from geometry_msgs.msg import Pose
+from geometry_msgs.msg import PoseArray
 from visualization_msgs.msg import Marker
 from cv_bridge import CvBridge, CvBridgeError
 from geometry_msgs.msg import Quaternion, Vector3, Transform,TransformStamped
@@ -58,7 +59,7 @@ class RealsenseDetector:
         self.iou_threshold = 0.3 #another cnn threshold
         self.world_base_frame = "odom"
         self.camera_base_frame = "realsense_d435_forward_camera"
-        self.target_frame = "realsense_person_est" # this is the output name of all things that are published from this module
+        self.target_frame = "realsense_detections_poseArray" # this is the output name of all things that are published from this module
 
         # setup bits of TF and CVbridge
         self.tf_sess = tensorflow.InteractiveSession() #make a tensorflow session
@@ -71,7 +72,6 @@ class RealsenseDetector:
 
         #stores the image bounding box
         # self.bounding_box = []
-
         # define camera fov angles to calculate direction from an image
         self.ANGLE_SCALING_FACTOR = 2
         if self.in_simulator:
@@ -87,7 +87,7 @@ class RealsenseDetector:
     """
     
 
-    def get_bounding_box_from_rgb_msg(self,rgb_image_msg, verbose):
+    def get_bounding_boxes_from_rgb_msg(self,rgb_image_msg, verbose):
         '''
         :param rgb_image_msg: an image in sensor_msgs/CompressedImage format
         :return: bounding box: the top left and bottom right coordinates of the box bounding a person detection ???? WHAT HAPPENS IF MULTIPLE PEOPLE????
@@ -110,16 +110,20 @@ class RealsenseDetector:
         predictions = self.inference(preprocessed_image)
 
         #postprocess the predictions and save the output image
-        output_image, bounding_box = self.postprocessing(predictions, frame, True)
+        output_image, bounding_boxes = self.postprocessing(predictions, frame, False)
 
-        # prepare the output image for displaying
-        output_image = cv2.resize(output_image, (self.REALSENSE_IMAGE_WIDTH,self.REALSENSE_IMAGE_HEIGHT), interpolation = cv2.INTER_CUBIC)
+        if verbose:
+            print('bounding boxes are located at')
+            print(bounding_boxes)
+
+        # prepare the output image for displaying ########?????? WHY????????/
+        # output_image = cv2.resize(output_image, (self.REALSENSE_IMAGE_WIDTH,self.REALSENSE_IMAGE_HEIGHT), interpolation = cv2.INTER_CUBIC)
         if verbose:
             print('publishing image with bounding box on self.image_pub')
 
         self.image_pub.publish(self.bridge.cv2_to_imgmsg(output_image, "bgr8"))
 
-        return bounding_box # return the top left and bottom right coordinates of the box bounding a person detection ???? WHAT HAPPENS IF MULTIPLE PEOPLE????
+        return bounding_boxes # return the top left and bottom right coordinates of the box bounding a person detection ???? WHAT HAPPENS IF MULTIPLE PEOPLE????
 
     def publish_transform_from_rgbd_msg(self, bounding_box, depth_image_msg, verbose):
         '''
@@ -143,11 +147,11 @@ class RealsenseDetector:
         if self.verbose:
             print('\n\n***********combined_callback()')
         # get the bounding box from rgb data
-        bounding_box = self.get_bounding_box_from_rgb_msg(rgb_image_msg, False)
-
+        bounding_boxes = self.get_bounding_boxes_from_rgb_msg(rgb_image_msg, True)
+        # print(len(bounding_boxes))
         #combine with depth data and publish the output ########################## POSSIBLY SHOULD DO THIS ONCE FOR EACH BOUNDING BOX???
 
-        if len(bounding_box) != 4:  # if we can see something, the bounding box will be defined and it will have length 4
+        if len(bounding_boxes) == 0:  # if we can see something, the bounding box will be defined and it will have length 4
             print('bounding box is nonexistent, returning out of method')
             return
 
@@ -158,26 +162,10 @@ class RealsenseDetector:
             # check it worked by printing out the shape (will be 'none' if not working)
             print("depth shape is " + str(depth_image.shape))
 
-        try: # CALCULATING DISTANCE CAN CAUSE AN UNDIAGNOSED ERROR. KEEPING IN A TRY CATCH FOR NOW
-            # get distance, yaw and pitch to the target id'd in bounding box from depth image
-            target_dist, target_yaw, target_pitch = self.get_dist_yaw_pitch(depth_image, bounding_box, show_cropped_image=True, verbose = True)
+        self.update_pose_array_from_bounding_boxes(depth_image, bounding_boxes, rgb_image_msg.header.stamp, True)
 
-            if np.isnan(target_dist):
-                print('something wrong with distance, waiting for next one')
-                return
-
-            if self.verbose:
-                print("dist = %s" % str(target_dist))
-                print("yaw = %f, pitch = %f" % (target_yaw, target_pitch))
-
-            # publish on a transform
-            self.publish_detections(target_dist, target_yaw, target_pitch, rgb_image_msg.header.stamp, True)
-            self.publish_transform(target_dist, target_yaw, target_pitch, True)
-
-        except (ValueError):
-            print('Depth computation has resulted in an empty depth measurement. Waiting for next one. To troubleshoot, investigate get_box_coordinates()')
-            # raise ValueError # throw the error
-            pass
+        # publish the latest array of poses
+        self.poseArray_publisher.publish(self.pose_array)
 
 
         return
@@ -211,7 +199,11 @@ class RealsenseDetector:
 
     def postprocessing(self, predictions,input_image, verbose):
         '''
-        does some useful stuff with our tensorflow predictions
+        :param predictions:
+        :param input_image:
+        :param verbose:
+        :return
+        Method: generates a list of bounding boxes on the image
         '''
         if verbose:
             print('postprocessing() is getting the bounding box for an image of shape '+str(input_image.shape))
@@ -290,14 +282,14 @@ class RealsenseDetector:
         thresholded_predictions.sort(key=lambda tup: tup[1],reverse=True)
         #what is non maximal suppression??????
         nms_predictions = []
+
         #create a list of predictions for which the class is 'person' from thresholded predictions
         thresholded_predictions = list(filter(lambda a: a[-1] == 'person', thresholded_predictions))
         if (len(thresholded_predictions) > 0): #if any of our predictions survived the threshold, pass thru our NMS function
             nms_predictions = self.get_nms_predictions(thresholded_predictions)
 
         #draw the final bounding boxes and label on the input image
-
-
+        bounding_boxes = [] # initiate an array to store predictions in
         #looping thru our predicted bounding boxes
         for i in range(len(nms_predictions)):
 
@@ -306,7 +298,9 @@ class RealsenseDetector:
 
             #put a class rectangle with bounding box coordinates and a class label on the image
             if verbose:
-                print ('placing a rectangle at '+str((nms_predictions[i][0][0], nms_predictions[i][0][1], nms_predictions[i][0][2],nms_predictions[i][0][3])))
+                # print ('bounding box located at '+str((nms_predictions[i][0][0], nms_predictions[i][0][1], nms_predictions[i][0][2],nms_predictions[i][0][3])))
+                print('this bb is '+str(nms_predictions[i][0][:]))
+            bounding_boxes.append(nms_predictions[i][0][:])
             input_image = cv2.rectangle(input_image, (nms_predictions[i][0][0], nms_predictions[i][0][1]), (nms_predictions[i][0][2],nms_predictions[i][0][3]), color)
             # print the class name onto the image
             cv2.putText(input_image,best_class_name,(int((nms_predictions[i][0][0]+nms_predictions[i][0][2])/2),int((nms_predictions[i][0][1]+nms_predictions[i][0][3])/2)),cv2.FONT_HERSHEY_SIMPLEX,1,color,3)
@@ -314,9 +308,10 @@ class RealsenseDetector:
         # if we've predicted any classes, return them. Else just send back the same old image.
         if (len(nms_predictions) > 0):
             #print('I can see a %s at coordinates %s'%(best_class_name, str(nms_predictions[0][0])))
-            if len(nms_predictions) > 1:
-                print('************i can see a total of %d people'%len(nms_predictions))
-            return input_image, nms_predictions[0][0]
+            if verbose:
+                if len(nms_predictions) > 1:
+                    print('************i can see a total of %d people'%len(nms_predictions))
+            return input_image, bounding_boxes
 
         else:
             print('cant see anything...')
@@ -443,6 +438,52 @@ class RealsenseDetector:
             print('l = %d, r = %d, t = %d, b = %d'%(l,r,t,b))
         return l,r,t,b
 
+    def update_pose_array_from_bounding_boxes(self, depth_image, bounding_boxes, time_of_detection, verbose):
+        '''
+        :param bounding_boxes:
+        :return:
+        '''
+        self.pose_array.poses = [] # clear the array
+
+        self.pose_array.header.stamp = time_of_detection # set the time to match that at which the image was detected
+
+        if verbose:
+            print("update_pose_array_from_bounding_boxes()")
+
+        for bounding_box in bounding_boxes: # loop thru the bounding boxes
+            if verbose:
+                print('inspecting bounding box '+str(bounding_box))
+
+            try:
+                # get distance, yaw and pitch to the target id'd in bounding box from depth image
+                target_dist, target_yaw, target_pitch = self.get_dist_yaw_pitch(depth_image, bounding_box,
+                                                                                show_cropped_image=True, verbose=True)
+            except ValueError:
+                print('*******Depth computation has resulted in an empty depth measurement. Waiting for next one.\n')
+                # raise ValueError # throw the error
+                pass
+
+            if verbose:
+                print("dist = %s" % str(target_dist))
+                print("yaw = %f, pitch = %f" % (target_yaw, target_pitch))
+
+            #strike a pose
+            new_pose = Pose()
+            new_pose.position.x = target_dist * np.cos(target_yaw) * np.cos(target_pitch)
+            new_pose.position.y = target_dist * np.sin(target_yaw) * np.cos(target_pitch)
+            new_pose.position.z = target_dist * np.sin(target_pitch)
+
+            quat = quaternion_from_euler(0, 0, 0)
+            new_pose.orientation.x = quat[0]
+            new_pose.orientation.y = quat[1]
+            new_pose.orientation.z = quat[2]
+            new_pose.orientation.w = quat[3]
+
+            self.pose_array.poses.append(new_pose)
+
+
+        if verbose:
+            print('pose_array updated.')
     '''
     Neural Network and CV methods
     '''
@@ -569,8 +610,13 @@ class RealsenseDetector:
         self.br = tf.TransformBroadcaster()
 
         #publisher for our pose estimates
-        self.pose_pub = rospy.Publisher(self.target_frame, PoseStamped, queue_size=100)
+        # self.pose_pub = rospy.Publisher(self.target_frame, PoseStamped, queue_size=100)
+        self.poseArray_publisher = rospy.Publisher(self.target_frame, PoseArray, queue_size=1)
 
+        self.pose_array = PoseArray() # initiate a posearray to publish
+        self.pose_array.header.frame_id = self.camera_base_frame # set the base frame
+        
+"""
     def publish_transform(self, target_dist, target_yaw, target_pitch, verbose):
         '''
         :param target_dist: distance from realsense_d435 to target person in metres
@@ -619,3 +665,5 @@ class RealsenseDetector:
         self.pose_pub.publish(pose) # publish the pose
 
         return
+
+"""
