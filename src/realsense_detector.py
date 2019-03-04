@@ -21,7 +21,10 @@ from sensor_msgs.msg import Image
 from sensor_msgs.msg import CompressedImage
 #from sensor_msgs.msg import compressedDepth
 
+import message_filters # for syncing up RGB and Depth images
+
 from geometry_msgs.msg import Point
+from geometry_msgs.msg import PoseStamped
 from visualization_msgs.msg import Marker
 from cv_bridge import CvBridge, CvBridgeError
 from geometry_msgs.msg import Quaternion, Vector3, Transform,TransformStamped
@@ -43,6 +46,7 @@ class RealsenseDetector:
     def __init__(self, in_simulator, verbose):
         print('initiating new Realsense Detector')
 
+
         # define variables
         self.verbose = verbose
         self.in_simulator = in_simulator # are we simulated or rosbag?
@@ -52,6 +56,9 @@ class RealsenseDetector:
         self.REALSENSE_IMAGE_WIDTH, self.REALSENSE_IMAGE_HEIGHT = 430, 300 # affect where we draw the bounding box
         self.score_threshold = 0.3 # threshold for picking true positives in our image
         self.iou_threshold = 0.3 #another cnn threshold
+        self.world_base_frame = "odom"
+        self.camera_base_frame = "realsense_d435_forward_camera"
+        self.target_frame = "realsense_person_est" # this is the output name of all things that are published from this module
 
         # setup bits of TF and CVbridge
         self.tf_sess = tensorflow.InteractiveSession() #make a tensorflow session
@@ -63,42 +70,39 @@ class RealsenseDetector:
         self.load_yolo_weights(True) # load the weights of the neural network
 
         #stores the image bounding box
-        self.bounding_box = []
+        # self.bounding_box = []
 
         # define camera fov angles to calculate direction from an image
+        self.ANGLE_SCALING_FACTOR = 2
         if self.in_simulator:
             self.realsense_half_fov_angle = 220/2 # found this number by experiment
             self.realsense_half_fov_angle_vert = (220/69.4)*42.5/2 # scaling other number by same amount
         else:
-            self.realsense_half_fov_angle = 69.4/2
-            self.realsense_half_fov_angle_vert = 42.5/2
-        return
+            self.realsense_half_fov_angle = 69.4/2*self.ANGLE_SCALING_FACTOR
+            self.realsense_half_fov_angle_vert = 42.5/2*self.ANGLE_SCALING_FACTOR
 
+        return
     """
     CALLBACKS
     """
-    def rgb_callback(self, rgb_image_msg):
-        '''
-        input: rgb_image_msg: an image in sensor_msgs/CompressedImage format
-        method: resizes the image, generates predictions, populates a bounding box
-        '''
-        # #skip every 5th frame
-        if self.skipping:
-            self.skip += 1
-            if self.skip % 5 != 0: # unless we are on a 5th frame, return
-                return
-            self.skip = 0 # reset skip counter
+    
 
-        if self.verbose:
-           print('\n*****rgb_callback()')
+    def get_bounding_box_from_rgb_msg(self,rgb_image_msg, verbose):
+        '''
+        :param rgb_image_msg: an image in sensor_msgs/CompressedImage format
+        :return: bounding box: the top left and bottom right coordinates of the box bounding a person detection ???? WHAT HAPPENS IF MULTIPLE PEOPLE????
+        '''
+
+        if verbose:
+           print('update_bounding_box_from_rgb_msg()')
 
         #use a cvbridge to convert from ros image to openCv image
         frame = self.bridge.compressed_imgmsg_to_cv2(rgb_image_msg, "bgr8") #frame is a new image in cv2 format
-        if self.verbose:
+        if verbose:
             print('we have an input frame with shape'+str(frame.shape[:2]))
 
         preprocessed_image = self.preprocessing(frame) #input height and width are fixed dimensions
-        if self.verbose:
+        if verbose:
             print('resized it to shape '+str(preprocessed_image.shape))
 
         #compute the predictions on the input image
@@ -106,58 +110,76 @@ class RealsenseDetector:
         predictions = self.inference(preprocessed_image)
 
         #postprocess the predictions and save the output image
-        output_image, bb = self.postprocessing(predictions, frame, True)
-
-        #set the bounding box variable (type??!!) to global for broad usage
-        self.bounding_box = bb #set the bounding box to the box of the top prediction
+        output_image, bounding_box = self.postprocessing(predictions, frame, True)
 
         # prepare the output image for displaying
         output_image = cv2.resize(output_image, (self.REALSENSE_IMAGE_WIDTH,self.REALSENSE_IMAGE_HEIGHT), interpolation = cv2.INTER_CUBIC)
+        if verbose:
+            print('publishing image with bounding box on self.image_pub')
+
         self.image_pub.publish(self.bridge.cv2_to_imgmsg(output_image, "bgr8"))
 
-        # uncomment this to display the output on a separate window
-        #    if verbose:
-        #        cv2.imshow('Video Visualise', output_image)
-        #        cv2.waitKey(100)
-    def depth_callback(self,depth_image_msg):
-        '''
-        INPUTS: depth_image_msg: an imgmsg format 8 bit depth image, of dimensions ???x???
-        Takes this image, converts to cv2, crops it, calculates:
-            distance 'target_dist'
-            yaw 'target_yaw'
-            pitch 'target_pitch'
-        between the forward realsense and the target. These are then sent to the tf topic using 'sendtransform'
-        '''
-        if self.skipping:
-            if self.skip % 5 != 0:
-                return
-            self.skip =0
+        return bounding_box # return the top left and bottom right coordinates of the box bounding a person detection ???? WHAT HAPPENS IF MULTIPLE PEOPLE????
 
-        print('\n****depth_callback()')
-        if len(self.bounding_box) != 4: #if we can see something, the bounding box will be defined and it will have length 4
+    def publish_transform_from_rgbd_msg(self, bounding_box, depth_image_msg, verbose):
+        '''
+        :param bounding_box:
+        :param depth_image_msg:
+        :return:
+        '''
+        if verbose:
+            print('publish_transform_from_rgbd_msg()')
+
+
+
+
+
+    def combined_callback(self, rgb_image_msg, depth_image_msg):
+        '''
+        :param rgb_image_msg: an image in sensor_msgs/CompressedImage format
+        :param depth_image_msg: an Image format depth image, of dimensions ???x???
+        :return: null
+        '''
+        if self.verbose:
+            print('\n\n***********combined_callback()')
+        # get the bounding box from rgb data
+        bounding_box = self.get_bounding_box_from_rgb_msg(rgb_image_msg, False)
+
+        #combine with depth data and publish the output ########################## POSSIBLY SHOULD DO THIS ONCE FOR EACH BOUNDING BOX???
+
+        if len(bounding_box) != 4:  # if we can see something, the bounding box will be defined and it will have length 4
             print('bounding box is nonexistent, returning out of method')
             return
 
-        # convert the image into cv2 format
+        # convert the depth image into cv2 format
         depth_image = self.bridge.imgmsg_to_cv2(depth_image_msg, desired_encoding="passthrough")
 
         if self.verbose:
-            #check it worked
-            print("depth shape is "+str(depth_image.shape))
+            # check it worked by printing out the shape (will be 'none' if not working)
+            print("depth shape is " + str(depth_image.shape))
 
-        # get distance, yaw and pitch to the target id'd in bounding box from depth image
-        target_dist, target_yaw, target_pitch = self.get_dist_yaw_pitch(depth_image, show_cropped_image = True)
+        try: # CALCULATING DISTANCE CAN CAUSE AN UNDIAGNOSED ERROR. KEEPING IN A TRY CATCH FOR NOW
+            # get distance, yaw and pitch to the target id'd in bounding box from depth image
+            target_dist, target_yaw, target_pitch = self.get_dist_yaw_pitch(depth_image, bounding_box, show_cropped_image=True, verbose = True)
 
-        if np.isnan(target_dist):
-           print('something wrong with distance, waiting for next one')
-           return
+            if np.isnan(target_dist):
+                print('something wrong with distance, waiting for next one')
+                return
 
-        if self.verbose:
-            print("dist = %s"%str(target_dist))
-            print("yaw = %f, pitch = %f"%(target_yaw, target_pitch))
+            if self.verbose:
+                print("dist = %s" % str(target_dist))
+                print("yaw = %f, pitch = %f" % (target_yaw, target_pitch))
 
-        #publish on a transform
-        self.publish_transform(target_dist, target_yaw, target_pitch)
+            # publish on a transform
+            self.publish_detections(target_dist, target_yaw, target_pitch, rgb_image_msg.header.stamp, True)
+            self.publish_transform(target_dist, target_yaw, target_pitch, True)
+
+        except (ValueError):
+            print('Depth computation has resulted in an empty depth measurement. Waiting for next one. To troubleshoot, investigate get_box_coordinates()')
+            # raise ValueError # throw the error
+            pass
+
+
         return
 
     '''
@@ -179,6 +201,7 @@ class RealsenseDetector:
         image_array = np.expand_dims(image_data, 0) # add a batch dimension ???WHAT IS THIS???
 
         return image_array
+
     def inference(self,preprocessed_image):
       # Forward pass of the preprocessed image into the network defined in the net.py file
       # using tensorflow
@@ -292,53 +315,32 @@ class RealsenseDetector:
         if (len(nms_predictions) > 0):
             #print('I can see a %s at coordinates %s'%(best_class_name, str(nms_predictions[0][0])))
             if len(nms_predictions) > 1:
-                print('i can also see other stuff')
+                print('************i can see a total of %d people'%len(nms_predictions))
             return input_image, nms_predictions[0][0]
 
         else:
             print('cant see anything...')
             return input_image, []
 
-
-    def get_box_coordinates(self,verbose):
+    def get_dist_yaw_pitch(self, depth_image, bounding_box, show_cropped_image, verbose):
         '''
-        Take the median of pixels inside the bounding box and use this as our distance
-        '''
-        # create an array of zeros across the span of the bb at 416x416
-        bb = np.zeros((self.YOLO_IMAGE_DIMENSION, self.YOLO_IMAGE_DIMENSION))
-
-        # draw a rectangle with the two opposite vertices at (bounding_box[0],bounding_box[1]) and (bounding_box[2],bounding_box[3])
-        bb = cv2.rectangle(bb,(self.bounding_box[0],self.bounding_box[1]),(self.bounding_box[2],self.bounding_box[3]),1, thickness=-1)
-
-        # now resize our bounding box (stretch it) to the coordinates of the output image 640x480
-        bb = cv2.resize(bb,(self.REALSENSE_IMAGE_WIDTH, self.REALSENSE_IMAGE_HEIGHT), interpolation = cv2.INTER_CUBIC)
-
-        sum0 =np.sum(bb, axis=0) # sum up the values across the x axis
-        sum0[sum0!=0] =1	#set all nonzero values to 1
-        sum1 =np.sum(bb, axis=1) # sum up the values across the y axis
-        sum1[sum1!=0] =1#set all nonzero values to 1
-
-        lr = np.multiply(sum0, range(0,self.REALSENSE_IMAGE_WIDTH)) # element-wise multiply the x axis sum with [0:640]
-        lr = list(filter(lambda a: a!=0, lr))  # remove all zero values
-
-        l = int(np.amin(lr)) # left side of box = minimum value of left-right
-        r =  int(np.amax(lr)) # right side of box = max value of left-right
-
-        tb = np.multiply(sum1, range(0,self.REALSENSE_IMAGE_HEIGHT)) # element-wise multiply the y axis sum with [0:480]
-        tb = list(filter(lambda a: a!=0, tb)) # remove all zero values
-
-        t =  int(np.amin(tb)) # top of box = minimum value of tb
-        b =  int(np.amax(tb)) # bottom of box = max value of tb
-
-        return l,r,t,b
-
-
-    def get_dist_yaw_pitch(self, depth_image, show_cropped_image):
-        '''
-        Returns the distance, yaw and pitch to a target in depth image, located by self.bounding_box
+        Returns the distance, yaw and pitch to a target in depth image, located by bounding_box
         '''
         #get lrtb values (unsure what these are)
-        l,r,t,b = self.get_box_coordinates(True) # bounding box coords fitted to depth image
+        # l,r,t,b = self.get_box_coordinates(bounding_box, True) # bounding box coords fitted to depth image
+        # set negative dims to zero
+        for i in range(0,len(bounding_box)):
+            if bounding_box[i] < 0:
+                print('setting a negative dimension to zero from bounding box')
+                bounding_box[i] = 0
+
+        l = bounding_box[0]
+        t = bounding_box[1]
+        r = bounding_box[2]
+        b = bounding_box[3]
+
+        if verbose:
+            print("Left: %d\n Right: %d\n Top: %d\n bottom: %d" % (l, r, t, b))
         cropped_depth_image = depth_image[t:b, l:r]    # select a rectangle from the depth image that is cropped to x = [t:b] and y = [l:r]
         # remove zero values to leave a valid array of depths of the person
         values = list(filter(lambda y: y!=0, cropped_depth_image.flatten()))
@@ -350,14 +352,16 @@ class RealsenseDetector:
         '''
         get yaw and pitch
         '''
-        horiz_dev_from_normal = 0.5 - (l+r)/(2.0*self.REALSENSE_IMAGE_WIDTH) # horizontal deviation from normal (kinda an angle)
-        vert_dev_from_normal = 0.5 - (t+b)/(2.0*self.REALSENSE_IMAGE_HEIGHT) # horizontal deviation from normal (kinda an angle)
+        # horiz_dev_from_normal = 0.5 - (l+r)/(2.0*self.REALSENSE_IMAGE_WIDTH) # horizontal deviation from normal (kinda an angle)
+        # vert_dev_from_normal = 0.5 - (t+b)/(2.0*self.REALSENSE_IMAGE_HEIGHT) # horizontal deviation from normal (kinda an angle)'''
+        horiz_dev_from_normal = 0.5 - (l+r)/(2.0*640) # horizontal deviation from normal (kinda an angle)
+        vert_dev_from_normal = 0.5 - (t+b)/(2.0*480) # horizontal deviation from normal (kinda an angle)
 
         target_yaw = self.realsense_half_fov_angle*horiz_dev_from_normal*np.pi/180.0 # in radians
         target_pitch = self.realsense_half_fov_angle_vert*vert_dev_from_normal*np.pi/180.0 # in radians
 
         if show_cropped_image:
-            print("Left: %d\n Right: %d\n Top: %d\n bottom: %d"%(l,r,t,b))
+            # print("Left: %d\n Right: %d\n Top: %d\n bottom: %d"%(l,r,t,b))
 #            cv2.imshow('original image',depth_image)
 #            cv2.waitKey(100)
 #            cv2.imshow('Cropped image',cropped_depth_image)
@@ -366,6 +370,79 @@ class RealsenseDetector:
             print('angle (0.5 (left) to -0.5 (right): '+str(horiz_dev_from_normal))
 
         return target_dist, target_yaw, target_pitch
+
+    def get_box_coordinates(self, bounding_box, verbose):
+        '''
+        Take the median of pixels inside the bounding box and use this as our distance
+        '''
+
+        # create an array of zeros across the span of the bb at 416x416
+        # bb_rectangle = np.zeros((self.YOLO_IMAGE_DIMENSION, self.YOLO_IMAGE_DIMENSION))
+        bb_rectangle = np.zeros((480,640))
+        # draw a rectangle with the two opposite vertices at (bounding_box[0],bounding_box[1]) and (bounding_box[2],bounding_box[3])
+        bb_rectangle = cv2.rectangle(bb_rectangle,(bounding_box[0], bounding_box[1]),(bounding_box[2], bounding_box[3]), 1, thickness=-1) # create a matrix which has ones inside bounding box and zeros elsewhere
+
+
+        if verbose:
+            cv2.imshow('bounding box before resizing to 430 x 300', bb_rectangle)
+            cv2.waitKey(100)
+            print(bounding_box)
+            # # print(bb_rectangle)
+            # print(np.max(bb_rectangle))
+            # print(np.min(bb_rectangle))
+        # now resize our bounding box (stretch it) to the coordinates of the Realsense image which we determined experimentally
+        bb_rectangle = cv2.resize(bb_rectangle,(640, 480), interpolation = cv2.INTER_CUBIC) # create a filled
+        # bb_rectangle = cv2.resize(bb_rectangle, (self.REALSENSE_IMAGE_WIDTH, self.REALSENSE_IMAGE_HEIGHT), interpolation=cv2.INTER_CUBIC)  # create a filled
+        sum0 =np.sum(bb_rectangle, axis=0) # sum up the values across the x axis
+        if verbose:
+            cv2.imshow('resized to 640x480', bb_rectangle)
+            cv2.waitKey(100)
+        #     # print(np.max(bb_rectangle))
+        #     # print(np.min(bb_rectangle))
+        #     # print('sum0 = ')
+        #     # print(sum0)
+
+        sum0[sum0!=0] =1	#set all nonzero values to 1
+        # if verbose:
+        #     print(sum0)
+        sum1 =np.sum(bb_rectangle, axis=1) # sum up the values across the y axis
+        # if verbose:
+        #     print('sum1 = ')
+        #     print(sum1)
+        sum1[sum1!=0] =1#set all nonzero values to 1
+        # if verbose:
+        #     print(sum1)
+
+        lr = np.multiply(sum0, range(0,self.REALSENSE_IMAGE_WIDTH)) # element-wise multiply the x axis sum with [0:640]
+        lr = list(filter(lambda a: a!=0, lr))  # remove all zero values
+        """
+        File "/home/ori/git/multi_sensor_tracker/src/realsense_detector.py", line 449, in get_box_coordinates
+            l = int(np.amin(lr)) # left side of box = minimum value of left-right
+        ValueError: zero-size array to reduction operation minimum which has no identity
+        """
+        # if verbose:
+        #     print('lr = ')
+        #     print(lr)
+
+        if (lr == []): # if lr is empty, there's an issue
+            print('**************************\n**************************\n**************************\nWE HAVE AN EMPTY lr LIST, THROWING ValueError')
+            print('bounding_box is')
+            print(bounding_box)
+
+
+        l = int(np.amin(lr)) # left side of box = minimum value of left-right
+
+        r =  int(np.amax(lr)) # right side of box = max value of left-right
+
+        tb = np.multiply(sum1, range(0,self.REALSENSE_IMAGE_HEIGHT)) # element-wise multiply the y axis sum with [0:480]
+        tb = list(filter(lambda a: a!=0, tb)) # remove all zero values
+
+        t =  int(np.amin(tb)) # top of box = minimum value of tb
+        b =  int(np.amax(tb)) # bottom of box = max value of tb
+        if verbose:
+            print('l = %d, r = %d, t = %d, b = %d'%(l,r,t,b))
+        return l,r,t,b
+
     '''
     Neural Network and CV methods
     '''
@@ -468,32 +545,77 @@ class RealsenseDetector:
 
         else:
             image_topic = "/realsense_d435_forward/color/image_raw/compressed"
-            self.rgb_sub = rospy.Subscriber(image_topic, CompressedImage,self.rgb_callback) # every time we get an RGB image, call self.rgb_callback
+            rgb_sub = message_filters.Subscriber(image_topic, CompressedImage) # every time we get an RGB image, call self.rgb_callback
             depth_topic = "/realsense_d435_forward/aligned_depth_to_color/image_raw"
-            self.depth_sub = rospy.Subscriber(depth_topic, Image, self.depth_callback) # same for depth images
+            depth_sub = message_filters.Subscriber(depth_topic, Image) # same for depth images
+
+        # setup the synchronised subscriber which combines the rgb and depth subscribers into a single callback
+        self.ts = message_filters.TimeSynchronizer([rgb_sub, depth_sub],10)
+        self.ts.registerCallback(self.combined_callback)
 
         # create the publisher to output our prediction images on
         image_pub_topic = "/camera/person_detection_bounding_boxes" # publishing to this topic
         self.image_pub = rospy.Publisher(image_pub_topic,Image)
+
         # create the publisher to output our cropped images on
         depth_pub_topic = "/camera/cropped_depth_image" # publishing to this topic
         self.depth_pub = rospy.Publisher(depth_pub_topic,Image)
 
+        # create the publisher to output our bb on
+        bounding_box_pub_topic = "/camera/bounding_box"  # publishing to this topic
+        self.bounding_box_pub = rospy.Publisher(bounding_box_pub_topic, Image)
+
+        # transform broadcaster for our transforms
         self.br = tf.TransformBroadcaster()
 
-    def publish_transform(self, target_dist, target_yaw, target_pitch):
+        #publisher for our pose estimates
+        self.pose_pub = rospy.Publisher(self.target_frame, PoseStamped, queue_size=100)
+
+    def publish_transform(self, target_dist, target_yaw, target_pitch, verbose):
         '''
-        publishes a transform at the given coordinates
+        :param target_dist: distance from realsense_d435 to target person in metres
+        :param target_yaw: yaw from ___ to ____ in radians
+        :param target_pitch: pitch from ___ to ____ in radians
+        :method: send a transform at location specified by the dist, yaw, pitch with parent frame "self.camera_base_frame"
         '''
+        if verbose:
+            print('publish_transform()')
         target_x = target_dist*np.cos(target_yaw)*np.cos(target_pitch)
         target_y = target_dist*np.sin(target_yaw)*np.cos(target_pitch)
         target_z = target_dist*np.sin(target_pitch)
-        #target_quat = Quaternion(target_yaw, 0.0, 0.0) # roll, pitch are both 0.0
-        target_quat = quaternion_from_euler(0.0, target_pitch, target_yaw) # roll is 0
+
         target_vector = (target_x, target_y, target_z)
+        target_quat = quaternion_from_euler(0.0, target_pitch, target_yaw) # roll is 0
 
-        camera_frame_id = "realsense_d435_forward_camera"
-        target_frame_id = "realsense_person_est"
+        self.br.sendTransform(target_vector, target_quat, rospy.Time.now(), self.target_frame,  self.camera_base_frame)
 
-        self.br.sendTransform(target_vector, target_quat, rospy.Time.now(), target_frame_id, camera_frame_id)
+        return
+
+
+    def publish_detections(self, target_dist, target_yaw, target_pitch, msg_time, verbose):
+        '''
+        :param target_dist:
+        :param target_yaw:
+        :param target_pitch:
+        :param msg_time:
+        :return:
+        '''
+        pose = PoseStamped()
+        pose.pose.position.x = target_dist*np.cos(target_yaw)*np.cos(target_pitch)
+        pose.pose.position.y = target_dist*np.sin(target_yaw)*np.cos(target_pitch)
+        pose.pose.position.z = target_dist*np.sin(target_pitch)
+        if verbose:
+            print('publish_detections()')
+
+        quat = quaternion_from_euler(0, 0, 0)
+        pose.pose.orientation.x = quat[0]
+        pose.pose.orientation.y = quat[1]
+        pose.pose.orientation.z = quat[2]
+        pose.pose.orientation.w = quat[3]
+        # pose.header.frame_id = "base"
+        pose.header.frame_id = self.camera_base_frame
+        pose.header.stamp = msg_time  # publish at the time the message was received
+
+        self.pose_pub.publish(pose) # publish the pose
+
         return
