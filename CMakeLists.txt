@@ -17,6 +17,7 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   apriltags
   tf_conversions
+  message_filters # for callback with both inputs
 )
 find_package(Eigen3 REQUIRED) # from Rob's code
 
@@ -38,7 +39,7 @@ include_directories(
 ## Declare a C++ library
  add_library(${PROJECT_NAME}
    src/kalman_filter.cpp
-#   src/tracker.cpp
+#   src/old_files/tracker.cpp
    src/centroid_estimator.cpp
    src/pairing.cpp
    src/tracklet.cpp
@@ -76,8 +77,8 @@ target_link_libraries (kalman_filter_tracker ${catkin_LIBRARIES} ${PCL_LIBRARIES
 #add_executable (nearest_cluster_tracker src/nearest_cluster_tracker.cpp)
 #target_link_libraries (nearest_cluster_tracker ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${PROJECT_NAME})
 
-add_executable (tracker_node src/tracker_node.cpp src/tracker.cpp)
-target_link_libraries (tracker_node ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${PROJECT_NAME})
+#add_executable (tracker_node src/old_files/tracker_node.cpp src/old_files/tracker.cpp)
+#target_link_libraries (tracker_node ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${PROJECT_NAME})
 
 add_executable (mo_tracker_node src/mo_tracker_node.cpp src/mo_tracker.cpp)
 target_link_libraries (mo_tracker_node ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${PROJECT_NAME})
