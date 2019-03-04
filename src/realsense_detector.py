@@ -438,8 +438,9 @@ class RealsenseDetector:
             weights_path = 'yolov2-tiny-voc.weights'
             ckpt_folder_path = '/catkin_ws/src/multi_sensor_tracker/drs-main/code/src/personal/person_tracker/scripts/ckpt/'
         else:
-            weights_path = 'yolov2-tiny-voc.weights'
-            ckpt_folder_path = '/catkin_ws/src/multi_sensor_tracker/drs-main/code/src/personal/person_tracker/scripts/ckpt/'
+            #calling from catkin_ws/src
+            weights_path = 'multi_sensor_tracker/src/yolo_weights/yolov2-tiny-voc.weights'
+            ckpt_folder_path = 'multi_sensor_tracker/drs-main/code/src/personal/person_tracker/scripts/ckpt/'
             #weights_path = 'multi_sensor_tracker/src/yolo_weights/yolov2-tiny-voc.weights'
             #ckpt_folder_path = '../drs-main/code/src/personal/person_tracker/scripts/ckpt/' # change this to a more reasonable folder
 
