@@ -21,6 +21,10 @@
 
 #include <Eigen/Dense>
 
+//geometry stuff
+#include <geometry_msgs/PoseArray.h> // for the python array
+#include <transform_datatypes.h>
+
 // TF includes
 #include <tf/transform_listener.h>
 #include <tf/transform_broadcaster.h>
@@ -90,7 +94,8 @@ public:
 
 private:
     ////// General Pointcloud Methods
-    void callback(const sensor_msgs::PointCloud2ConstPtr &cloud_msg); // this method is called whenever the Tracker sees a new pointcloud
+    void pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr &cloud_msg); // this method is called whenever the Tracker sees a new pointcloud
+
     void applyPassthroughFilter(const sensor_msgs::PointCloud2ConstPtr input_cloud, sensor_msgs::PointCloud2 &output_cloud); // filters points outside of a defined cube
     void removeOutOfPlanePoints(pcl::PointCloud<pcl::PointXYZRGB>::Ptr &cloud_ptr); // remove non-planar-inlying points
     void applyBaseOdomTransformation(sensor_msgs::PointCloud2 input_cloud, sensor_msgs::PointCloud2 &output_cloud); // transforms the cloud into the odom frame
@@ -106,6 +111,12 @@ private:
     void processCentroidCoords(vector<VectorXd> unpaired_detections);
 
 
+    ////// Realsense Detector Methods
+
+    void poseArrayCallback(const geometry_msgs::PoseArray &pose_array); // this method is called whenever the Tracker sees a new pointcloud
+    void applyRealsenseOdomTransformation(Stamped<tf::Pose> input_pose, Stamped<tf::Pose> &output_pose,bool verbose); // convert realsense coordinates into odom frame
+
+    tf::Transformer pose_transformer_;
     ////// Tracklet methods
     void updatePairings(vector<VectorXd> &unpaired_detections, bool verbose);
     void updateTracklets(vector<VectorXd> &unpaired_detections, bool verbose);
@@ -129,6 +140,8 @@ private:
 
     ////// I/O Variables
     ros::Subscriber point_cloud_sub_; // private copy of subscriber for velodyne
+    ros::Subscriber realsense_poseArray_sub_; // private copy of subscriber to the posearray
+
     tf::TransformBroadcaster br_; // to broadcast tfs on
     ros::NodeHandle nh_; // the nodehandle
     ros::Publisher pub_raw_; // raw input cloud
@@ -139,7 +152,7 @@ private:
     ros::Publisher pub_centroid_; // centroid cluster
     ros::Publisher pub_marker_; // for markers
     boost::shared_ptr<tf::TransformListener> odom_base_ls_; // setup the transform listener so we can listen to the odom_base_tf
-    boost::shared_ptr<tf::TransformListener> rs_detector_ls_; // setup the transform listener so we can listen to the realsense_detcetor
+    boost::shared_ptr<tf::TransformListener> odom_realsense_ls_; // setup the transform listener so we can transform realsense coords into odom frame
     bool verbose_, publishing_, write_to_csv_; // do we print? do we publish pointclouds>? do we write results to a csv?
     ofstream results_file_; // stores output results in
 

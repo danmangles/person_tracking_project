@@ -10,14 +10,14 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   sensor_msgs
 #from Rob's code
-  compressed_image_transport
-  cv_bridge
-  image_transport
-  rospy
-  std_msgs
-  apriltags
-  tf_conversions
-  message_filters # for callback with both inputs
+#  compressed_image_transport
+#  cv_bridge
+#  image_transport
+#  rospy
+#  std_msgs
+#  apriltags
+#  tf_conversions
+#  message_filters # for callback with both inputs
 )
 find_package(Eigen3 REQUIRED) # from Rob's code
 

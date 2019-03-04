@@ -16,16 +16,19 @@ MOTracker::MOTracker(ros::NodeHandle nh,
     nh_(nh), max_cluster_size_(max_cluster_size), min_cluster_size_(min_cluster_size),cluster_tolerance_(cluster_tolerance),
     seg_dist_threshold_(seg_dist_threshold), kf_params_(kf_params), verbose_(verbose), publishing_(publishing),
     write_to_csv_(write_to_csv) // initiate the nodehandle
-{   // Constructor: sets up
+{
+    // Constructor: sets up
     cout<< "MOTracker constructor called "<<endl;
     initialiseSubscribersAndPublishers(); //initialise the subscribers and publishers
     results_file_.open("tracking_results.csv");
     results_file_ << "Detection_X,Detection_Y,Detection_Z,Tracklet_ID,KF_X,KF_Y,KF_Z,KF_cov_X,KF_cov_Y,KF_cov_Z\n";
+
 //    results_file_.close();
+
 }
 
 ///// General Pointcloud Methods
-void MOTracker::callback(const sensor_msgs::PointCloud2ConstPtr &cloud_msg) { // the callback fcn
+void MOTracker::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr &cloud_msg) { // the callback fcn
     // this is called by pointclouds from the velodyne, processing them, decomposing into clusters, and publishing cluster coordinates
     cout<< "************************************\nInitiating Callback\n***********************************"<<endl;
     sensor_msgs::PointCloud2 msg_to_publish; // we will use this for all the pointclouds we need to publish
@@ -81,6 +84,32 @@ void MOTracker::callback(const sensor_msgs::PointCloud2ConstPtr &cloud_msg) { //
         cout << "No valid clusters visible after getCentroidsOfClusters()"<<endl;
 }
 
+void MOTracker::poseArrayCallback(const geometry_msgs::PoseArray &pose_array)
+{
+// this callback is called by the posearray
+    if (verbose_)
+        cout <<"poseArrayCallback()"<<endl;
+
+    vector <VectorXd> realsense_coords;
+    // generate a vector of coordinates in the same manner as the pointclouds
+    for (int i = 0; i < pose_array.poses.size(); i++) {
+        VectorXd pose_coords(3);
+        pose_coords[0] = pose_array.poses[i].position.x;
+        pose_coords[1] = pose_array.poses[i].position.y;
+        pose_coords[2] = pose_array.poses[i].position.z; // << pose_array.poses[i].position.y << pose_array.poses[i].position.z;
+        cout<<"pose coords is "<<pose_coords<<endl;
+
+
+
+        // convert these coordinates into the odom frame
+
+        realsense_coords.push_back(pose_coords);
+    }
+    // call processCentroidCoords
+    processCentroidCoords(realsense_coords);
+
+}
+
 void MOTracker::applyPassthroughFilter(const sensor_msgs::PointCloud2ConstPtr input_cloud, sensor_msgs::PointCloud2 &output_cloud) {
     if (verbose_)
         cout <<"Applying Passthrough Filter" << endl;
@@ -120,7 +149,6 @@ void MOTracker::applyPassthroughFilter(const sensor_msgs::PointCloud2ConstPtr in
 
     // Convert to ROS data type
     pcl_conversions::moveFromPCL(*output_cloud_z, output_cloud); // convert into the sensor_msgs format
-
 }
 
 void MOTracker::applyBaseOdomTransformation(sensor_msgs::PointCloud2 input_cloud, sensor_msgs::PointCloud2 &output_cloud) {
@@ -137,7 +165,21 @@ void MOTracker::applyBaseOdomTransformation(sensor_msgs::PointCloud2 input_cloud
     cout << "1"<<endl;
     return;
 }
+void MOTracker::applyRealsenseOdomTransformation(Stamped<tf::Pose> input_pose, Stamped<tf::Pose> &output_pose,bool verbose) {
+    // transforms coordinate_to_transform into the odom frame from realsense frame
+    if (verbose_)
+        cout<<"Transforming coordinate_to_transform into odom frame. Waiting for transform"<<endl;
+    string target_frame = "odom", base_frame = "realsense_d435_forward_camera"; // target frame and base frame for transform
+    odom_realsense_ls_->waitForTransform(target_frame, base_frame, ros::Time::now(), ros::Duration(.1) ); // wait until a tf is available before transforming
 
+    if (verbose)
+        cout<<"transforming coordinate using time "<< ros::Time::now()<<endl;
+
+
+    pose_transformer_.transformPose(target_frame,ros::Time::now(),input_pose, output_pose);
+
+    return;
+}
 
 void MOTracker::removeOutOfPlanePoints(pcl::PointCloud<pcl::PointXYZRGB>::Ptr &cloud_ptr) {
     //////// Create a planar segmentation model <- NOT SURE WHAT THIS DOES EXACTLY, SEE http://pointclouds.org/documentation/tutorials/planar_segmentation.php#id1
@@ -654,10 +696,13 @@ void MOTracker::publishTransform(VectorXd coordinates, string target_frame_id) {
 }
 
 void MOTracker::initialiseSubscribersAndPublishers() {
-    string input_topic = "/velodyne/point_cloud_filtered"; // topic is the pointcloud from the velodyne
-    point_cloud_sub_ = nh_.subscribe(input_topic, 1, &MOTracker::callback, this); // Create a ROS subscriber for the input point cloud that calls the callback
-    //string rs_input_topic =
-    //realsense_tf_sub_ = nh_.subscribe(rs_input_topic, 1, &MOTracker::realsenseCallback, this);
+    string velodyne_topic = "/velodyne/point_cloud_filtered"; // topic is the pointcloud from the velodyne
+    point_cloud_sub_ = nh_.subscribe(velodyne_topic, 1, &MOTracker::pointCloudCallback, this); // Create a ROS subscriber for the input point cloud that calls the callback
+
+    // SUBSCRIBE TO A POSESTAMPED::TRANSFORM here from RGBD
+    string pose_array_topic = "/realsense_detections_poseArray";
+    realsense_poseArray_sub_ = nh_.subscribe(pose_array_topic,1, &MOTracker::poseArrayCallback, this); // Create a ROS subscriber for the input posearray
+
     // Create ROS publishers for the output point clouds
     string topic_raw = "pcl_raw", topic_trans = "pcl_trans", topic_zfilt = "pcl_zfilt", topic_ds = "pcl_ds", topic_seg_filt = "pcl_seg_filter", topic_centroid = "pcl_centroid";
     if (publishing_)
