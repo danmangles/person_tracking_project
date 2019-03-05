@@ -82,7 +82,7 @@ void MOTracker::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr &cloud
 
     /////// Publish the cluster centroids
     if (centroid_coord_array.size() != 0) // if there are any clusters visible
-        processCentroidCoords(centroid_coord_array, "LIDAR"); // call the process centroids method with our vector of centroids
+        processCentroidCoords(centroid_coord_array, false); // call the process centroids method with our vector of centroids
     else
         cout << "No valid clusters visible after getCentroidsOfClusters()"<<endl;
 }
@@ -109,7 +109,7 @@ void MOTracker::poseArrayCallback(const geometry_msgs::PoseArray &pose_array)
             realsense_coords.push_back(pose_coords);
         }
         // call processCentroidCoords
-        processCentroidCoords(realsense_coords, "RGBD");
+        processCentroidCoords(realsense_coords, true);
         cout << "centroid coords updated with a new pose"<<endl;
 
     } catch(const std::exception&)
@@ -381,7 +381,7 @@ void MOTracker::getClusterCentroid(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cluste
     cout << "generate_centroid() is returning a coord_centroid at :\n"<<coord_centroid<<endl;
 }
 
-void MOTracker::updatePairings(vector<VectorXd> &unpaired_detections, bool verbose)
+void MOTracker::updatePairings(vector<VectorXd> &unpaired_detections, bool isRGBD, bool verbose)
 {
     if (verbose)
         cout << "\nupdatePairings() with "<<unpaired_detections.size()<<" unpaired_detections"<<endl;
@@ -422,10 +422,10 @@ void MOTracker::updatePairings(vector<VectorXd> &unpaired_detections, bool verbo
             if (new_distance < MAX_GATING_DISTANCE) // if detection is within range
             {
                 if (verbose)
-                    cout << "detection "<<j<<" in range, creating a new pairing"<<endl;
+                    cout << "detection "<<j<<" in range, creating a new pairing.\n isRGBD: "<<isRGBD<<endl;
                 //create a pairing instance with tracklet ID and detection
 
-                Pairing new_pairing (tracklet_vector_[i].getID(), unpaired_detections[j], new_distance); // make a new pairing with MOTracker ID and detection coord
+                Pairing new_pairing (tracklet_vector_[i].getID(), unpaired_detections[j], new_distance, isRGBD); // make a new pairing with MOTracker ID and detection coord
 
                 unpaired_detections.erase(unpaired_detections.begin() + j); // move this one out of the array
 
@@ -633,8 +633,12 @@ void MOTracker::initiateLongTracklets(bool verbose)
     for (int i = 0; i < tracklet_vector_.size(); i++) // loop through all live tracklets.
     {
         if (verbose)
-            cout << "Tracklet "<<tracklet_vector_[i].getID()<<" has had "<<tracklet_vector_[i].getLength()<<" detections."<<endl;
-        if (tracklet_vector_[i].getLength() > min_initialisation_length && !tracklet_vector_[i].isInitialised()) // if this tracklet is long enough and not initialised
+            cout << "Tracklet "<<tracklet_vector_[i].getID()<<" has had "<<tracklet_vector_[i].getLength()<<" detections.\n hasRGBDDetection: "<< tracklet_vector_[i].has_RGBD_detection()<<endl;
+//        if (tracklet_vector_[i].getLength() > min_initialisation_length && !tracklet_vector_[i].isInitialised()) // if this tracklet is long enough and not initialised
+        // only allow initiation for RGBD detections
+
+        if (tracklet_vector_[i].has_RGBD_detection() != 0 && tracklet_vector_[i].getLength() > min_initialisation_length && !tracklet_vector_[i].isInitialised()) // if this tracklet is long enough and not initialised
+
         {
             if (verbose)
                 cout << "initiating kf."<<endl;
@@ -642,7 +646,7 @@ void MOTracker::initiateLongTracklets(bool verbose)
         }
     }
 }
-void MOTracker::processCentroidCoords(vector<VectorXd> unpaired_detections, string detection_sensor_type) {
+void MOTracker::processCentroidCoords(vector<VectorXd> unpaired_detections, bool isRGBD) {
     // Loops through a vector of centroids and updates the kalman filter with the one closest to previous estimate.
     // Publishes transforms for all estimates
     if (verbose_)
@@ -657,28 +661,14 @@ void MOTracker::processCentroidCoords(vector<VectorXd> unpaired_detections, stri
         ss << "detection_"<<i;
         publishTransform(unpaired_detections[i], ss.str());
     }
-    updatePairings(unpaired_detections, false); // get a bunch of pairings
+    updatePairings(unpaired_detections,isRGBD, true); // get a bunch of pairings
     updateTracklets(unpaired_detections, false); // update each tracklet with the best pairing for that tracklet, increment the misses for tracklets without pairings
     createNewTracklets(unpaired_detections, false); // generate new tracklets from any unassociated pairings
     deleteDeadTracklets(false); // delete any tracklets that have been missed too many times
 
 //    if (detection_sensor_type == "RGBD") // initiate the kalman filters only if we are getting RGBD readings
-    initiateLongTracklets(false); // initiate the kalman filters and publisher for any tracklets with a long sequence of detections
+    initiateLongTracklets(true); // initiate the kalman filters and publisher for any tracklets with a long sequence of detections
 }
-/* THIS WAS FOR PREVIOUS ATTEMPT AT NEAREST CLUSTER TRACKER
-int Tracker::getIndexOfClosestKf(VectorXd centroid_coord)
-{ // returns the index of the coordinate that's closest to the kf's state
-    vector <double> distances_from_prev_est; // stores the distances between measurements and prior estimate in a vector
-    for (int i = 0; i<kf_vector_.size(); i ++)
-    {
-        distances_from_prev_est.push_back(sqrt((centroid_coord - kf_vector_[i].getState()).squaredNorm())); // this value is in metres
-        if (verbose_)
-            cout << "distances_from_prev_est["<<i<<"] = "<< distances_from_prev_est[i]<<"m"<<endl;
-    }
-    return min_element(distances_from_prev_est.begin(),distances_from_prev_est.end()) - distances_from_prev_est.begin(); // take the minimum distance from the array
-//    centroid_coord_array.erase(index); // remove this coordinate from the centroid array so that it doesn't get claimed by some other kalman filter
-}
-*/
 
 ///// I/O Methods
 void MOTracker::publishTransform(VectorXd coordinates, string target_frame_id) {

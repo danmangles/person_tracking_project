@@ -14,7 +14,8 @@ void Tracklet::updateTracklet(Pairing pairing) {
     detection_vector_.push_back(pairing.getDetectionCoord()); // update this tracklet with the detection coord from the pairing
     tracklet_length_++; // increase tracklet length
     num_consecutive_misses = 0; // reset num of consecutive misses
-
+    if (pairing.isRGBD_)
+        has_RGBD_detection_ = true; // register an RGBD detection
     if (isInitialised_)
     {
         cout << "updating kf for Tracklet_"<<ID_<<endl;

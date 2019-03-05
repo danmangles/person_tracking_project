@@ -112,7 +112,7 @@ private:
     ////// Centroid Pointcloud Methods
     void getCentroidsOfClusters (vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> cloud_cluster_vector, vector<Eigen::VectorXd> &centroid_coord_array);
     void getClusterCentroid(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cluster_ptr, VectorXd &coord_centroid); //returns a vector of centroid coordinates
-    void processCentroidCoords(vector<VectorXd> unpaired_detections, string detection_sensor_type);
+    void processCentroidCoords(vector<VectorXd> unpaired_detections, bool isRGBD);
 
 
     ////// Realsense Detector Methods
@@ -122,7 +122,7 @@ private:
 
     tf::Transformer pose_transformer_;
     ////// Tracklet methods
-    void updatePairings(vector<VectorXd> &unpaired_detections, bool verbose);
+    void updatePairings(vector<VectorXd> &unpaired_detections,bool isRGBD, bool verbose);
     void updateTracklets(vector<VectorXd> &unpaired_detections, bool verbose);
     void createNewTracklets(vector<VectorXd> &unpaired_detections, bool verbose);
     int getNextTrackletID(bool verbose);

@@ -28,7 +28,7 @@ public:
     bool isInitialised() {return isInitialised_;}; // have we started the kalman_filter?
     void initKf(); // initialise the kalman filter at the last observation
     KalmanFilter getKf() {return kf_;}; // get the private kalman filter
-
+    bool has_RGBD_detection(){return has_RGBD_detection_;} // get method
 private:
     KalmanFilter kf_; // private copy of kalman filter
     int ID_;
@@ -36,7 +36,7 @@ private:
     int tracklet_length_ = 1; // number of detections registered with this tracklet. We start with 1 detection
     vector <VectorXd> detection_vector_;
     bool isInitialised_ = false; // have we started the kalman_filter?
-
+    bool has_RGBD_detection_ = 0;
 };
 
 #endif // TRACKLET_H
