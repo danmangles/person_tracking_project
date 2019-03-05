@@ -14,6 +14,9 @@
 #include <vector>
 ///////////////////
 
+//#include <roslib
+#include <chrono>
+#include <ctime>
 // sensor msgs includes specific includes
 #include <sensor_msgs/PointCloud2.h>
 #include <sensor_msgs/PointCloud.h>
@@ -23,7 +26,7 @@
 
 //geometry stuff
 #include <geometry_msgs/PoseArray.h> // for the python array
-#include <transform_datatypes.h>
+//#include <transform_datatypes.h>
 
 // TF includes
 #include <tf/transform_listener.h>
@@ -80,7 +83,8 @@ public:
             kf_param_struct kf_params,
             bool verbose,
             bool publishing,
-            bool write_to_csv);
+            bool write_to_csv,
+              int file_index);
 //            ofstream &results_file  ); // initiate a constructor with a nodehandle and parameters for the kalman filter
 
     void setupKalmanFilter(VectorXd x0,
@@ -108,13 +112,13 @@ private:
     ////// Centroid Pointcloud Methods
     void getCentroidsOfClusters (vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> cloud_cluster_vector, vector<Eigen::VectorXd> &centroid_coord_array);
     void getClusterCentroid(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cluster_ptr, VectorXd &coord_centroid); //returns a vector of centroid coordinates
-    void processCentroidCoords(vector<VectorXd> unpaired_detections);
+    void processCentroidCoords(vector<VectorXd> unpaired_detections, string detection_sensor_type);
 
 
     ////// Realsense Detector Methods
 
     void poseArrayCallback(const geometry_msgs::PoseArray &pose_array); // this method is called whenever the Tracker sees a new pointcloud
-    void applyRealsenseOdomTransformation(Stamped<tf::Pose> input_pose, Stamped<tf::Pose> &output_pose,bool verbose); // convert realsense coordinates into odom frame
+    void applyRealsenseOdomTransformation(VectorXd input_coordinate, VectorXd &output_coordinate,ros::Time msg_time, bool verbose); // convert realsense coordinates into odom frame
 
     tf::Transformer pose_transformer_;
     ////// Tracklet methods
@@ -129,7 +133,7 @@ private:
     void initialiseSubscribersAndPublishers(); // initialises all the subscribers and publishers
     void publishMarker(VectorXd x_hat,string marker_name, double scale_x,double scale_y,double scale_z);
     void publishTransform(VectorXd coordinates, string target_frame_id); // publishes a transform at the 3D coordinate Vector coordinates
-
+    void setupResultsCSV(int file_index); // sets up the results spreasheet
     ////// Kalman Filter Methods
     //vector <KalmanFilter> kf_vector_; // our private copy of a kalman filter
     vector <KalmanFilter> kf_vector_;

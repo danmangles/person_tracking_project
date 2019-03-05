@@ -3,6 +3,7 @@
 using namespace std;
 //using namespace Eigen;
 
+
 MOTracker::MOTracker(ros::NodeHandle nh,
                      int max_cluster_size,
                      int min_cluster_size,
@@ -11,7 +12,8 @@ MOTracker::MOTracker(ros::NodeHandle nh,
                      kf_param_struct kf_params,
                      bool verbose,
                      bool publishing,
-                     bool write_to_csv
+                     bool write_to_csv,
+                     int file_index
                      ) :
     nh_(nh), max_cluster_size_(max_cluster_size), min_cluster_size_(min_cluster_size),cluster_tolerance_(cluster_tolerance),
     seg_dist_threshold_(seg_dist_threshold), kf_params_(kf_params), verbose_(verbose), publishing_(publishing),
@@ -20,10 +22,11 @@ MOTracker::MOTracker(ros::NodeHandle nh,
     // Constructor: sets up
     cout<< "MOTracker constructor called "<<endl;
     initialiseSubscribersAndPublishers(); //initialise the subscribers and publishers
-    results_file_.open("tracking_results.csv");
-    results_file_ << "Detection_X,Detection_Y,Detection_Z,Tracklet_ID,KF_X,KF_Y,KF_Z,KF_cov_X,KF_cov_Y,KF_cov_Z\n";
+    setupResultsCSV(file_index);
 
-//    results_file_.close();
+
+
+    //    results_file_.close();
 
 }
 
@@ -79,34 +82,42 @@ void MOTracker::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr &cloud
 
     /////// Publish the cluster centroids
     if (centroid_coord_array.size() != 0) // if there are any clusters visible
-        processCentroidCoords(centroid_coord_array); // call the process centroids method with our vector of centroids
+        processCentroidCoords(centroid_coord_array, "LIDAR"); // call the process centroids method with our vector of centroids
     else
         cout << "No valid clusters visible after getCentroidsOfClusters()"<<endl;
 }
 
 void MOTracker::poseArrayCallback(const geometry_msgs::PoseArray &pose_array)
 {
-// this callback is called by the posearray
+    // this callback is called by the posearray
     if (verbose_)
-        cout <<"poseArrayCallback()"<<endl;
-
-    vector <VectorXd> realsense_coords;
+        cout <<"\n\n**********poseArrayCallback()"<<endl;
+    vector <VectorXd> realsense_coords; // initiate the array (empty
     // generate a vector of coordinates in the same manner as the pointclouds
-    for (int i = 0; i < pose_array.poses.size(); i++) {
-        VectorXd pose_coords(3);
-        pose_coords[0] = pose_array.poses[i].position.x;
-        pose_coords[1] = pose_array.poses[i].position.y;
-        pose_coords[2] = pose_array.poses[i].position.z; // << pose_array.poses[i].position.y << pose_array.poses[i].position.z;
-        cout<<"pose coords is "<<pose_coords<<endl;
+    try {
+        for (int i = 0; i < pose_array.poses.size(); i++) {
+            VectorXd pose_coords(3);
+            pose_coords[0] = pose_array.poses[i].position.x;
+            pose_coords[1] = pose_array.poses[i].position.y;
+            pose_coords[2] = pose_array.poses[i].position.z; // << pose_array.poses[i].position.y << pose_array.poses[i].position.z;
+            cout<<"pose coords is \n"<<pose_coords<<endl;
 
+            // convert these coordinates into the odom frame
+            VectorXd translated_pose_coords(3);
+//            applyRealsenseOdomTransformation(pose_coords, translated_pose_coords, pose_array.header.stamp, true);
 
+            realsense_coords.push_back(pose_coords);
+        }
+        // call processCentroidCoords
+        processCentroidCoords(realsense_coords, "RGBD");
+        cout << "centroid coords updated with a new pose"<<endl;
 
-        // convert these coordinates into the odom frame
-
-        realsense_coords.push_back(pose_coords);
+    } catch(const std::exception&)
+    {
+        cout <<"!!!!!!!!!!!!!!!!!!!!!!!!!!!Got a transform error"<<endl;
     }
-    // call processCentroidCoords
-    processCentroidCoords(realsense_coords);
+    ros::Duration(0.5).sleep(); //sleep for 0.5s
+    return;
 
 }
 
@@ -165,21 +176,7 @@ void MOTracker::applyBaseOdomTransformation(sensor_msgs::PointCloud2 input_cloud
     cout << "1"<<endl;
     return;
 }
-void MOTracker::applyRealsenseOdomTransformation(Stamped<tf::Pose> input_pose, Stamped<tf::Pose> &output_pose,bool verbose) {
-    // transforms coordinate_to_transform into the odom frame from realsense frame
-    if (verbose_)
-        cout<<"Transforming coordinate_to_transform into odom frame. Waiting for transform"<<endl;
-    string target_frame = "odom", base_frame = "realsense_d435_forward_camera"; // target frame and base frame for transform
-    odom_realsense_ls_->waitForTransform(target_frame, base_frame, ros::Time::now(), ros::Duration(.1) ); // wait until a tf is available before transforming
 
-    if (verbose)
-        cout<<"transforming coordinate using time "<< ros::Time::now()<<endl;
-
-
-    pose_transformer_.transformPose(target_frame,ros::Time::now(),input_pose, output_pose);
-
-    return;
-}
 
 void MOTracker::removeOutOfPlanePoints(pcl::PointCloud<pcl::PointXYZRGB>::Ptr &cloud_ptr) {
     //////// Create a planar segmentation model <- NOT SURE WHAT THIS DOES EXACTLY, SEE http://pointclouds.org/documentation/tutorials/planar_segmentation.php#id1
@@ -525,7 +522,7 @@ void MOTracker::updateTracklets(vector<VectorXd> &unpaired_detections, bool verb
                 if (write_to_csv_)
                 {
                     VectorXd det_coord = pairing_vector_[best_pairing_index].getDetectionCoord();
-                 // order : detection XYZ, kf XYZ, kf covariance XYZ
+                    // order : detection XYZ, kf XYZ, kf covariance XYZ
                     results_file_ <<det_coord[0]<<","<<det_coord[1]<<","<<det_coord[2]<<","<<this_tracklet->getID()<<","<< xhat[0]<<","<<xhat[1]<<","<<xhat[2]<<","<<P(0,0)<<","<<P(1,1)<<","<<P(2,2)<<"\n";
                 }
 
@@ -645,7 +642,7 @@ void MOTracker::initiateLongTracklets(bool verbose)
         }
     }
 }
-void MOTracker::processCentroidCoords(vector<VectorXd> unpaired_detections) {
+void MOTracker::processCentroidCoords(vector<VectorXd> unpaired_detections, string detection_sensor_type) {
     // Loops through a vector of centroids and updates the kalman filter with the one closest to previous estimate.
     // Publishes transforms for all estimates
     if (verbose_)
@@ -660,10 +657,12 @@ void MOTracker::processCentroidCoords(vector<VectorXd> unpaired_detections) {
         ss << "detection_"<<i;
         publishTransform(unpaired_detections[i], ss.str());
     }
-    updatePairings(unpaired_detections, true); // get a bunch of pairings
+    updatePairings(unpaired_detections, false); // get a bunch of pairings
     updateTracklets(unpaired_detections, false); // update each tracklet with the best pairing for that tracklet, increment the misses for tracklets without pairings
-    createNewTracklets(unpaired_detections, true); // generate new tracklets from any unassociated pairings
-    deleteDeadTracklets(true); // delete any tracklets that have been missed too many times
+    createNewTracklets(unpaired_detections, false); // generate new tracklets from any unassociated pairings
+    deleteDeadTracklets(false); // delete any tracklets that have been missed too many times
+
+//    if (detection_sensor_type == "RGBD") // initiate the kalman filters only if we are getting RGBD readings
     initiateLongTracklets(false); // initiate the kalman filters and publisher for any tracklets with a long sequence of detections
 }
 /* THIS WAS FOR PREVIOUS ATTEMPT AT NEAREST CLUSTER TRACKER
@@ -719,7 +718,7 @@ void MOTracker::initialiseSubscribersAndPublishers() {
     // Create a transformListener to enable translation from odom to base frames with our pointcloud.
 
     odom_base_ls_.reset(new tf::TransformListener); // initialise the odom_base transform listener- so we can transform our output into odom coords
-    rs_detector_ls_.reset(new tf::TransformListener); // initialise the rs_detector_ls_ transform listener- so we can listen to the realsense
+    odom_realsense_ls_.reset(new tf::TransformListener); // initialise the rs_detector_ls_ transform listener- so we can listen to the realsense
     return;
 }
 
@@ -763,6 +762,12 @@ void MOTracker::publishMarker(VectorXd x_hat, string marker_name,double scale_x,
     pub_marker_.publish( marker ); // publish
 
 
+}
+void MOTracker::setupResultsCSV(int file_index){
+    stringstream ss;
+    ss <<"tracking_results_"<<file_index<<".csv";
+    results_file_.open(ss.str());
+    results_file_ << "Detection_X,Detection_Y,Detection_Z,Tracklet_ID,KF_X,KF_Y,KF_Z,KF_cov_X,KF_cov_Y,KF_cov_Z\n";
 }
 
 ////// Kalman Filter Methods
