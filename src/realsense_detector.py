@@ -20,10 +20,12 @@ from std_msgs.msg import String
 from sensor_msgs.msg import Image
 from sensor_msgs.msg import CompressedImage
 #from sensor_msgs.msg import compressedDepth
+import std_msgs.msg
 
 import message_filters # for syncing up RGB and Depth images
 
 from geometry_msgs.msg import Point
+from geometry_msgs.msg import PoseStamped
 from geometry_msgs.msg import Pose
 from geometry_msgs.msg import PoseArray
 from visualization_msgs.msg import Marker
@@ -58,6 +60,7 @@ class RealsenseDetector:
         self.score_threshold = 0.3 # threshold for picking true positives in our image
         self.iou_threshold = 0.3 #another cnn threshold
         self.world_base_frame = "odom"
+        # self.camera_base_frame = "realsense_d435_forward_color_optical_frame"
         self.camera_base_frame = "realsense_d435_forward_camera"
         self.target_frame = "realsense_detections_poseArray" # this is the output name of all things that are published from this module
 
@@ -74,12 +77,13 @@ class RealsenseDetector:
         # self.bounding_box = []
         # define camera fov angles to calculate direction from an image
         self.ANGLE_SCALING_FACTOR = 2
+
         if self.in_simulator:
             self.realsense_half_fov_angle = 220/2 # found this number by experiment
             self.realsense_half_fov_angle_vert = (220/69.4)*42.5/2 # scaling other number by same amount
         else:
             self.realsense_half_fov_angle = 69.4/2*self.ANGLE_SCALING_FACTOR
-            self.realsense_half_fov_angle_vert = 42.5/2*self.ANGLE_SCALING_FACTOR
+            self.realsense_half_fov_angle_vert = 42.5/2*3
 
         return
     """
@@ -134,10 +138,6 @@ class RealsenseDetector:
         if verbose:
             print('publish_transform_from_rgbd_msg()')
 
-
-
-
-
     def combined_callback(self, rgb_image_msg, depth_image_msg):
         '''
         :param rgb_image_msg: an image in sensor_msgs/CompressedImage format
@@ -147,7 +147,7 @@ class RealsenseDetector:
         if self.verbose:
             print('\n\n***********combined_callback()')
         # get the bounding box from rgb data
-        bounding_boxes = self.get_bounding_boxes_from_rgb_msg(rgb_image_msg, True)
+        bounding_boxes = self.get_bounding_boxes_from_rgb_msg(rgb_image_msg, False)
         # print(len(bounding_boxes))
         #combine with depth data and publish the output ########################## POSSIBLY SHOULD DO THIS ONCE FOR EACH BOUNDING BOX???
 
@@ -166,6 +166,8 @@ class RealsenseDetector:
 
         # publish the latest array of poses
         self.poseArray_publisher.publish(self.pose_array)
+        if self.verbose:
+            print('poses published to '+self.target_frame)
 
 
         return
@@ -468,22 +470,40 @@ class RealsenseDetector:
                 print("yaw = %f, pitch = %f" % (target_yaw, target_pitch))
 
             #strike a pose
-            new_pose = Pose()
-            new_pose.position.x = target_dist * np.cos(target_yaw) * np.cos(target_pitch)
-            new_pose.position.y = target_dist * np.sin(target_yaw) * np.cos(target_pitch)
-            new_pose.position.z = target_dist * np.sin(target_pitch)
+            new_pose = PoseStamped()
 
-            quat = quaternion_from_euler(0, 0, 0)
-            new_pose.orientation.x = quat[0]
-            new_pose.orientation.y = quat[1]
-            new_pose.orientation.z = quat[2]
-            new_pose.orientation.w = quat[3]
+            local_coord = [target_dist * np.cos(target_yaw) * np.cos(target_pitch), target_dist * np.sin(target_yaw) * np.cos(target_pitch), target_dist * np.sin(target_pitch) ]
 
-            self.pose_array.poses.append(new_pose)
+            if verbose:
+                print('local coord is '+str(local_coord))
 
+            try:
+
+                new_pose.pose.position.x = local_coord[0]
+                new_pose.pose.position.y =  local_coord[1]
+                new_pose.pose.position.z =  local_coord[2]
+                quat = quaternion_from_euler(0, 0, 0)
+                new_pose.pose.orientation.x = quat[0]
+                new_pose.pose.orientation.y = quat[1]
+                new_pose.pose.orientation.z = quat[2]
+                new_pose.pose.orientation.w = quat[3]
+
+                # construct a posestamped so that we can correctly transform into odom frame
+                new_pose.header.frame_id = self.camera_base_frame
+                new_pose.header.stamp = time_of_detection
+                new_pose = self.realsense_odom_ls.transformPose("odom", new_pose)
+
+                if verbose:
+                    print('adding pose at (%f, %f, %f) to the posearray'%(new_pose.pose.position.x,new_pose.pose.position.y,new_pose.pose.position.z))
+                self.pose_array.poses.append(new_pose.pose) # add the pose to the array
+
+            except Exception as e:
+                print('*****************ERROR WITH TRANSFORM\n'+repr(e))
+                # raise e
 
         if verbose:
             print('pose_array updated.')
+        return
     '''
     Neural Network and CV methods
     '''
@@ -608,14 +628,15 @@ class RealsenseDetector:
 
         # transform broadcaster for our transforms
         self.br = tf.TransformBroadcaster()
+        self.realsense_odom_ls = tf.TransformListener()
 
         #publisher for our pose estimates
         # self.pose_pub = rospy.Publisher(self.target_frame, PoseStamped, queue_size=100)
         self.poseArray_publisher = rospy.Publisher(self.target_frame, PoseArray, queue_size=1)
 
         self.pose_array = PoseArray() # initiate a posearray to publish
-        self.pose_array.header.frame_id = self.camera_base_frame # set the base frame
-        
+        self.pose_array.header.frame_id = self.world_base_frame # set the base frame
+
 """
     def publish_transform(self, target_dist, target_yaw, target_pitch, verbose):
         '''
