@@ -4,6 +4,8 @@ import numpy as np
 import os.path
 import test
 import net
+import rospkg # for getting abs path
+
 
 
 # IMPORTANT: Weights order in the binary file is [ 'biases','gamma','moving_mean','moving_variance','kernel']
@@ -84,24 +86,32 @@ def load_conv_layer(name,loaded_weights,shape,offset):
 
 
 def load(sess,weights_path,ckpt_folder_path,saver):
-    full_ckpt_folder_path = os.getcwd()+'/'+ckpt_folder_path
-    print (full_ckpt_folder_path)
-    if(os.path.exists(full_ckpt_folder_path)):
+    '''
+    :param sess: current tensorflow session
+    :param weights_path: local path (relative to package) and filename of the yolo weights, relative to home (~)
+    :param ckpt_folder_path: local path (relative to package) of the tensorflow.train.Saver() checkpoint, if it exists
+    :param saver: instance of the tensorflow.train.Saver()
+    :return:
+    '''
+    os.chdir("/home") # move into home directory
+    rospack = rospkg.RosPack() # get an instance of RosPack to get path
+    package_path = rospack.get_path('multi_sensor_tracker') # get the path of current package
+    abs_weights_path = package_path + '/' + weights_path # append to the local path
+    abs_ckpt_folder_path = package_path+'/'+ckpt_folder_path
+
+
+    print (abs_ckpt_folder_path)
+    if(os.path.exists(abs_ckpt_folder_path)):
         print('Found a checkpoint!') 
-        checkpoint_files_path = os.path.join(full_ckpt_folder_path,"model.ckpt")
+        checkpoint_files_path = os.path.join(abs_ckpt_folder_path,"model.ckpt")
         saver.restore(sess,checkpoint_files_path)
         print('Loaded weights from checkpoint!') 
         return True
 
     print('No checkpoint found!') 
-    print('Loading weights from file and creating new checkpoint...') 
-    print('Looking in '+ os.getcwd()+'/'+weights_path+' for the weights')
-    # Get the size in bytes of the binary
-    size = os.path.getsize(weights_path)
-
-    # Load the binary to an array of float32
-    loaded_weights = []
-    loaded_weights = np.fromfile(weights_path, dtype='f')
+    print('Loading weights from file and creating new checkpoint...')
+    print('Looking in '+ abs_weights_path+' for the weights')
+    loaded_weights = np.fromfile(abs_weights_path, dtype='f') # Load the binary to an array of float32
 
     # Delete the first 4 that are not real params...
     loaded_weights = loaded_weights[4:]
