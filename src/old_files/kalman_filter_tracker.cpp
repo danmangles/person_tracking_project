@@ -112,7 +112,7 @@ int main (int argc, char** argv)
     VectorXd x0(n);
     VectorXd x_hat(3);
     x0 << 0, 0, 0;
-    kf.init(0, x0); // initialise the kalman filter
+    kf.init(x0); // initialise the kalman filter
 
 
 
