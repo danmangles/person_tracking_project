@@ -10,33 +10,32 @@
 using namespace Eigen;
 class KalmanFilter {
 public:
-	// all public methods and variables go here
-	/**
-	  * Create a Kalman filter with the specified matrices.
-	  *   A - System dynamics matrix
-	  *   C - Output matrix
-	  *   Q - Process noise covariance
-	  *   R - Measurement noise covariance
-	  *   P - Estimate error covariance
-	  */
+    // all public methods and variables go here
+    /**
+      * Create a Kalman filter with the specified matrices.
+      *   A - System dynamics matrix
+      *   C - Output matrix
+      *   Q - Process noise covariance
+      *   R - Measurement noise covariance
+      *   P - Estimate error covariance
+      */
 
     KalmanFilter(
-			double dt,
-			const MatrixXd& A,
-			const MatrixXd& C,
-			const MatrixXd& Q,
-			const MatrixXd& R,
-            const MatrixXd& P,
+            double dt,
+            const MatrixXd& delF,
+            const MatrixXd& delH,
+            const MatrixXd& delGQdelGT,
+            const MatrixXd& R,
+            const MatrixXd& P0,
             bool verbose
-	);
-	/**
-	  * Create a blank estimator.
-	  */
-    KalmanFilter(); // what does this line do????
-	void init();
-	/*
-	 * Initial states are zero
-	 */
+    );
+    /**
+      * Create a blank estimator.
+      */
+    void init();
+    /*
+     * Initial states are zero
+     */
 
         /*
          * Initialise the filier witha  aguess for initial states
@@ -47,41 +46,33 @@ public:
           * Update the estimated state based on measured values. The
           * time step is assumed to remain constant.
           */
-        void update(const VectorXd& y);
+        void update(const VectorXd& z);
 
-        /*
-         * Update estimate state using measured values, using give time step and dynamics matrix
-         */
-        void update(const VectorXd& y, double dt, const MatrixXd A);
-
-	/*
-	 * Return current state and time
-	 */
+    /*
+     * Return current state and time
+     */
     VectorXd getState();
     MatrixXd getP(); // return covariance matrix
-	double time() { return t; };
+    double time() { return t; };
 
 private:
-	 // Matrices for computation
-	  MatrixXd A, C, Q, R, P, K, P0;
+    // Matrices for computation
+    MatrixXd delF, delH, delGQdelGT, R, P, S, W, I;
 
-	  // System dimensions
-      int m, n;
+    // System dimensions
+    int m, n;
 
-	  // Initial and current time
-	  double t0, t;
+    // Initial and current time
+    double t, t0;
 
-	  // Discrete time step
-	  double dt;
+    // Discrete time step
+    double dt;
 
-	  // Is the filter initialized?
-	  bool initialized;
+    // Is the filter initialized?
+    bool initialized;
 
-	  // n-size identity
-      MatrixXd I;
-
-          // Estimated states
-      VectorXd x_hat, x_hat_new;
+    // Estimated states, measurement, innovation
+    VectorXd x_hat,  z_pred, v;
 
       bool verbose_;
 };

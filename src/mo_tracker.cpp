@@ -590,7 +590,7 @@ void MOTracker::createNewTracklets(vector<VectorXd> &unpaired_detections, bool v
         //        int next_tracklet_ID = next_tracklet_ID_;
         Tracklet new_tracklet(next_tracklet_ID_,
                               unpaired_detections[i],
-                              KalmanFilter(kf_params_.dt, kf_params_.A, kf_params_.C, kf_params_.Q, kf_params_.R, kf_params_.P, false));
+                              KalmanFilter(.1, kf_params_.A, kf_params_.C, kf_params_.Q, kf_params_.R, kf_params_.P, false));
         tracklet_vector_.push_back(new_tracklet);
         if (verbose)
             cout << "Tracklet with ID "<<next_tracklet_ID_<<" added to tracklet_vector_"<<endl;
