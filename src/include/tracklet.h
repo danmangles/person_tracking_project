@@ -20,7 +20,7 @@ public:
     void updateTracklet(Pairing pairing); // update the tracklet with a new pairing
 
     int getNumConsecutiveMisses() { return num_consecutive_misses;};
-    void recordMiss(){num_consecutive_misses++;}; // increment number of consecutive misses
+    void recordMiss(); // increment number of consecutive misses
     int getID(){return ID_;};
 
     double getDistance(VectorXd detection);// return the distance to this detection

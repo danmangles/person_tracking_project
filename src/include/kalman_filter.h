@@ -38,7 +38,7 @@ public:
      */
 
         /*
-         * Initialise the filier witha  aguess for initial states
+         * Initialise the filier witha  a guess for initial states
          */
         void init(double t0, const VectorXd& x0);
 
@@ -46,8 +46,9 @@ public:
           * Update the estimated state based on measured values. The
           * time step is assumed to remain constant.
           */
-        void update(const VectorXd& z);
 
+        void update(const VectorXd& z);
+        void predict();
     /*
      * Return current state and time
      */
@@ -74,5 +75,5 @@ private:
     // Estimated states, measurement, innovation
     VectorXd x_hat,  z_pred, v;
 
-      bool verbose_;
+    bool verbose_;
 };

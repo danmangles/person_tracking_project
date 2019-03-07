@@ -53,33 +53,7 @@ void KalmanFilter::init(double t0, const VectorXd& x0) {
     }
 }
 
-// default constructor
-void KalmanFilter::init() {
-    x_hat.setZero();
-    //    P = P0;
-    t0 = 0;
-    t = t0;
-    initialized = true;
-}
-
-void KalmanFilter::update(const VectorXd& z) {
-    /*
-    //check if we are initialised
-    if (!initialized)
-        throw std::runtime_error("Filter is not initialised... :3");
-
-    if (verbose_)
-    {
-        cout << "A = "<<A <<endl;
-        cout << "*************\ny = "<<y<<endl;
-    }
-    x_hat_new = A*x_hat; // PREDICT
-    P = A*P*A.transpose() + Q; //PREDICT
-
-    if (verbose_) {
-        cout << "*PREDICT*\nx_hat_new = "<<x_hat_new<<endl;
-        cout << "P = \n"<<P<<endl;} //
-*/
+void KalmanFilter::predict(){
     //check if we are initialised
     if (!initialized)
         throw runtime_error("Filter is not initialised... :3");
@@ -93,25 +67,16 @@ void KalmanFilter::update(const VectorXd& z) {
         cout << "P_pred = \n"<<P<<endl;
         cout << "z_pred = \n"<<z_pred<<endl;
     }
+    //increment time
+    t += dt;
+}
 
-    /*
+void KalmanFilter::update(const VectorXd& z) {
 
-    K = P*C.transpose()*(C*P*C.transpose() + R).inverse(); //UPDATE
+    //check if we are initialised
+    if (!initialized)
+        throw runtime_error("Filter is not initialised... :3");
 
-
-    x_hat_new += K * (y - C*x_hat_new); // predict
-
-
-    P = (I - K*C)*P; // UPDATE
-    if (verbose_) {
-        cout << "*UPDATE*\nK = \n"<<K<<endl;
-        cout << "UPDATED x_hat_new = "<<x_hat_new<<endl;
-        cout << "UPDATED P = "<<P<<endl;}
-
-    x_hat = x_hat_new; // UPDATE
-    if (verbose_)
-        cout << "x_hat is now\n" << x_hat<<endl;
-        */
     /////// Update
     v = z - z_pred; // innovation = difference between measurement and predicted measurement
     S = delH*P*delH.transpose() + R; // innovation covariance = kf covariance in observation space + sensor noise R
@@ -122,7 +87,7 @@ void KalmanFilter::update(const VectorXd& z) {
 
     if (verbose_)
         cout << "*UPDATE*\nv = \n"<<v<< "\nS = \n"<<S<<"\nW = \n"<<W<<"\nx_hat_new = \n"<<x_hat<< "\nP_new = \n"<<P<<endl;
-
+    // increment time
     t += dt;
 
 }

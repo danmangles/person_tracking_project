@@ -18,7 +18,8 @@ void Tracklet::updateTracklet(Pairing pairing) {
         has_RGBD_detection_ = true; // register an RGBD detection
     if (isInitialised_)
     {
-        cout << "updating kf for Tracklet_"<<ID_<<endl;
+        cout << "predicting and updating kf for Tracklet_"<<ID_<<endl;
+        kf_.predict();
         kf_.update(pairing.getDetectionCoord());
     }
 }
@@ -31,4 +32,13 @@ double Tracklet::getDistance(VectorXd detection)
 void Tracklet::initKf(){
     kf_.init(0, detection_vector_.back());
     isInitialised_ = true;
+}
+void Tracklet::recordMiss()
+{
+    num_consecutive_misses++;
+    if (isInitialised_)
+    {
+        cout << "predicting kf for Tracklet_"<<ID_<<endl;
+        kf_.predict(); // predict even if we don't have a measurement
+    }
 }
