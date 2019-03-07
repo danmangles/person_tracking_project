@@ -68,11 +68,11 @@ target_link_libraries (velodyne_tracker ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 add_executable (average_tracker src/average_tracker.cpp)
 target_link_libraries (average_tracker ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
-add_executable (kalman_test src/kalman_test.cpp)
-target_link_libraries (kalman_test ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${PROJECT_NAME})
+#add_executable (kalman_test src/kalman_test.cpp)
+#target_link_libraries (kalman_test ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${PROJECT_NAME})
 
-add_executable (kalman_filter_tracker src/kalman_filter_tracker.cpp)
-target_link_libraries (kalman_filter_tracker ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${PROJECT_NAME})
+#add_executable (kalman_filter_tracker src/kalman_filter_tracker.cpp)
+#target_link_libraries (kalman_filter_tracker ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${PROJECT_NAME})
 
 #add_executable (nearest_cluster_tracker src/nearest_cluster_tracker.cpp)
 #target_link_libraries (nearest_cluster_tracker ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${PROJECT_NAME})
