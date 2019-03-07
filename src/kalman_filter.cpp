@@ -96,8 +96,6 @@ MatrixXd KalmanFilter::getP()
 
     if (!initialized)
         throw std::runtime_error("Filter is not initialised... :3");
-    if (verbose_)
-        cout << "KalmanFilter::getP() P =" <<P<<endl;
     return P;
 }
 VectorXd KalmanFilter::getState()

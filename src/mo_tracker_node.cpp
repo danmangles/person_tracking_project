@@ -19,6 +19,7 @@ using namespace std;
 
 kf_param_struct getTrackerKfParams() {
     // Sets the tracker's kalman filter kf's parameters dt,A,C,Q,R,P
+    /*
     int n = 3; // Number of states
     int m = 3; // Number of measurements
 
@@ -41,8 +42,43 @@ kf_param_struct getTrackerKfParams() {
     delGQdelGT << 2, 0, 0, 0, 2, 0, 0, 0, .5; // MAKE THIS A FUNCTION OF TIMESTEP^2
     R << 20, 0, 0, 0, 20, 0, 0, 0, 1; //I3 * .05 // MAKE THIS A FUNCTION OF TIMESTEP^2
     P0 << 3, 0, 0, 0, 3, 0, 0, 0, 3;
+    */
+    // add a velocity state
 
-    // initialise the kalman filter with the given parameters
+    int n = 6; // Number of states (velocity
+    int m = 3; // Number of measurements
+    double dt = 1.0/5;
+    MatrixXd I3(3,3); //define an identity matrix
+    I3.setIdentity();
+
+    ///// Setup the matrices
+    // delF
+    MatrixXd delF(n, n); // System dynamics matrix
+    delF.setIdentity(); // delF has a diagonal of ones
+    delF.block(0,3,3,3) = I3*dt; // set the top right 3x3 block to dt
+    // delH
+    MatrixXd delH(m, n); // map state space to observation space
+    delH.setZero();
+    delH.block(0,0,3,3) = I3; // set left 3x3 block to identity
+    //delGQdelGT
+    MatrixXd delGQdelGT(n, n); // Process noise covariance
+    delGQdelGT.setIdentity(); //MAKE THIS A FUNCTION OF TIMESTEP^2
+    delGQdelGT = delGQdelGT*2; // to do with walking speed
+    //R
+    MatrixXd R(m, m); // Measurement noise covariance
+    R << 20, 0, 0, 0, 20, 0, 0, 0, 1; //I3 * .05 // MAKE THIS A FUNCTION OF TIMESTEP^2
+    //P0
+    MatrixXd P0(n, n); // Estimate error covariance initial state
+    P0 = delGQdelGT; // set to same as process noise initially
+
+
+   // initialise the kalman filter with the given parameters
+    //print out the chosen matrices
+    cout << "delF: \n" << delF << endl;
+    cout << "delH: \n" << delH << endl;
+    cout << "delGQdelGT: \n" << delGQdelGT << endl;
+    cout << "R: \n" << R << endl;
+    cout << "P0: \n" << P0 << endl;
 
     kf_param_struct kf_params = {.dt = dt, .delF = delF, .delH = delH, .delGQdelGT = delGQdelGT, .R = R, .P0 = P0}; // move all the params into the struct
     return kf_params; // return the parameters
