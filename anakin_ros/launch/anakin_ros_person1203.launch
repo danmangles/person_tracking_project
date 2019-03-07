@@ -1,6 +1,0 @@
-<launch>
-<!-- parameters for camera can also specify in terminal -->
-  <!-- send footstep request to, compute the velocity to follow. execute it -->
-  	<node pkg="anakin_ros" type="ros_realsense_1203.py" name="ros_realsense_1203" output="screen">
-  </node>
-</launch>
