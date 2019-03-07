@@ -128,6 +128,7 @@ private:
     int getNextTrackletID(bool verbose);
     void deleteDeadTracklets( bool verbose);
     void initiateLongTracklets(bool verbose);
+    double getMaxGatingDistance(Tracklet *this_tracklet, bool verbose); // returns max distance at which we can associate a new tracklet
 
     ////// I/O Methods
     void initialiseSubscribersAndPublishers(); // initialises all the subscribers and publishers

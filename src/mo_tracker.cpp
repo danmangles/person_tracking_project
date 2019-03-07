@@ -394,7 +394,6 @@ void MOTracker::updatePairings(vector<VectorXd> &unpaired_detections, bool isRGB
             if no detections paired
                 tracklet.num_consecutive_misses ++
     */
-    double MAX_GATING_DISTANCE = 2; //m
     double new_distance; // specific for each tracklet
     bool isPaired;
     for (int i = 0; i < tracklet_vector_.size(); i++) // loop through all live tracklets
@@ -414,8 +413,9 @@ void MOTracker::updatePairings(vector<VectorXd> &unpaired_detections, bool isRGB
             if (verbose)
                 cout << "detection "<<j<<" is at distance "<<new_distance<<"m"<<endl;
 
+            // if the tracklet is initialised, use a multiple of max gating distance
 
-            if (new_distance < MAX_GATING_DISTANCE) // if detection is within range
+            if (new_distance < getMaxGatingDistance(this_tracklet, verbose = true)) // if detection is within range
             {
                 if (verbose)
                     cout << "detection "<<j<<" in range, creating a new pairing.\n isRGBD: "<<isRGBD<<endl;
@@ -432,7 +432,6 @@ void MOTracker::updatePairings(vector<VectorXd> &unpaired_detections, bool isRGB
                     cout << "MOTracker "<<this_tracklet->getID()<<" has been paired"<<endl;
                 cout << "pairing vector has length "<<pairing_vector_.size()<<endl;
             }
-
         }
 
         if (!isPaired && !isRGBD) // only record misses if we miss it in the pointcloud
@@ -459,6 +458,24 @@ void MOTracker::updatePairings(vector<VectorXd> &unpaired_detections, bool isRGB
             cout << "this tracklet is paired" <<endl;
         }
     }
+}
+double MOTracker::getMaxGatingDistance(Tracklet *tracklet_ptr, bool verbose) {
+    // returns the max distance at which a new detection can be associated
+
+    double covariance_multiplier = 0.5;
+    if (tracklet_ptr->isInitialised()) {
+        KalmanFilter kf = tracklet_ptr->getKf(); // get the Kf from this tracklet vector
+        MatrixXd P = kf.getP(); //get covariance
+        double max = sqrt(covariance_multiplier*(P(0,0) + P(1,1))/2);
+        if (verbose)
+            cout <<"MAX_GATING_DIST = "<<max<<"m"<<endl;
+        return max; // return sqrt of average covariance is basically the std dev in x, y
+    }
+    else
+    {
+        return 1.5; // just use 1.5m for an uninitialised tracklet
+    }
+
 }
 void MOTracker::updateTracklets(vector<VectorXd> &unpaired_detections, bool verbose)
 {
@@ -604,7 +621,7 @@ void MOTracker::createNewTracklets(vector<VectorXd> &unpaired_detections, bool v
         //        int next_tracklet_ID = next_tracklet_ID_;
         Tracklet new_tracklet(next_tracklet_ID_,
                               unpaired_detections[i],
-                              KalmanFilter(.1, kf_params_.A, kf_params_.C, kf_params_.Q, kf_params_.R, kf_params_.P, false));
+                              KalmanFilter(.1, kf_params_.A, kf_params_.C, kf_params_.Q, kf_params_.R, kf_params_.P, true));
         tracklet_vector_.push_back(new_tracklet);
         if (verbose)
             cout << "Tracklet with ID "<<next_tracklet_ID_<<" added to tracklet_vector_"<<endl;
@@ -675,12 +692,10 @@ void MOTracker::processCentroidCoords(vector<VectorXd> unpaired_detections, bool
         ss << "detection_"<<i;
         publishTransform(unpaired_detections[i], ss.str());
     }
-    updatePairings(unpaired_detections,isRGBD, true); // get a bunch of pairings
+    updatePairings(unpaired_detections,isRGBD, false); // get a bunch of pairings
     updateTracklets(unpaired_detections, false); // update each tracklet with the best pairing for that tracklet, increment the misses for tracklets without pairings
     createNewTracklets(unpaired_detections, false); // generate new tracklets from any unassociated pairings
     deleteDeadTracklets(false); // delete any tracklets that have been missed too many times
-
-    //    if (detection_sensor_type == "RGBD") // initiate the kalman filters only if we are getting RGBD readings
     initiateLongTracklets(true); // initiate the kalman filters and publisher for any tracklets with a long sequence of detections
 }
 
