@@ -104,7 +104,7 @@ void MOTracker::poseArrayCallback(const geometry_msgs::PoseArray &pose_array)
 
             // convert these coordinates into the odom frame
             VectorXd translated_pose_coords(3);
-//            applyRealsenseOdomTransformation(pose_coords, translated_pose_coords, pose_array.header.stamp, true);
+            //            applyRealsenseOdomTransformation(pose_coords, translated_pose_coords, pose_array.header.stamp, true);
 
             realsense_coords.push_back(pose_coords);
         }
@@ -394,38 +394,34 @@ void MOTracker::updatePairings(vector<VectorXd> &unpaired_detections, bool isRGB
             if no detections paired
                 tracklet.num_consecutive_misses ++
     */
-    double MAX_GATING_DISTANCE = 1; //m
+    double MAX_GATING_DISTANCE = 2; //m
     double new_distance; // specific for each tracklet
     bool isPaired;
     for (int i = 0; i < tracklet_vector_.size(); i++) // loop through all live tracklets
     {
-
-        //        if (unpaired_detections.empty())
-        //        {
-        //            if (verbose)
-        //                cout << "All detections have been paired"<<endl;
-        //            return; // break out of loop (and therefore method)
-        //        }
-
+        Tracklet *this_tracklet = &tracklet_vector_[i];
         isPaired = false; // not paired this iteration
+
         if (verbose)
-            cout << "*****assessing tracklet "<<tracklet_vector_[i].getID()<<endl;
+            cout << "*****assessing tracklet "<<this_tracklet->getID()<<endl;
 
         for (int j = 0; j < unpaired_detections.size(); j++) // loop through all unpaired detections
         {
             if (verbose)
                 cout << "assessing detection "<<j<<endl;
             VectorXd new_detection = unpaired_detections[j];
-            new_distance = tracklet_vector_[i].getDistance(new_detection); // get distance of detection from tracklet
+            new_distance = this_tracklet->getDistance(new_detection); // get distance of detection from tracklet
             if (verbose)
                 cout << "detection "<<j<<" is at distance "<<new_distance<<"m"<<endl;
+
+
             if (new_distance < MAX_GATING_DISTANCE) // if detection is within range
             {
                 if (verbose)
                     cout << "detection "<<j<<" in range, creating a new pairing.\n isRGBD: "<<isRGBD<<endl;
                 //create a pairing instance with tracklet ID and detection
 
-                Pairing new_pairing (tracklet_vector_[i].getID(), unpaired_detections[j], new_distance, isRGBD); // make a new pairing with MOTracker ID and detection coord
+                Pairing new_pairing (this_tracklet->getID(), unpaired_detections[j], new_distance, isRGBD); // make a new pairing with MOTracker ID and detection coord
 
                 unpaired_detections.erase(unpaired_detections.begin() + j); // move this one out of the array
 
@@ -433,15 +429,32 @@ void MOTracker::updatePairings(vector<VectorXd> &unpaired_detections, bool isRGB
 
                 pairing_vector_.push_back(new_pairing); // add to pairing vector
                 if (verbose)
-                    cout << "MOTracker "<<tracklet_vector_[i].getID()<<" has been paired"<<endl;
+                    cout << "MOTracker "<<this_tracklet->getID()<<" has been paired"<<endl;
                 cout << "pairing vector has length "<<pairing_vector_.size()<<endl;
             }
 
         }
-        if (!isPaired)
+
+        if (!isPaired && !isRGBD) // only record misses if we miss it in the pointcloud
         {
-            cout << "Couldn't find a detection for tracklet "<< tracklet_vector_[i].getID()<<endl;
-            tracklet_vector_[i].recordMiss();
+            cout << "Couldn't find a detection for tracklet "<< this_tracklet->getID()<<endl;
+            this_tracklet->recordMiss();
+            cout << "has the tracklet been initialised? "<<this_tracklet->isInitialised()<<endl;
+            if (this_tracklet->isInitialised()) {
+                // update the kalman filter variance so the covariance circle grows for missed
+                cout << "!!!!!!!Growing the covariance cylinder!!!!!!!"<<endl;
+                KalmanFilter kf = this_tracklet->getKf(); // get the Kf from this tracklet vector
+                MatrixXd P = kf.getP(); //get covariance
+                VectorXd xhat = kf.getState();
+                if (verbose) {
+                    cout << "New measurement covariance is\n"<<P <<endl;
+                    cout << "new Kf state is\n"<<xhat <<endl; }
+                stringstream tracklet_name;
+                tracklet_name << "tracklet_"<<this_tracklet->getID(); // identify this marker with the tracklet id
+                /// create a title for this marker
+                publishMarker(xhat,tracklet_name.str(), P(0,0),P(1,1),P(2,2)); // publish the marker
+            }
+
         } else {
             cout << "this tracklet is paired" <<endl;
         }
@@ -504,7 +517,7 @@ void MOTracker::updateTracklets(vector<VectorXd> &unpaired_detections, bool verb
 
             pairing_vector_.erase(pairing_vector_.begin() + best_pairing_index); // delete this pairing from pairing_vector_
 
-            if (tracklet_vector_[i].isInitialised()) // start publishing if we are initialised
+            if (this_tracklet->isInitialised()) // start publishing if we are initialised
             {
 
                 KalmanFilter kf = this_tracklet->getKf(); // get the Kf from this tracklet vector
@@ -544,6 +557,7 @@ void MOTracker::updateTracklets(vector<VectorXd> &unpaired_detections, bool verb
     pairing_vector_.clear(); // remove all elements from pairing_vector_, since we've just copied them across
 
 }
+
 
 
 int MOTracker::getNextTrackletID(bool verbose)
@@ -608,7 +622,7 @@ void MOTracker::deleteDeadTracklets(bool verbose)
     //    8. for each tracklet
     //        1. if num_consecutive_misses > 3
     //            1. delete this tracker
-    int max_consecutive_misses = 4; // start this at 4 and see what happens
+    int max_consecutive_misses = 6; // start this at 4 and see what happens
 
     for (int i = 0; i < tracklet_vector_.size(); i++) // loop through all live tracklets.
     {
@@ -634,7 +648,7 @@ void MOTracker::initiateLongTracklets(bool verbose)
     {
         if (verbose)
             cout << "Tracklet "<<tracklet_vector_[i].getID()<<" has had "<<tracklet_vector_[i].getLength()<<" detections.\n hasRGBDDetection: "<< tracklet_vector_[i].has_RGBD_detection()<<endl;
-//        if (tracklet_vector_[i].getLength() > min_initialisation_length && !tracklet_vector_[i].isInitialised()) // if this tracklet is long enough and not initialised
+        //        if (tracklet_vector_[i].getLength() > min_initialisation_length && !tracklet_vector_[i].isInitialised()) // if this tracklet is long enough and not initialised
         // only allow initiation for RGBD detections
 
         if (tracklet_vector_[i].has_RGBD_detection() != 0 && tracklet_vector_[i].getLength() > min_initialisation_length && !tracklet_vector_[i].isInitialised()) // if this tracklet is long enough and not initialised
@@ -666,7 +680,7 @@ void MOTracker::processCentroidCoords(vector<VectorXd> unpaired_detections, bool
     createNewTracklets(unpaired_detections, false); // generate new tracklets from any unassociated pairings
     deleteDeadTracklets(false); // delete any tracklets that have been missed too many times
 
-//    if (detection_sensor_type == "RGBD") // initiate the kalman filters only if we are getting RGBD readings
+    //    if (detection_sensor_type == "RGBD") // initiate the kalman filters only if we are getting RGBD readings
     initiateLongTracklets(true); // initiate the kalman filters and publisher for any tracklets with a long sequence of detections
 }
 
@@ -714,6 +728,8 @@ void MOTracker::initialiseSubscribersAndPublishers() {
 
 void MOTracker::publishMarker(VectorXd x_hat, string marker_name,double scale_x,double scale_y,double scale_z) {
     /// This publishes a cylinder, size set by scale_* onto publisher vis_pub at location x_hat
+
+
 
     visualization_msgs::Marker marker; // initiate the marker
 

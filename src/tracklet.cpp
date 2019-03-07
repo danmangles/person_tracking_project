@@ -33,12 +33,16 @@ void Tracklet::initKf(){
     kf_.init(0, detection_vector_.back());
     isInitialised_ = true;
 }
+
 void Tracklet::recordMiss()
 {
+    cout<<"recordMiss()"<<endl;
     num_consecutive_misses++;
     if (isInitialised_)
     {
         cout << "predicting kf for Tracklet_"<<ID_<<endl;
         kf_.predict(); // predict even if we don't have a measurement
+    } else{
+        cout << "filter not initialised anyway" <<endl;
     }
 }
