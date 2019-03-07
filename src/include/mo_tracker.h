@@ -68,9 +68,7 @@ using namespace std;
 #ifndef mo_tracker_H
 #define mo_tracker_H
 
-
-struct kf_param_struct {double dt; MatrixXd A; MatrixXd C; MatrixXd Q; MatrixXd R; MatrixXd P;}; // define this type of structure
-
+struct kf_param_struct {double dt; MatrixXd delF; MatrixXd delH; MatrixXd delGQdelGT; MatrixXd R; MatrixXd P0;}; // define this type of structure
 
 class MOTracker {
 
