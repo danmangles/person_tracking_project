@@ -387,11 +387,12 @@ class RealsenseDetector:
             print("yaw = %f, pitch = %f" % (target_yaw, target_pitch))
             print('angle (0.5 (left) to -0.5 (right): '+str(horiz_dev_from_normal))
 
-        self.display_position_cross_on_image(depth_image, horiz_dev_from_normal, vert_dev_from_normal)
+        # self.display_position_cross_on_image(depth_image, horiz_dev_from_normal, vert_dev_from_normal)
         self.depth_pub.publish(self.bridge.cv2_to_imgmsg(cropped_depth_image, "16UC1"))
 
         return target_dist, target_yaw, target_pitch
-
+    """ this was a terrible idea
+    
     def display_position_cross_on_image(self, depth_image, horiz_dev_from_normal, vert_dev_from_normal):
         '''
         :param depth_image:
@@ -409,6 +410,7 @@ class RealsenseDetector:
 
         cv2.imshow('depth_image', depth_image)
         cv2.waitKey(100)
+       """
     '''
     Neural Network and CV methods
     '''
@@ -484,7 +486,7 @@ class RealsenseDetector:
         else:
             #paths are relative to the package
             weights_path = 'src/yolo_weights/yolov2-tiny-voc.weights'
-            ckpt_folder_path = 'drs-main/code/src/personal/person_tracker/scripts/ckpt/'
+            ckpt_folder_path = 'yolo_ckpts/'
 
         # Check for an existing checkpoint and load the weights (if it exists) or do it from binary file
         saver = tensorflow.train.Saver()

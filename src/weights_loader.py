@@ -66,7 +66,7 @@ def load_conv_layer(name,loaded_weights,shape,offset):
 
     n_kernel_weights = shape[0]*shape[1]*shape[2]*shape[3]
     n_output_channels = shape[-1]
-    n_biases = n_output_channels
+    n_biases = n_output_channels 
 
     n_weights_conv = (n_kernel_weights + n_output_channels)
     # The number of weights is a conv layer without batchnorm is: (kernel_height*kernel_width + n_biases)
