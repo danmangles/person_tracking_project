@@ -17,10 +17,10 @@ public:
 
     VectorXd getState(); // either returns KF state OR last measurement if KF not initialised
 
-    void updateTracklet(Pairing pairing); // update the tracklet with a new pairing
+    void updateTracklet(Pairing pairing, double time); // update the tracklet with a new pairing
 
     int getNumConsecutiveMisses() { return num_consecutive_misses;};
-    void recordMiss(); // increment number of consecutive misses
+    void recordMiss(double time); // increment number of consecutive misses
     int getID(){return ID_;};
 
     double getDistance(VectorXd detection);// return the distance to this detection

@@ -437,7 +437,9 @@ void MOTracker::updatePairings(vector<VectorXd> &unpaired_detections, bool isRGB
         if (!isPaired && !isRGBD) // only record misses if we miss it in the pointcloud
         {
             cout << "Couldn't find a detection for tracklet "<< this_tracklet->getID()<<endl;
-            this_tracklet->recordMiss();
+            double time = ros::Time::now().toSec();
+            cout<<"time is now "<<time<<endl;
+            this_tracklet->recordMiss(52.0);
             cout << "has the tracklet been initialised? "<<this_tracklet->isInitialised()<<endl;
             if (this_tracklet->isInitialised()) {
                 // update the kalman filter variance so the covariance circle grows for missed
@@ -519,10 +521,12 @@ void MOTracker::updateTracklets(vector<VectorXd> &unpaired_detections, bool verb
         {
             ///// using the best_pairing_index we've just found, update the tracklet and remove this pairing from the vector
             /// so it doesn't get associated with another tracker
-            if (verbose)
+            if (verbose) {
                 cout << "Updating Tracklet "<<this_tracklet->getID()<< " with pairing at index "<<best_pairing_index<<endl;
-
-            this_tracklet->updateTracklet(pairing_vector_[best_pairing_index]); // update the tracklet with this pairing
+                double time = ros::Time::now().toSec();
+                cout<<"time is now "<<time<<endl;
+            }
+            this_tracklet->updateTracklet(pairing_vector_[best_pairing_index], 52.0); // update the tracklet with this pairing
             ///// now publish the output of this tracklet with a marker
 
             stringstream tracklet_name;
@@ -693,10 +697,10 @@ void MOTracker::processCentroidCoords(vector<VectorXd> unpaired_detections, bool
         publishTransform(unpaired_detections[i], ss.str());
     }
     updatePairings(unpaired_detections,isRGBD, false); // get a bunch of pairings
-    updateTracklets(unpaired_detections, false); // update each tracklet with the best pairing for that tracklet, increment the misses for tracklets without pairings
+    updateTracklets(unpaired_detections, true); // update each tracklet with the best pairing for that tracklet, increment the misses for tracklets without pairings
     createNewTracklets(unpaired_detections, false); // generate new tracklets from any unassociated pairings
     deleteDeadTracklets(false); // delete any tracklets that have been missed too many times
-    initiateLongTracklets(true); // initiate the kalman filters and publisher for any tracklets with a long sequence of detections
+    initiateLongTracklets(false); // initiate the kalman filters and publisher for any tracklets with a long sequence of detections
 }
 
 ///// I/O Methods
