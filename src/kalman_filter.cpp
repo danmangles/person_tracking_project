@@ -57,20 +57,26 @@ void KalmanFilter::predict(double time, bool verbose){
     //check if we are initialised
     if (!initialized)
         throw runtime_error("Filter is not initialised... :3");
+    double walking_speed = 2; // in ms-1
     /////// Prediction
-
     dt_ = time - t_;
     t_ = time;
 
-
-    if (verbose) {
-        cout <<"time is "<<t_<<endl;
-        cout <<"dt is "<<dt_<<endl;
-
-
-    }
     if (dt_ < 0)
         cout<<"\n!!!!!! dt is negative!!!"<<endl;
+
+    MatrixXd new_matrix(3,3);
+    new_matrix.setIdentity();
+    new_matrix = new_matrix*walking_speed*dt_;
+
+    delF.block(0,3,3,3) = new_matrix;
+
+    if (verbose)
+    {
+            cout <<"time is "<<t_<<endl;
+            cout <<"dt is "<<dt_<<endl;
+            cout <<"delF is "<<delF<<endl;
+    }
 
     x_hat = delF*x_hat; // predicted  state = plant_model(old_state) but using a linear plant model delF
     P = delF*P*delF.transpose() + delGQdelGT; // predicted covariance = transformed old covariance + process noise
@@ -81,8 +87,6 @@ void KalmanFilter::predict(double time, bool verbose){
         cout << "P_pred = \n"<<P<<endl;
         cout << "z_pred = \n"<<z_pred<<endl;
     }
-    //increment time
-//    t_ += dt_;
 }
 
 void KalmanFilter::update(const VectorXd& z) {
@@ -102,7 +106,7 @@ void KalmanFilter::update(const VectorXd& z) {
     if (verbose_)
         cout << "*UPDATE*\nv = \n"<<v<< "\nS = \n"<<S<<"\nW = \n"<<W<<"\nx_hat_new = \n"<<x_hat<< "\nP_new = \n"<<P<<endl;
     // increment time
-//    t_ += dt_;
+    //    t_ += dt_;
 
 }
 MatrixXd KalmanFilter::getP()

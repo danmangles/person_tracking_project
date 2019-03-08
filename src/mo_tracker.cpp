@@ -553,7 +553,11 @@ void MOTracker::updateTracklets(vector<VectorXd> &unpaired_detections, double ms
                 //              // write
                 if (write_to_csv_)
                 {
+
                     VectorXd det_coord = pairing_vector_[best_pairing_index].getDetectionCoord();
+                    if (verbose) {
+                       cout <<det_coord[0]<<","<<det_coord[1]<<","<<det_coord[2]<<endl;
+                    }
                     // order : detection XYZ, kf XYZ, kf covariance XYZ
                     results_file_ <<msg_time<<","<<det_coord[0]<<","<<det_coord[1]<<","<<det_coord[2]<<","<<this_tracklet->getID()<<","<< xhat[0]<<","<<xhat[1]<<","<<xhat[2]<<","<<P(0,0)<<","<<P(1,1)<<","<<P(2,2)<<","<<isRGBD<<"\n";
                 }
