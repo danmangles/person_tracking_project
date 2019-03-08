@@ -24,8 +24,6 @@ MOTracker::MOTracker(ros::NodeHandle nh,
     initialiseSubscribersAndPublishers(); //initialise the subscribers and publishers
     setupResultsCSV(file_index);
 
-    tracker_start_time = ros::Time::now().toSec();
-
     //    results_file_.close();
 
 }
@@ -82,7 +80,7 @@ void MOTracker::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr &cloud
 
     /////// Publish the cluster centroids
     if (centroid_coord_array.size() != 0) // if there are any clusters visible
-        processCentroidCoords(centroid_coord_array, false); // call the process centroids method with our vector of centroids
+        processCentroidCoords(centroid_coord_array, cloud_msg->header.stamp.toSec(), false); // call the process centroids method with our vector of centroids
     else
         cout << "No valid clusters visible after getCentroidsOfClusters()"<<endl;
 }
@@ -108,8 +106,8 @@ void MOTracker::poseArrayCallback(const geometry_msgs::PoseArray &pose_array)
 
             realsense_coords.push_back(pose_coords);
         }
-        // call processCentroidCoords
-        processCentroidCoords(realsense_coords, true);
+        // call processCentroidCoords with the time in seconds as a double
+        processCentroidCoords(realsense_coords, pose_array.header.stamp.toSec(), true);
         cout << "centroid coords updated with a new pose"<<endl;
 
     } catch(const std::exception&)
@@ -381,7 +379,7 @@ void MOTracker::getClusterCentroid(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cluste
     cout << "generate_centroid() is returning a coord_centroid at :\n"<<coord_centroid<<endl;
 }
 
-void MOTracker::updatePairings(vector<VectorXd> &unpaired_detections, bool isRGBD, bool verbose)
+void MOTracker::updatePairings(vector<VectorXd> &unpaired_detections, double msg_time, bool isRGBD, bool verbose)
 {
     if (verbose)
         cout << "\nupdatePairings() with "<<unpaired_detections.size()<<" unpaired_detections"<<endl;
@@ -437,9 +435,9 @@ void MOTracker::updatePairings(vector<VectorXd> &unpaired_detections, bool isRGB
         if (!isPaired && !isRGBD) // only record misses if we miss it in the pointcloud
         {
             cout << "Couldn't find a detection for tracklet "<< this_tracklet->getID()<<endl;
-            double time = ros::Time::now().toSec() - tracker_start_time;
-            cout<<"time is now "<<time<<endl;
-            this_tracklet->recordMiss(52.0);
+//            double time = ros::Time::now().toSec() - tracker_start_time;
+            cout<<"time is now "<<msg_time<<endl;
+            this_tracklet->recordMiss(msg_time);
             cout << "has the tracklet been initialised? "<<this_tracklet->isInitialised()<<endl;
             if (this_tracklet->isInitialised()) {
                 // update the kalman filter variance so the covariance circle grows for missed
@@ -479,7 +477,7 @@ double MOTracker::getMaxGatingDistance(Tracklet *tracklet_ptr, bool verbose) {
     }
 
 }
-void MOTracker::updateTracklets(vector<VectorXd> &unpaired_detections, bool verbose)
+void MOTracker::updateTracklets(vector<VectorXd> &unpaired_detections, double msg_time, bool verbose)
 {
     /*5. for each tracklet
             1. for each pairing with this tracklet ID
@@ -521,12 +519,12 @@ void MOTracker::updateTracklets(vector<VectorXd> &unpaired_detections, bool verb
         {
             ///// using the best_pairing_index we've just found, update the tracklet and remove this pairing from the vector
             /// so it doesn't get associated with another tracker
-            double new_time = ros::Time::now().toSec() - tracker_start_time;
+//            double new_time = ros::Time::now().toSec() - tracker_start_time;
             if (verbose) {
                 cout << "Updating Tracklet "<<this_tracklet->getID()<< " with pairing at index "<<best_pairing_index<<endl;
-                cout<<"\n!!!!!!!!!!!!!!!!!!!!!time is now "<<new_time<<endl;
+                cout<<"\n!!!!!!!!!!!!!!!!!!!!!time is now "<<msg_time<<endl;
             }
-            this_tracklet->updateTracklet(pairing_vector_[best_pairing_index], new_time); // update the tracklet with this pairing
+            this_tracklet->updateTracklet(pairing_vector_[best_pairing_index], msg_time); // update the tracklet with this pairing
             ///// now publish the output of this tracklet with a marker
 
             stringstream tracklet_name;
@@ -658,7 +656,7 @@ void MOTracker::deleteDeadTracklets(bool verbose)
         }
     }
 }
-void MOTracker::initiateLongTracklets(bool verbose)
+void MOTracker::initiateLongTracklets(double msg_time, bool verbose)
 {
     //    // kf initiation if tracklet reaches sufficient length
     //    9. for each tracklet
@@ -677,19 +675,25 @@ void MOTracker::initiateLongTracklets(bool verbose)
         {
             if (verbose)
                 cout << "initiating kf."<<endl;
-            double time = ros::Time::now().toSec() - tracker_start_time;
-            cout<<"time is now "<<time<<endl;
-            tracklet_vector_[i].initKf(time); // initialise this tracklet's kalman filter
+//            double time = ros::Time::now().toSec() - tracker_start_time;
+            cout<<"time is now "<<msg_time<<endl;
+            tracklet_vector_[i].initKf(msg_time); // initialise this tracklet's kalman filter
         }
     }
 }
-void MOTracker::processCentroidCoords(vector<VectorXd> unpaired_detections, bool isRGBD) {
+void MOTracker::processCentroidCoords(vector<VectorXd> unpaired_detections, double msg_time, bool isRGBD) {
     // Loops through a vector of centroids and updates the kalman filter with the one closest to previous estimate.
-    // Publishes transforms for all estimates
-    if (verbose_)
+    // Publishes transforms for all estimates. Uses time of message msg_time
+    if (verbose_) {
         cout << "***********************************************\nprocessCentroidCoords()"<<endl;
-    if (verbose_)
         cout << "There are "<<tracklet_vector_.size()<<" live tracklets."<<endl;
+    }
+    // if time not started yet, start the time
+    if (tracker_start_time == -1) {
+        tracker_start_time = msg_time;
+    }
+    // put msg_time relative to tracker time
+    msg_time = msg_time - tracker_start_time;
 
     //// PUBLISH A TRANSFORM FOR EACH DETECTION
     ///
@@ -698,11 +702,11 @@ void MOTracker::processCentroidCoords(vector<VectorXd> unpaired_detections, bool
         ss << "detection_"<<i;
         publishTransform(unpaired_detections[i], ss.str());
     }
-    updatePairings(unpaired_detections,isRGBD, false); // get a bunch of pairings
-    updateTracklets(unpaired_detections, true); // update each tracklet with the best pairing for that tracklet, increment the misses for tracklets without pairings
+    updatePairings(unpaired_detections,msg_time, isRGBD, false); // get a bunch of pairings
+    updateTracklets(unpaired_detections, msg_time, true); // update each tracklet with the best pairing for that tracklet, increment the misses for tracklets without pairings
     createNewTracklets(unpaired_detections, false); // generate new tracklets from any unassociated pairings
     deleteDeadTracklets(false); // delete any tracklets that have been missed too many times
-    initiateLongTracklets(false); // initiate the kalman filters and publisher for any tracklets with a long sequence of detections
+    initiateLongTracklets(msg_time, true); // initiate the kalman filters and publisher for any tracklets with a long sequence of detections
 }
 
 ///// I/O Methods

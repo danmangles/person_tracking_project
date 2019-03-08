@@ -67,7 +67,10 @@ void KalmanFilter::predict(double time, bool verbose){
         cout <<"time is "<<t_<<endl;
         cout <<"dt is "<<dt_<<endl;
 
+
     }
+    if (dt < 0)
+        cout<<"\n!!!!!! dt is negative!!!"<<endl;
 
     x_hat = delF*x_hat; // predicted  state = plant_model(old_state) but using a linear plant model delF
     P = delF*P*delF.transpose() + delGQdelGT; // predicted covariance = transformed old covariance + process noise

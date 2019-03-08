@@ -110,7 +110,7 @@ private:
     ////// Centroid Pointcloud Methods
     void getCentroidsOfClusters (vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> cloud_cluster_vector, vector<Eigen::VectorXd> &centroid_coord_array);
     void getClusterCentroid(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cluster_ptr, VectorXd &coord_centroid); //returns a vector of centroid coordinates
-    void processCentroidCoords(vector<VectorXd> unpaired_detections, bool isRGBD);
+    void processCentroidCoords(vector<VectorXd> unpaired_detections, double msg_time, bool isRGBD);
 
 
     ////// Realsense Detector Methods
@@ -120,12 +120,12 @@ private:
 
     tf::Transformer pose_transformer_;
     ////// Tracklet methods
-    void updatePairings(vector<VectorXd> &unpaired_detections,bool isRGBD, bool verbose);
-    void updateTracklets(vector<VectorXd> &unpaired_detections, bool verbose);
+    void updatePairings(vector<VectorXd> &unpaired_detections, double msg_time, bool isRGBD, bool verbose);
+    void updateTracklets(vector<VectorXd> &unpaired_detections, double msg_time, bool verbose);
     void createNewTracklets(vector<VectorXd> &unpaired_detections, bool verbose);
     int getNextTrackletID(bool verbose);
     void deleteDeadTracklets( bool verbose);
-    void initiateLongTracklets(bool verbose);
+    void initiateLongTracklets(double msg_time, bool verbose);
     double getMaxGatingDistance(Tracklet *this_tracklet, bool verbose); // returns max distance at which we can associate a new tracklet
 
     ////// I/O Methods
@@ -168,7 +168,7 @@ private:
     vector <Pairing> pairing_vector_;
     int next_tracklet_ID_ = 0; // unique id for tracklets
     vector <int> dead_tracklet_IDs_; // a vector of tracklet IDs that have been deleted
-    double tracker_start_time; // time when the filter is initiated
+    double tracker_start_time = -1; // time when the filter is initiated
 
 };
 #endif // mo_tracker_h
