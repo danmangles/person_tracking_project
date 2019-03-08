@@ -48,7 +48,7 @@ public:
           */
 
         void update(const VectorXd& z);
-        void predict();
+        void predict(double time, bool verbose);
     /*
      * Return current state and time
      */

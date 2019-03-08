@@ -19,7 +19,7 @@ void Tracklet::updateTracklet(Pairing pairing) {
     if (isInitialised_)
     {
         cout << "predicting and updating kf for Tracklet_"<<ID_<<endl;
-        kf_.predict();
+        kf_.predict(45.0, true);
         kf_.update(pairing.getDetectionCoord());
     }
 }
@@ -41,7 +41,7 @@ void Tracklet::recordMiss()
     if (isInitialised_)
     {
         cout << "predicting kf for Tracklet_"<<ID_<<endl;
-        kf_.predict(); // predict even if we don't have a measurement
+        kf_.predict(45.0, true); // predict even if we don't have a measurement
     } else{
         cout << "filter not initialised anyway" <<endl;
     }
