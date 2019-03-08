@@ -54,7 +54,7 @@ public:
      */
     VectorXd getState();
     MatrixXd getP(); // return covariance matrix
-    double time() { return t; };
+    double time() { return t_; };
 
 private:
     // Matrices for computation
@@ -64,10 +64,10 @@ private:
     int m, n;
 
     // Initial and current time
-    double t, t0;
+    double t_, t0;
 
     // Discrete time step
-    double dt;
+    double dt_;
 
     // Is the filter initialized?
     bool initialized;

@@ -677,7 +677,9 @@ void MOTracker::initiateLongTracklets(bool verbose)
         {
             if (verbose)
                 cout << "initiating kf."<<endl;
-            tracklet_vector_[i].initKf(); // initialise this tracklet's kalman filter
+            double time = ros::Time::now().toSec() - tracker_start_time;
+            cout<<"time is now "<<time<<endl;
+            tracklet_vector_[i].initKf(time); // initialise this tracklet's kalman filter
         }
     }
 }

@@ -22,7 +22,7 @@ KalmanFilter::KalmanFilter(
         const MatrixXd& P0,
         bool verbose)
 
-    : delF(delF), delH(delH), delGQdelGT(delGQdelGT), R(R), P(P0), //populate matrices values given in constructor
+    : dt_(dt), delF(delF), delH(delH), delGQdelGT(delGQdelGT), R(R), P(P0), //populate matrices values given in constructor
       m(delH.rows()), n(delF.rows()), initialized(false), //populate m with number of rows in C, n with number of rows in A
       I(n, n), x_hat(n), verbose_(verbose)
 {
@@ -45,7 +45,7 @@ void KalmanFilter::init(double t0, const VectorXd& x0) {
     x_hat = x0;
     //    P = P0;
     this->t0 = t0;
-    t = t0;
+    t_ = t0;
     initialized = true;
     if (verbose_) {
         cout << "P = \n"<<P <<endl;
@@ -58,10 +58,16 @@ void KalmanFilter::predict(double time, bool verbose){
     if (!initialized)
         throw runtime_error("Filter is not initialised... :3");
     /////// Prediction
-    if (verbose)
-        cout <<"time is "<<time<<endl;
+
+    dt_ = time - t_;
+    t_ = time;
 
 
+    if (verbose) {
+        cout <<"time is "<<t_<<endl;
+        cout <<"dt is "<<dt_<<endl;
+
+    }
 
     x_hat = delF*x_hat; // predicted  state = plant_model(old_state) but using a linear plant model delF
     P = delF*P*delF.transpose() + delGQdelGT; // predicted covariance = transformed old covariance + process noise
@@ -73,7 +79,7 @@ void KalmanFilter::predict(double time, bool verbose){
         cout << "z_pred = \n"<<z_pred<<endl;
     }
     //increment time
-    t += dt;
+//    t_ += dt_;
 }
 
 void KalmanFilter::update(const VectorXd& z) {
@@ -93,7 +99,7 @@ void KalmanFilter::update(const VectorXd& z) {
     if (verbose_)
         cout << "*UPDATE*\nv = \n"<<v<< "\nS = \n"<<S<<"\nW = \n"<<W<<"\nx_hat_new = \n"<<x_hat<< "\nP_new = \n"<<P<<endl;
     // increment time
-    t += dt;
+//    t_ += dt_;
 
 }
 MatrixXd KalmanFilter::getP()
