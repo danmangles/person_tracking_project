@@ -168,7 +168,7 @@ private:
     vector <Pairing> pairing_vector_;
     int next_tracklet_ID_ = 0; // unique id for tracklets
     vector <int> dead_tracklet_IDs_; // a vector of tracklet IDs that have been deleted
-
+    double tracker_start_time; // time when the filter is initiated
 
 };
 #endif // mo_tracker_h

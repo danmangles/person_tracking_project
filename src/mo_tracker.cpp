@@ -24,7 +24,7 @@ MOTracker::MOTracker(ros::NodeHandle nh,
     initialiseSubscribersAndPublishers(); //initialise the subscribers and publishers
     setupResultsCSV(file_index);
 
-
+    tracker_start_time = ros::Time::now().toSec();
 
     //    results_file_.close();
 
@@ -437,7 +437,7 @@ void MOTracker::updatePairings(vector<VectorXd> &unpaired_detections, bool isRGB
         if (!isPaired && !isRGBD) // only record misses if we miss it in the pointcloud
         {
             cout << "Couldn't find a detection for tracklet "<< this_tracklet->getID()<<endl;
-            double time = ros::Time::now().toSec();
+            double time = ros::Time::now().toSec() - tracker_start_time;
             cout<<"time is now "<<time<<endl;
             this_tracklet->recordMiss(52.0);
             cout << "has the tracklet been initialised? "<<this_tracklet->isInitialised()<<endl;
@@ -521,12 +521,12 @@ void MOTracker::updateTracklets(vector<VectorXd> &unpaired_detections, bool verb
         {
             ///// using the best_pairing_index we've just found, update the tracklet and remove this pairing from the vector
             /// so it doesn't get associated with another tracker
+            double new_time = ros::Time::now().toSec() - tracker_start_time;
             if (verbose) {
                 cout << "Updating Tracklet "<<this_tracklet->getID()<< " with pairing at index "<<best_pairing_index<<endl;
-                double time = ros::Time::now().toSec();
-                cout<<"time is now "<<time<<endl;
+                cout<<"\n!!!!!!!!!!!!!!!!!!!!!time is now "<<new_time<<endl;
             }
-            this_tracklet->updateTracklet(pairing_vector_[best_pairing_index], 52.0); // update the tracklet with this pairing
+            this_tracklet->updateTracklet(pairing_vector_[best_pairing_index], new_time); // update the tracklet with this pairing
             ///// now publish the output of this tracklet with a marker
 
             stringstream tracklet_name;

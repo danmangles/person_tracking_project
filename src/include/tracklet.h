@@ -29,6 +29,7 @@ public:
     void initKf(); // initialise the kalman filter at the last observation
     KalmanFilter getKf() {return kf_;}; // get the private kalman filter
     bool has_RGBD_detection(){return has_RGBD_detection_;} // get method
+
 private:
     KalmanFilter kf_; // private copy of kalman filter
     int ID_;
