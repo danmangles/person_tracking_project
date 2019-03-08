@@ -477,7 +477,7 @@ double MOTracker::getMaxGatingDistance(Tracklet *tracklet_ptr, bool verbose) {
     }
 
 }
-void MOTracker::updateTracklets(vector<VectorXd> &unpaired_detections, double msg_time, bool verbose)
+void MOTracker::updateTracklets(vector<VectorXd> &unpaired_detections, double msg_time,bool isRGBD, bool verbose)
 {
     /*5. for each tracklet
             1. for each pairing with this tracklet ID
@@ -555,7 +555,7 @@ void MOTracker::updateTracklets(vector<VectorXd> &unpaired_detections, double ms
                 {
                     VectorXd det_coord = pairing_vector_[best_pairing_index].getDetectionCoord();
                     // order : detection XYZ, kf XYZ, kf covariance XYZ
-                    results_file_ <<det_coord[0]<<","<<det_coord[1]<<","<<det_coord[2]<<","<<this_tracklet->getID()<<","<< xhat[0]<<","<<xhat[1]<<","<<xhat[2]<<","<<P(0,0)<<","<<P(1,1)<<","<<P(2,2)<<"\n";
+                    results_file_ <<msg_time<<","<<det_coord[0]<<","<<det_coord[1]<<","<<det_coord[2]<<","<<this_tracklet->getID()<<","<< xhat[0]<<","<<xhat[1]<<","<<xhat[2]<<","<<P(0,0)<<","<<P(1,1)<<","<<P(2,2)<<","<<isRGBD<<"\n";
                 }
 
                 /////////////////
@@ -703,7 +703,7 @@ void MOTracker::processCentroidCoords(vector<VectorXd> unpaired_detections, doub
         publishTransform(unpaired_detections[i], ss.str());
     }
     updatePairings(unpaired_detections,msg_time, isRGBD, false); // get a bunch of pairings
-    updateTracklets(unpaired_detections, msg_time, true); // update each tracklet with the best pairing for that tracklet, increment the misses for tracklets without pairings
+    updateTracklets(unpaired_detections, msg_time, isRGBD, true); // update each tracklet with the best pairing for that tracklet, increment the misses for tracklets without pairings
     createNewTracklets(unpaired_detections, false); // generate new tracklets from any unassociated pairings
     deleteDeadTracklets(false); // delete any tracklets that have been missed too many times
     initiateLongTracklets(msg_time, true); // initiate the kalman filters and publisher for any tracklets with a long sequence of detections
@@ -798,7 +798,7 @@ void MOTracker::setupResultsCSV(int file_index){
     stringstream ss;
     ss <<"tracking_results_"<<file_index<<".csv";
     results_file_.open(ss.str());
-    results_file_ << "Detection_X,Detection_Y,Detection_Z,Tracklet_ID,KF_X,KF_Y,KF_Z,KF_cov_X,KF_cov_Y,KF_cov_Z\n";
+    results_file_ << "Time,Detection_X,Detection_Y,Detection_Z,Tracklet_ID,KF_X,KF_Y,KF_Z,KF_cov_X,KF_cov_Y,KF_cov_Z,isRGBD\n";
 }
 
 ////// Kalman Filter Methods

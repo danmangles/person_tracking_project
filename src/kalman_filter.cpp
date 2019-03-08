@@ -69,7 +69,7 @@ void KalmanFilter::predict(double time, bool verbose){
 
 
     }
-    if (dt < 0)
+    if (dt_ < 0)
         cout<<"\n!!!!!! dt is negative!!!"<<endl;
 
     x_hat = delF*x_hat; // predicted  state = plant_model(old_state) but using a linear plant model delF

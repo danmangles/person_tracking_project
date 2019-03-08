@@ -121,7 +121,7 @@ private:
     tf::Transformer pose_transformer_;
     ////// Tracklet methods
     void updatePairings(vector<VectorXd> &unpaired_detections, double msg_time, bool isRGBD, bool verbose);
-    void updateTracklets(vector<VectorXd> &unpaired_detections, double msg_time, bool verbose);
+    void updateTracklets(vector<VectorXd> &unpaired_detections, double msg_time, bool isRGBD, bool verbose);
     void createNewTracklets(vector<VectorXd> &unpaired_detections, bool verbose);
     int getNextTrackletID(bool verbose);
     void deleteDeadTracklets( bool verbose);
