@@ -58,6 +58,7 @@ void KalmanFilter::predict(double time, bool verbose){
     if (!initialized)
         throw runtime_error("Filter is not initialised... :3");
     double walking_speed = 2; // in ms-1
+
     /////// Prediction
     dt_ = time - t_;
     t_ = time;
@@ -65,24 +66,28 @@ void KalmanFilter::predict(double time, bool verbose){
     if (dt_ < 0)
         cout<<"\n!!!!!! dt is negative!!!"<<endl;
 
-    MatrixXd new_matrix(3,3);
-    new_matrix.setIdentity();
-    new_matrix = new_matrix*walking_speed*dt_;
+    MatrixXd uncertainty_distance(3,3);
+    uncertainty_distance.setIdentity();
+    uncertainty_distance = uncertainty_distance*walking_speed*dt_;
 
-    delF.block(0,3,3,3) = new_matrix;
+    // change the matrices which are a function of time
+    delF.block(0,3,3,3) = uncertainty_distance; // set the top right to make fcn of dt
+    delGQdelGT.block(0,0,3,3) = uncertainty_distance; // possibly need to take sqrt of this
 
     if (verbose)
     {
             cout <<"time is "<<t_<<endl;
             cout <<"dt is "<<dt_<<endl;
-            cout <<"delF is "<<delF<<endl;
+            cout <<"delF is \n"<<delF<<endl;
+            cout <<"delGQdelGT is \n"<<delGQdelGT<<endl;
     }
 
     x_hat = delF*x_hat; // predicted  state = plant_model(old_state) but using a linear plant model delF
     P = delF*P*delF.transpose() + delGQdelGT; // predicted covariance = transformed old covariance + process noise
     z_pred = delH*x_hat; // predicted observation
 
-    if (verbose) {
+    if (verbose)
+    {
         cout << "*PREDICT*\nx_hat_pred = \n"<<x_hat<<endl;
         cout << "P_pred = \n"<<P<<endl;
         cout << "z_pred = \n"<<z_pred<<endl;

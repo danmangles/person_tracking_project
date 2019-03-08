@@ -19,30 +19,6 @@ using namespace std;
 
 kf_param_struct getTrackerKfParams() {
     // Sets the tracker's kalman filter kf's parameters dt,A,C,Q,R,P
-    /*
-    int n = 3; // Number of states
-    int m = 3; // Number of measurements
-
-    double dt = 1.0/10;
-
-    MatrixXd I3(3,3); //define an identity matrix
-    I3.setIdentity();
-    cout << I3 << endl;
-
-    MatrixXd delF(n, n); // System dynamics matrix
-    MatrixXd delH(m, n); // map state space to observation space
-    MatrixXd delGQdelGT(n, n); // Process noise covariance
-    MatrixXd R(m, m); // Measurement noise covariance
-    MatrixXd P0(n, n); // Estimate error covariance initial state
-
-    // Assuming the person doesn't move, we are JUST X INITIALLY
-    delF = I3; //I3
-    delH = I3;
-
-    delGQdelGT << 2, 0, 0, 0, 2, 0, 0, 0, .5; // MAKE THIS A FUNCTION OF TIMESTEP^2
-    R << 20, 0, 0, 0, 20, 0, 0, 0, 1; //I3 * .05 // MAKE THIS A FUNCTION OF TIMESTEP^2
-    P0 << 3, 0, 0, 0, 3, 0, 0, 0, 3;
-    */
     // add a velocity state
 
     int n = 6; // Number of states (velocity
@@ -54,8 +30,7 @@ kf_param_struct getTrackerKfParams() {
     ///// Setup the matrices
     // delF
     MatrixXd delF(n, n); // System dynamics matrix
-    delF.setIdentity(); // delF has a diagonal of ones
-    delF.block(0,3,3,3) = I3*dt; // set the top right 3x3 block to dt
+    delF.setIdentity(); // delF has a diagonal of ones, don't add the velocity state to the first estimate
     // delH
     MatrixXd delH(m, n); // map state space to observation space
     delH.setZero();
