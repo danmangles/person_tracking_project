@@ -1,0 +1,307 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ChangeListManager">
+    <list default="true" id="1509c2cf-310d-4d0e-ad87-7e100f2e88e3" name="Default Changelist" comment="">
+      <change beforePath="$PROJECT_DIR$/anakin_ros/CMakeLists.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/anakin_ros/launch/anakin_ros.launch" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/anakin_ros/launch/anakin_ros_person1203.launch" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/anakin_ros/launch/average_tracker.launch" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/anakin_ros/package.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/anakin_ros/src/anakin_detector_node.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/anakin_ros/src/average_tracker.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/anakin_ros/src/average_tracker_v2.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/anakin_ros/src/net.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/anakin_ros/src/ros_realsense_1203.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/anakin_ros/src/transform_publisher.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/anakin_ros/src/weights_loader.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/anakin_ros/src/yolov2-tiny-voc.weights" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/drs-main/code/src/personal/person_tracker/scripts/ckpt/checkpoint" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/drs-main/code/src/personal/person_tracker/scripts/ckpt/model.ckpt.data-00000-of-00001" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/drs-main/code/src/personal/person_tracker/scripts/ckpt/model.ckpt.index" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/drs-main/code/src/personal/person_tracker/scripts/ckpt/model.ckpt.meta" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/mo_tracker.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/mo_tracker.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/nearest_cluster_tracker.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/old_files/tracker.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/old_files/tracker.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/realsense_detector.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/realsense_detector.py" afterDir="false" />
+    </list>
+    <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FUSProjectUsageTrigger">
+    <session id="1132751923">
+      <usages-collector id="statistics.lifecycle.project">
+        <counts>
+          <entry key="project.open.time.0" value="1" />
+          <entry key="project.open.time.12" value="1" />
+          <entry key="project.open.time.5" value="1" />
+          <entry key="project.open.time.9" value="1" />
+          <entry key="project.opened" value="4" />
+        </counts>
+      </usages-collector>
+      <usages-collector id="statistics.file.extensions.open">
+        <counts>
+          <entry key="cpp" value="1" />
+          <entry key="py" value="10" />
+          <entry key="txt" value="1" />
+        </counts>
+      </usages-collector>
+      <usages-collector id="statistics.file.types.open">
+        <counts>
+          <entry key="C++" value="1" />
+          <entry key="PLAIN_TEXT" value="1" />
+          <entry key="Python" value="10" />
+        </counts>
+      </usages-collector>
+      <usages-collector id="statistics.file.extensions.edit">
+        <counts>
+          <entry key="py" value="11704" />
+          <entry key="txt" value="107" />
+        </counts>
+      </usages-collector>
+      <usages-collector id="statistics.file.types.edit">
+        <counts>
+          <entry key="PLAIN_TEXT" value="107" />
+          <entry key="Python" value="11704" />
+        </counts>
+      </usages-collector>
+    </session>
+  </component>
+  <component name="FileEditorManager">
+    <splitter split-orientation="horizontal" split-proportion="0.5">
+      <split-first>
+        <leaf>
+          <file pinned="false" current-in-tab="true">
+            <entry file="file://$PROJECT_DIR$/src/realsense_detector.py">
+              <provider selected="true" editor-type-id="text-editor">
+                <state relative-caret-position="471">
+                  <caret line="488" column="44" selection-start-line="488" selection-start-column="44" selection-end-line="488" selection-end-column="44" />
+                  <folding>
+                    <element signature="e#43#60#0" expanded="true" />
+                    <element signature="e#4386#5828#0" />
+                    <element signature="e#4715#5899#0" />
+                    <element signature="e#5926#6605#0" />
+                    <element signature="e#7128#13253#0" />
+                    <marker date="1551951380049" expanded="true" signature="18632:19231" ph="..." />
+                  </folding>
+                </state>
+              </provider>
+            </entry>
+          </file>
+        </leaf>
+      </split-first>
+      <split-second>
+        <leaf>
+          <file pinned="false" current-in-tab="true">
+            <entry file="file://$PROJECT_DIR$/src/realsense_detector.py">
+              <provider selected="true" editor-type-id="text-editor">
+                <state relative-caret-position="1085">
+                  <caret line="572" column="55" selection-start-line="572" selection-start-column="55" selection-end-line="572" selection-end-column="55" />
+                  <folding>
+                    <element signature="e#43#60#0" expanded="true" />
+                    <element signature="e#4715#5899#0" />
+                    <element signature="e#5926#6605#0" />
+                    <element signature="e#18974#19003#0" />
+                    <element signature="e#19038#19114#0" />
+                    <element signature="e#19163#20083#0" />
+                    <element signature="e#20157#21195#0" />
+                    <marker date="1551951380049" expanded="true" signature="18632:19231" ph="..." />
+                  </folding>
+                </state>
+              </provider>
+            </entry>
+          </file>
+        </leaf>
+      </split-second>
+    </splitter>
+  </component>
+  <component name="FindInProjectRecents">
+    <findStrings>
+      <find>poseArray_publisher</find>
+      <find>update_pose_array_from_bounding_boxes</find>
+      <find>pose_array</find>
+      <find>odom</find>
+      <find>d435</find>
+      <find>get_xyz_in_odom_frame</find>
+      <find>get_pose_in_odom_frame</find>
+      <find>get_pose</find>
+      <find>import</find>
+      <find>po</find>
+      <find>forward</find>
+      <find>posestam</find>
+      <find>get</find>
+      <find>size = os.</find>
+      <find>weights_loader</find>
+      <find>skip</find>
+      <find>camera_base_frame</find>
+      <find>colors</find>
+      <find>YOLO_IMAGE_DIMENSION</find>
+      <find>REALSENSE_IMAGE_WIDTH</find>
+      <find>REALSENSE_IMAGE_</find>
+      <find>REALSENSE_IMAGE</find>
+      <find>MAGIC_WIDTH</find>
+      <find>get_box_coordinates</find>
+      <find>get_dist_yaw_pitch</find>
+      <find>MAGIC</find>
+      <find>MAGIC_</find>
+      <find>REALSENSE_IMAGE_HEIGHT</find>
+      <find>bounding_box</find>
+      <find>inspecting</find>
+    </findStrings>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="IdeDocumentHistory">
+    <option name="CHANGED_PATHS">
+      <list>
+        <option value="$PROJECT_DIR$/CMakeLists.txt" />
+        <option value="$PROJECT_DIR$/src/realsense_detector_node.py" />
+        <option value="$PROJECT_DIR$/src/weights_loader.py" />
+        <option value="$PROJECT_DIR$/src/realsense_detector.py" />
+      </list>
+    </option>
+  </component>
+  <component name="ProjectFrameBounds" extendedState="6">
+    <option name="x" value="-241" />
+    <option name="y" value="204" />
+    <option name="width" value="1246" />
+    <option name="height" value="1372" />
+  </component>
+  <component name="ProjectView">
+    <navigator proportions="" version="1">
+      <foldersAlwaysOnTop value="true" />
+    </navigator>
+    <panes>
+      <pane id="ProjectPane">
+        <subPane>
+          <expand>
+            <path>
+              <item name="multi_sensor_tracker" type="b2602c69:ProjectViewProjectNode" />
+              <item name="multi_sensor_tracker" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="multi_sensor_tracker" type="b2602c69:ProjectViewProjectNode" />
+              <item name="multi_sensor_tracker" type="462c0819:PsiDirectoryNode" />
+              <item name="src" type="462c0819:PsiDirectoryNode" />
+            </path>
+          </expand>
+          <select />
+        </subPane>
+      </pane>
+      <pane id="Scope" />
+    </panes>
+  </component>
+  <component name="PropertiesComponent">
+    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
+    <property name="settings.editor.selected.configurable" value="com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable" />
+  </component>
+  <component name="RunDashboard">
+    <option name="ruleStates">
+      <list>
+        <RuleState>
+          <option name="name" value="ConfigurationTypeDashboardGroupingRule" />
+        </RuleState>
+        <RuleState>
+          <option name="name" value="StatusDashboardGroupingRule" />
+        </RuleState>
+      </list>
+    </option>
+  </component>
+  <component name="SvnConfiguration">
+    <configuration />
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="1509c2cf-310d-4d0e-ad87-7e100f2e88e3" name="Default Changelist" comment="" />
+      <created>1551695263269</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1551695263269</updated>
+    </task>
+    <servers />
+  </component>
+  <component name="ToolWindowManager">
+    <frame x="1985" y="-4" width="2495" height="1444" extended-state="6" />
+    <editor active="true" />
+    <layout>
+      <window_info active="true" content_ui="combo" id="Project" order="0" side_tool="true" visible="true" weight="0.12702265" />
+      <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
+      <window_info id="Favorites" order="2" side_tool="true" />
+      <window_info anchor="bottom" id="Message" order="0" />
+      <window_info anchor="bottom" id="Find" order="1" />
+      <window_info anchor="bottom" id="Run" order="2" />
+      <window_info anchor="bottom" id="Debug" order="3" weight="0.4" />
+      <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
+      <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
+      <window_info anchor="bottom" id="TODO" order="6" />
+      <window_info anchor="bottom" id="Version Control" order="7" />
+      <window_info anchor="bottom" id="Terminal" order="8" />
+      <window_info anchor="bottom" id="Event Log" order="9" side_tool="true" />
+      <window_info anchor="bottom" id="Python Console" order="10" />
+      <window_info anchor="right" id="Commander" internal_type="SLIDING" order="0" type="SLIDING" weight="0.4" />
+      <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
+      <window_info anchor="right" content_ui="combo" id="Hierarchy" order="2" weight="0.25" />
+    </layout>
+  </component>
+  <component name="VcsContentAnnotationSettings">
+    <option name="myLimit" value="2678400000" />
+  </component>
+  <component name="editorHistoryManager">
+    <entry file="file://$PROJECT_DIR$/src/mo_tracker.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="419">
+          <caret line="655" column="17" selection-start-line="655" selection-start-column="8" selection-end-line="655" selection-end-column="17" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/ros_realsense_1203.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="1206">
+          <caret line="405" column="18" selection-start-line="405" selection-start-column="18" selection-end-line="405" selection-end-column="18" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/weights_loader.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="210">
+          <caret line="68" column="32" lean-forward="true" selection-start-line="68" selection-start-column="32" selection-end-line="68" selection-end-column="32" />
+          <folding>
+            <element signature="e#0#23#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/realsense_detector_node.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="165">
+          <caret line="12" column="16" selection-start-line="12" selection-start-column="16" selection-end-line="12" selection-end-column="16" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/CMakeLists.txt">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="105">
+          <caret line="7" column="17" lean-forward="true" selection-start-line="7" selection-start-column="17" selection-end-line="7" selection-end-column="17" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/realsense_detector.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="471">
+          <caret line="488" column="44" selection-start-line="488" selection-start-column="44" selection-end-line="488" selection-end-column="44" />
+          <folding>
+            <element signature="e#43#60#0" expanded="true" />
+            <element signature="e#4386#5828#0" />
+            <element signature="e#4715#5899#0" />
+            <element signature="e#5926#6605#0" />
+            <element signature="e#7128#13253#0" />
+            <marker date="1551951380049" expanded="true" signature="18632:19231" ph="..." />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+  </component>
+</project>

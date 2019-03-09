@@ -1,0 +1,148 @@
+group "0.core" {
+    cmd "core" {
+        exec = "roscore";
+        host = "localhost";
+    }
+}
+
+group "1.simulator" {
+    cmd "sim_sensors_ori" {
+        exec = "roslaunch anymal_sim_drs sim_ori.launch";
+        host = "localhost";
+    }
+    cmd "sim_sensors_stairs_course" {
+        exec = "roslaunch anymal_sim_drs sim_stairs_course.launch";
+        host = "localhost";
+    }
+    cmd "sim_sensors_kick_ball" {
+        exec = "roslaunch anymal_sim_drs sim_kick_ball.launch";
+        host = "localhost";
+    }
+    cmd "sim_sensors_object_scan" {
+        exec = "roslaunch anymal_sim_drs sim_object_scan.launch";
+        host = "localhost";
+    }
+    cmd "sim_sensors_cdt_challenge" {
+        exec = "roslaunch anymal_sim_drs sim_cdt_challenge.launch";
+        host = "localhost";
+    }    
+    cmd "sim_sensors_oil_rig" {
+        exec = "roslaunch anymal_sim_drs sim_oil_rig.launch";
+        host = "localhost";
+    }
+    cmd "sim_sensors_mapping_challenge" {
+        exec = "roslaunch anymal_sim_drs sim_ori_mapping_challenge.launch";
+        host = "localhost";
+    }    
+    cmd "sim_no_sensors" {
+        exec = "roslaunch anymal_boxy_sim sim.launch";
+        host = "localhost";
+    }
+    cmd "sim_sensors_fire_college" {
+        exec = "roslaunch anymal_sim_drs sim_fire_college.launch";
+        host = "localhost";
+    }
+    cmd "sim_sensors_april_box" {
+        exec = "roslaunch anymal_sim_drs sim_april_box.launch";
+        host = "localhost";
+    }
+    cmd "sim_sensors_obstacle_course" {
+        exec = "roslaunch anymal_sim_drs sim_obstacle_course.launch";
+        host = "localhost";
+    }
+    cmd "sim_spinning_lidar" {
+        exec = "roslaunch anymal_sim_drs sim_spinning_lidar.launch";
+        host = "localhost";
+    }
+}
+
+group "2.vis" {
+   cmd "dans_rviz" {
+        exec = "rosrun rviz rviz -d /home/ori/.rviz/dans_config.rviz";
+        host = "localhost";
+    }
+}
+
+group "3.navigation" {
+    cmd "position-controller" {
+        exec = "roslaunch  position_controller position_controller.launch";
+        host = "localhost";
+    }
+    cmd "lidar-navigation" {
+        exec = "roslaunch lidar_navigation lidar_navigation.launch";
+        host = "localhost";
+    }
+}
+
+group "3.planning" {
+    cmd "multi-gait-plan" {
+        exec = "rosrun multi_gait_planner multi_gait_planner.py";
+        host = "localhost";
+    }
+    cmd "multi-gait-execute" {
+        exec = "rosrun multi_gait_executor multi_gait_executor.py";
+        host = "localhost";
+    }
+}
+
+group "4.velodyne_collector" {
+    cmd "velodyne_collector" {
+        exec = "roslaunch position_controller velodyne_collector.launch";
+        host = "localhost";
+    }
+}
+
+group "5.april_tags" {
+    cmd "person_follower" {
+        exec = "roslaunch position_controller apriltag_follower_anymal_sim.launch";
+        host = "localhost";
+    }
+}
+
+group "6.rosbag_play" {
+    cmd "icp_tools_from_rosbag" {
+        exec = "roslaunch icp_tools_drs icp_tools_from_rosbag_anymal.launch";
+        host = "localhost";
+    }
+}
+group "7.tracker" {
+    cmd "realsense_detector" {
+        exec = "rosrun multi_sensor_tracker realsense_detector_node.py";
+        host = "localhost";
+    }
+    cmd "tracker_node" {
+        exec = "rosrun multi_sensor_tracker mo_tracker_node";
+        host = "localhost";
+    }
+}
+
+group "x.misc" {
+    cmd "qt_creator" {
+        exec = "/./opt/qtcreator-4.6.2/bin/qtcreator";
+        host = "localhost";
+    }
+    cmd "image_transport_republisher" {
+        exec = "rosrun image_transport republish compressedDepth in:=/realsense_d435_forward/aligned_depth_to_color/image_raw raw out:=/realsense_d435_forward/aligned_depth_to_color/image_raw";
+        host = "localhost";
+    }
+}
+
+script "0.start_sim_tracker_sim" {
+    start group "0.core";
+    wait ms 2000;
+    start group "2.vis";
+    wait ms 2000;
+    start cmd "icp_tools_from_rosbag";
+    start group "x.misc";
+}
+
+
+
+script "start_sim_april_box" {
+    start group "0.core";
+    wait ms 1000;
+    start cmd "sim_sensors_april_box";
+    start group "2.vis";
+    start group "5.april_tags";
+}
+

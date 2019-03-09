@@ -1,0 +1,14 @@
+<launch>
+
+<!--
+  <node pkg="rviz" name="rviz" type="rviz" />
+-->
+  <node name="republish" type="republish" pkg="image_transport" output="screen" args="compressed in:=/realsense_d435_forward/aligned_depth_to_color/image_raw out:=/realsense_d435_forward/depth/image_raw _image_transport:=compressedDepth" />
+
+<!--
+  <node pkg="rosbag" type="play" name="player" args="dashdashclock /home/ori/Documents/any/anymal_2018-08-02-12-54-14.bag"/>
+
+  <node pkg="person_tracker" name="ros_realsense" type="ros_realsense.py" output="screen" />
+-->
+
+</launch>
