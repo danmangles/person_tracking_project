@@ -21,7 +21,6 @@ public:
       */
 
     KalmanFilter(
-            double dt,
             const MatrixXd& delF,
             const MatrixXd& delH,
             const MatrixXd& delGQdelGT,

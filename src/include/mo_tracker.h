@@ -73,8 +73,8 @@ struct kf_param_struct {double dt; MatrixXd delF; MatrixXd delH; MatrixXd delGQd
 // holds params for the pointcloud
 struct pcl_param_struct {bool apply_passthrough_filter;bool apply_planar_outlier_removal; int max_cluster_size; int min_cluster_size; double cluster_tolerance; double seg_dist_threshold;};
 // holds params for the tracker
-struct tracker_param_struct {double gating_dist_constant; int max_consecutive_misses; int min_initialisation_length; bool only_init_rgb_tracklet;};
-//
+struct tracker_param_struct {double gating_dist_constant; double base_gating_dist; int max_consecutive_misses; int min_initialisation_length; bool only_init_rgb_tracklet;};
+// holds io params
 struct io_param_struct {bool publishing; bool write_to_csv; string filename;};
 
 class MOTracker {
@@ -90,12 +90,12 @@ public:
 
     void setupKalmanFilter(VectorXd x0,
                            double dt,
-                           const Eigen::MatrixXd& A,
-                           const Eigen::MatrixXd& C,
-                           const Eigen::MatrixXd& Q,
-                           const Eigen::MatrixXd& R,
-                           const Eigen::MatrixXd& P); // call the constructor of and initiate the kalman filter with params x0
-    void updateKf(VectorXd y); // update the kalman filter with a new estimate y
+                           const MatrixXd& delF,
+                           const MatrixXd& delH,
+                           const MatrixXd& delGQdelGT,
+                           const MatrixXd& R,
+                           const MatrixXd& P0); // call the constructor of and initiate the kalman filter with params x0
+    void updateKf(VectorXd z); // update the kalman filter with a new estimate y
 
 private:
     ////// General Pointcloud Methods
@@ -135,11 +135,10 @@ private:
     void initialiseSubscribersAndPublishers(); // initialises all the subscribers and publishers
     void publishMarker(VectorXd x_hat,string marker_name, double scale_x,double scale_y,double scale_z);
     void publishTransform(VectorXd coordinates, string target_frame_id); // publishes a transform at the 3D coordinate Vector coordinates
-    void setupResultsCSV(int file_index); // sets up the results spreasheet
+    void setupResultsCSV(); // sets up the results spreasheet
     ////// Kalman Filter Methods
     //vector <KalmanFilter> kf_vector_; // our private copy of a kalman filter
     vector <KalmanFilter> kf_vector_;
-    kf_param_struct kf_params_; // holds the parameters for a new kalman filter
     VectorXd getState(); // returns the current position estimate
     //KalmanFilter getNewKalmanFilter(); // returns a new Kalman Filter initialised at x0
     int getIndexOfClosestKf(VectorXd centroid_coord); // returns the index of the coordinate
@@ -159,12 +158,8 @@ private:
     ros::Publisher pub_marker_; // for markers
     boost::shared_ptr<tf::TransformListener> odom_base_ls_; // setup the transform listener so we can listen to the odom_base_tf
     boost::shared_ptr<tf::TransformListener> odom_realsense_ls_; // setup the transform listener so we can transform realsense coords into odom frame
-    bool verbose_, publishing_, write_to_csv_; // do we print? do we publish pointclouds>? do we write results to a csv?
+    bool verbose_; // do we print? do we publish pointclouds>? do we write results to a csv?
     ofstream results_file_; // stores output results in
-
-    ////// Clustering parameters
-    int max_cluster_size_, min_cluster_size_; // clustering parameters
-    double cluster_tolerance_,seg_dist_threshold_; // seg_dist is how close a point must be to the model in order to be considered an inlier:
 
     ////// Tracklet variables
     vector <Tracklet> tracklet_vector_;
@@ -172,6 +167,12 @@ private:
     int next_tracklet_ID_ = 0; // unique id for tracklets
     vector <int> dead_tracklet_IDs_; // a vector of tracklet IDs that have been deleted
     double tracker_start_time = -1; // time when the filter is initiated
+
+    ////// Tuning parameter structures
+    pcl_param_struct pcl_params;
+    kf_param_struct kf_params;
+    tracker_param_struct tracker_params;
+    io_param_struct io_params;
 
 };
 #endif // mo_tracker_h

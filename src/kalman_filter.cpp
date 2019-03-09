@@ -14,7 +14,6 @@ using namespace std;
 
 
 KalmanFilter::KalmanFilter(
-        double dt,
         const MatrixXd& delF,
         const MatrixXd& delH,
         const MatrixXd& delGQdelGT,
@@ -22,7 +21,7 @@ KalmanFilter::KalmanFilter(
         const MatrixXd& P0,
         bool verbose)
 
-    : dt_(dt), delF(delF), delH(delH), delGQdelGT(delGQdelGT), R(R), P(P0), //populate matrices values given in constructor
+    : delF(delF), delH(delH), delGQdelGT(delGQdelGT), R(R), P(P0), //populate matrices values given in constructor
       m(delH.rows()), n(delF.rows()), initialized(false), //populate m with number of rows in C, n with number of rows in A
       I(n, n), x_hat(n), verbose_(verbose)
 {
@@ -59,6 +58,7 @@ void KalmanFilter::predict(double time, bool verbose){
     double walking_speed = 2; // in ms-1
 
     /////// Prediction
+    cout <<"dt may not be initialsed and may throw an error"<<endl;
     dt_ = time - t_;
     t_ = time;
 

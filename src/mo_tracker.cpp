@@ -5,24 +5,18 @@ using namespace std;
 
 
 MOTracker::MOTracker(ros::NodeHandle nh,
-                     int max_cluster_size,
-                     int min_cluster_size,
-                     double cluster_tolerance,
-                     double seg_dist_threshold,
+                     pcl_param_struct pcl_params,
                      kf_param_struct kf_params,
-                     bool verbose,
-                     bool publishing,
-                     bool write_to_csv,
-                     int file_index
+                     tracker_param_struct tracker_params,
+                     io_param_struct io_params,
+                     bool verbose
                      ) :
-    nh_(nh), max_cluster_size_(max_cluster_size), min_cluster_size_(min_cluster_size),cluster_tolerance_(cluster_tolerance),
-    seg_dist_threshold_(seg_dist_threshold), kf_params_(kf_params), verbose_(verbose), publishing_(publishing),
-    write_to_csv_(write_to_csv) // initiate the nodehandle
+    nh_(nh),  pcl_params(pcl_params), kf_params(kf_params), tracker_params(tracker_params), io_params(io_params), verbose_(verbose)// initiate the nodehandle
 {
     // Constructor: sets up
     cout<< "MOTracker constructor called "<<endl;
     initialiseSubscribersAndPublishers(); //initialise the subscribers and publishers
-    setupResultsCSV(file_index);
+    setupResultsCSV();
 
     //    results_file_.close();
 
@@ -34,19 +28,30 @@ void MOTracker::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr &cloud
     cout<< "************************************\nInitiating Callback\n***********************************"<<endl;
     sensor_msgs::PointCloud2 msg_to_publish; // we will use this for all the pointclouds we need to publish
     // Publish the cloud
-    if (publishing_)
+    if (io_params.publishing)
         pub_raw_.publish (*cloud_msg); // publish the raw cloud
 
     /////////// Apply a passthrough filter and publish the result
+    ///
     sensor_msgs::PointCloud2 bounded_cloud;
-    applyPassthroughFilter(cloud_msg, bounded_cloud); // remove all points outside of a predefined bod
-    if (publishing_)
-        pub_zfilt_.publish (bounded_cloud); // Publish the output
+
+    if (pcl_params.apply_passthrough_filter == 1) {
+        applyPassthroughFilter(cloud_msg, bounded_cloud); // remove all points outside of a predefined bod
+        if (io_params.publishing)
+            pub_zfilt_.publish (bounded_cloud); // Publish the output
+    } else {
+        cout<<"not applying passthrough_filter"<<endl;
+        // Convert from sensor_msgs::PointCloud2 to pcl::PointCloud2
+        pcl::PCLPointCloud2* cloud = new pcl::PCLPointCloud2;
+        pcl_conversions::toPCL(*cloud_msg, *cloud); // convert cloud_msg into a pcl edition
+        // Convert to ROS data type
+        pcl_conversions::moveFromPCL(*cloud, bounded_cloud); // convert into the sensor_msgs format
+    }
 
     ////////// Transform the cloud into the odom frame to eliminate base motion
     sensor_msgs::PointCloud2 transformed_cloud;
     applyBaseOdomTransformation(bounded_cloud, transformed_cloud);
-    if (publishing_)
+    if (io_params.publishing)
         pub_trans_.publish (transformed_cloud); // Publish the cloud
 
     /////////   if cloud has less than 10 points, jump out of the callback
@@ -64,7 +69,7 @@ void MOTracker::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr &cloud
 
     //////// Remove non planar points e.g. outliers http://pointclouds.org/documentation/tutorials/planar_segmentation.php#id1
     removeOutOfPlanePoints(cloud_ptr);
-    if (publishing_)
+    if (io_params.publishing)
     {
         pcl::toROSMsg(*cloud_ptr,msg_to_publish ); // convert from PCL:PC1 to SM:PC2
         pub_seg_filter_.publish (msg_to_publish);
@@ -189,7 +194,7 @@ void MOTracker::removeOutOfPlanePoints(pcl::PointCloud<pcl::PointXYZRGB>::Ptr &c
     seg.setModelType (pcl::SACMODEL_PLANE);
     seg.setMethodType (pcl::SAC_RANSAC); // using RANSAC to determine inliers
     seg.setMaxIterations (100);
-    seg.setDistanceThreshold (seg_dist_threshold_); // how close a point must be to the model in order to be considered an inlier: 3cm in this case
+    seg.setDistanceThreshold (pcl_params.seg_dist_threshold); // how close a point must be to the model in order to be considered an inlier: 3cm in this case
 
     // Loop through the cloud, performing the segmentation operation
     int i=0, nr_points = (int) cloud_ptr->points.size ();
@@ -307,9 +312,9 @@ vector<pcl::PointIndices> MOTracker::getClusterIndices(pcl::PointCloud<pcl::Poin
     vector<pcl::PointIndices> cluster_indices;
 
     pcl::EuclideanClusterExtraction<pcl::PointXYZRGB> ec;
-    ec.setClusterTolerance (cluster_tolerance_);
-    ec.setMinClusterSize (min_cluster_size_);
-    ec.setMaxClusterSize (max_cluster_size_);
+    ec.setClusterTolerance (pcl_params.cluster_tolerance);
+    ec.setMinClusterSize (pcl_params.min_cluster_size);
+    ec.setMaxClusterSize (pcl_params.max_cluster_size);
     //    ec.setClusterTolerance (.4);
     //    ec.setMinClusterSize (40);
     //    ec.setMaxClusterSize (150);
@@ -333,7 +338,7 @@ void MOTracker::getCentroidsOfClusters (vector<pcl::PointCloud<pcl::PointXYZRGB>
     for (int i = 0; i<cloud_cluster_vector.size(); i++) {
         cloud_cluster = cloud_cluster_vector[i]; // extract one cluster
         // publish it!
-        if (publishing_)
+        if (io_params.publishing)
         {
             sensor_msgs::PointCloud2 msg_to_publish; // initiate intermediate message variable
             pcl::toROSMsg(*cloud_cluster,msg_to_publish);
@@ -435,7 +440,7 @@ void MOTracker::updatePairings(vector<VectorXd> &unpaired_detections, double msg
         if (!isPaired && !isRGBD) // only record misses if we miss it in the pointcloud
         {
             cout << "Couldn't find a detection for tracklet "<< this_tracklet->getID()<<endl;
-//            double time = ros::Time::now().toSec() - tracker_start_time;
+            //            double time = ros::Time::now().toSec() - tracker_start_time;
             cout<<"time is now "<<msg_time<<endl;
             this_tracklet->recordMiss(msg_time);
             cout << "has the tracklet been initialised? "<<this_tracklet->isInitialised()<<endl;
@@ -461,19 +466,17 @@ void MOTracker::updatePairings(vector<VectorXd> &unpaired_detections, double msg
 }
 double MOTracker::getMaxGatingDistance(Tracklet *tracklet_ptr, bool verbose) {
     // returns the max distance at which a new detection can be associated
-
-    double covariance_multiplier = 0.5;
     if (tracklet_ptr->isInitialised()) {
         KalmanFilter kf = tracklet_ptr->getKf(); // get the Kf from this tracklet vector
         MatrixXd P = kf.getP(); //get covariance
-        double max = sqrt(covariance_multiplier*(P(0,0) + P(1,1))/2);
+        double max = sqrt(tracker_params.gating_dist_constant*(P(0,0) + P(1,1))/2);
         if (verbose)
             cout <<"MAX_GATING_DIST = "<<max<<"m"<<endl;
         return max; // return sqrt of average covariance is basically the std dev in x, y
     }
     else
     {
-        return 1.5; // just use 1.5m for an uninitialised tracklet
+        return tracker_params.base_gating_dist;
     }
 
 }
@@ -494,7 +497,7 @@ void MOTracker::updateTracklets(vector<VectorXd> &unpaired_detections, double ms
 
         if (verbose)
             cout << "Looping through "<<pairing_vector_.size()<<" pairings for tracklet "<<i<<endl;
-        double best_distance = 100; //in m. try and beat this
+        double best_distance = 100; //in m. try and beat this ////////////////////////////////////////////////
         int best_pairing_index = -1; // index for pairing with shortest distance
 
         for (int j = 0; j < pairing_vector_.size(); j++) // loop through all paired detections
@@ -519,7 +522,7 @@ void MOTracker::updateTracklets(vector<VectorXd> &unpaired_detections, double ms
         {
             ///// using the best_pairing_index we've just found, update the tracklet and remove this pairing from the vector
             /// so it doesn't get associated with another tracker
-//            double new_time = ros::Time::now().toSec() - tracker_start_time;
+            //            double new_time = ros::Time::now().toSec() - tracker_start_time;
             if (verbose) {
                 cout << "Updating Tracklet "<<this_tracklet->getID()<< " with pairing at index "<<best_pairing_index<<endl;
                 cout<<"\n!!!!!!!!!!!!!!!!!!!!!time is now "<<msg_time<<endl;
@@ -551,11 +554,11 @@ void MOTracker::updateTracklets(vector<VectorXd> &unpaired_detections, double ms
                 publishMarker(xhat,tracklet_name.str(), P(0,0),P(1,1),P(2,2)); // publish the marker
 
                 /////////////// write to csv
-                if (write_to_csv_)
+                if (io_params.write_to_csv)
                 {
                     VectorXd det_coord = best_pairing_ptr->getDetectionCoord();
                     if (verbose)
-                       cout <<det_coord[0]<<","<<det_coord[1]<<","<<det_coord[2]<<endl;
+                        cout <<det_coord[0]<<","<<det_coord[1]<<","<<det_coord[2]<<endl;
 
                     // order : detection XYZ, kf XYZ, kf covariance XYZ
                     results_file_ <<msg_time<<","<<det_coord[0]<<","<<det_coord[1]<<","<<det_coord[2]<<","<<this_tracklet->getID()<<","<< xhat[0]<<","<<xhat[1]<<","<<xhat[2]<<","<<P(0,0)<<","<<P(1,1)<<","<<P(2,2)<<","<<isRGBD<<"\n";
@@ -623,7 +626,7 @@ void MOTracker::createNewTracklets(vector<VectorXd> &unpaired_detections, bool v
         //        int next_tracklet_ID = next_tracklet_ID_;
         Tracklet new_tracklet(next_tracklet_ID_,
                               unpaired_detections[i],
-                              KalmanFilter(.1, kf_params_.delF, kf_params_.delH, kf_params_.delGQdelGT, kf_params_.R, kf_params_.P0, true));
+                              KalmanFilter(kf_params.delF, kf_params.delH, kf_params.delGQdelGT, kf_params.R, kf_params.P0, true));
         tracklet_vector_.push_back(new_tracklet);
         if (verbose)
             cout << "Tracklet with ID "<<next_tracklet_ID_<<" added to tracklet_vector_"<<endl;
@@ -641,13 +644,12 @@ void MOTracker::deleteDeadTracklets(bool verbose)
     //    8. for each tracklet
     //        1. if num_consecutive_misses > 3
     //            1. delete this tracker
-    int max_consecutive_misses = 6; // start this at 4 and see what happens
 
     for (int i = 0; i < tracklet_vector_.size(); i++) // loop through all live tracklets.
     {
         if (verbose)
             cout << "Tracklet "<<tracklet_vector_[i].getID()<<" has had "<<tracklet_vector_[i].getNumConsecutiveMisses()<<" consecutive misses."<<endl;
-        if (tracklet_vector_[i].getNumConsecutiveMisses() > max_consecutive_misses) // if we've missed this tracklet too many times in a row
+        if (tracklet_vector_[i].getNumConsecutiveMisses() > tracker_params.max_consecutive_misses) // if we've missed this tracklet too many times in a row
         {
             dead_tracklet_IDs_.push_back(tracklet_vector_[i].getID()); // move ID back into tracklet vector
             tracklet_vector_.erase(tracklet_vector_.begin() + i); // delete this tracklet from tracklet_vector_
@@ -662,7 +664,6 @@ void MOTracker::initiateLongTracklets(double msg_time, bool verbose)
     //    9. for each tracklet
     //        1. if detections_vector.size() > 2
     //            1. initiate the kalman filter
-    int min_initialisation_length = 5; // min number of detections needed to start the kalman filter
     for (int i = 0; i < tracklet_vector_.size(); i++) // loop through all live tracklets.
     {
         if (verbose)
@@ -670,14 +671,13 @@ void MOTracker::initiateLongTracklets(double msg_time, bool verbose)
         //        if (tracklet_vector_[i].getLength() > min_initialisation_length && !tracklet_vector_[i].isInitialised()) // if this tracklet is long enough and not initialised
         // only allow initiation for RGBD detections
 
-        if (tracklet_vector_[i].has_RGBD_detection() != 0 && tracklet_vector_[i].getLength() > min_initialisation_length && !tracklet_vector_[i].isInitialised()) // if this tracklet is long enough and not initialised
-
-        {
-            if (verbose)
-                cout << "initiating kf."<<endl;
-//            double time = ros::Time::now().toSec() - tracker_start_time;
-            cout<<"time is now "<<msg_time<<endl;
-            tracklet_vector_[i].initKf(msg_time); // initialise this tracklet's kalman filter
+        if (tracklet_vector_[i].has_RGBD_detection() != 0 || tracker_params.only_init_rgb_tracklet == 0) { // if either we don't require RGB detection OR we have an RGB detection
+            if (tracklet_vector_[i].getLength() > tracker_params.min_initialisation_length && !tracklet_vector_[i].isInitialised()) // if this tracklet is long enough and not initialised
+            {
+                if (verbose)
+                    cout << "initiating kf at time "<<msg_time<<endl;
+                tracklet_vector_[i].initKf(msg_time); // initialise this tracklet's kalman filter
+            }
         }
     }
 }
@@ -735,7 +735,7 @@ void MOTracker::initialiseSubscribersAndPublishers() {
 
     // Create ROS publishers for the output point clouds
     string topic_raw = "pcl_raw", topic_trans = "pcl_trans", topic_zfilt = "pcl_zfilt", topic_ds = "pcl_ds", topic_seg_filt = "pcl_seg_filter", topic_centroid = "pcl_centroid";
-    if (publishing_)
+    if (io_params.publishing)
     {
         pub_raw_ = nh_.advertise<sensor_msgs::PointCloud2> (topic_raw, 1);
         pub_trans_ = nh_.advertise<sensor_msgs::PointCloud2> (topic_trans, 1);
@@ -796,10 +796,9 @@ void MOTracker::publishMarker(VectorXd x_hat, string marker_name,double scale_x,
 
 
 }
-void MOTracker::setupResultsCSV(int file_index){
-    stringstream ss;
-    ss <<"tracking_results_"<<file_index<<".csv";
-    results_file_.open(ss.str());
+void MOTracker::setupResultsCSV(){
+    cout<<"opening results file"<<io_params.filename<<endl;
+    results_file_.open(io_params.filename);
     results_file_ << "Time,Detection_X,Detection_Y,Detection_Z,Tracklet_ID,KF_X,KF_Y,KF_Z,KF_cov_X,KF_cov_Y,KF_cov_Z,isRGBD\n";
 }
 
