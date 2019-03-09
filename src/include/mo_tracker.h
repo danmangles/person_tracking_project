@@ -68,21 +68,24 @@ using namespace std;
 #ifndef mo_tracker_H
 #define mo_tracker_H
 
-struct kf_param_struct {double dt; MatrixXd delF; MatrixXd delH; MatrixXd delGQdelGT; MatrixXd R; MatrixXd P0;}; // define this type of structure
+// holds params for the kalman filter
+struct kf_param_struct {double dt; MatrixXd delF; MatrixXd delH; MatrixXd delGQdelGT; MatrixXd R; MatrixXd P0;};
+// holds params for the pointcloud
+struct pcl_param_struct {bool apply_passthrough_filter;bool apply_planar_outlier_removal; int max_cluster_size; int min_cluster_size; double cluster_tolerance; double seg_dist_threshold;};
+// holds params for the tracker
+struct tracker_param_struct {double gating_dist_constant; int max_consecutive_misses; int min_initialisation_length; bool only_init_rgb_tracklet;};
+//
+struct io_param_struct {bool publishing; bool write_to_csv; string filename;};
 
 class MOTracker {
 
 public:
     MOTracker(ros::NodeHandle nh,
-            int max_cluster_size,
-            int min_cluster_size,
-            double cluster_tolerance,
-            double seg_dist_threshold,
+            pcl_param_struct pcl_params,
             kf_param_struct kf_params,
-            bool verbose,
-            bool publishing,
-            bool write_to_csv,
-              int file_index);
+            tracker_param_struct tracker_params,
+            io_param_struct io_params,
+            bool verbose);
 //            ofstream &results_file  ); // initiate a constructor with a nodehandle and parameters for the kalman filter
 
     void setupKalmanFilter(VectorXd x0,
