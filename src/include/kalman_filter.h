@@ -63,11 +63,8 @@ private:
     // System dimensions
     int m, n;
 
-    // Initial and current time
-    double t_, t0;
-
-    // Discrete time step
-    double dt_;
+    // current time and discrete time step
+    double t_,dt_;
 
     // Is the filter initialized?
     bool initialized;

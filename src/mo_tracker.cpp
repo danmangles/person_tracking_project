@@ -80,7 +80,7 @@ void MOTracker::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr &cloud
 
     /////// Publish the cluster centroids
     if (centroid_coord_array.size() != 0) // if there are any clusters visible
-        processCentroidCoords(centroid_coord_array, cloud_msg->header.stamp.toSec(), false); // call the process centroids method with our vector of centroids
+        manageTracklets(centroid_coord_array, cloud_msg->header.stamp.toSec(), false); // call the process centroids method with our vector of centroids
     else
         cout << "No valid clusters visible after getCentroidsOfClusters()"<<endl;
 }
@@ -106,8 +106,8 @@ void MOTracker::poseArrayCallback(const geometry_msgs::PoseArray &pose_array)
 
             realsense_coords.push_back(pose_coords);
         }
-        // call processCentroidCoords with the time in seconds as a double
-        processCentroidCoords(realsense_coords, pose_array.header.stamp.toSec(), true);
+        // call manageTracklets with the time in seconds as a double
+        manageTracklets(realsense_coords, pose_array.header.stamp.toSec(), true);
         cout << "centroid coords updated with a new pose"<<endl;
 
     } catch(const std::exception&)
@@ -524,15 +524,16 @@ void MOTracker::updateTracklets(vector<VectorXd> &unpaired_detections, double ms
                 cout << "Updating Tracklet "<<this_tracklet->getID()<< " with pairing at index "<<best_pairing_index<<endl;
                 cout<<"\n!!!!!!!!!!!!!!!!!!!!!time is now "<<msg_time<<endl;
             }
-            this_tracklet->updateTracklet(pairing_vector_[best_pairing_index], msg_time); // update the tracklet with this pairing
+            // make a pointer to the best pairing
+            Pairing* best_pairing_ptr = &pairing_vector_[best_pairing_index];
+            this_tracklet->updateTracklet(*best_pairing_ptr, msg_time); // update the tracklet with this pairing
             ///// now publish the output of this tracklet with a marker
 
             stringstream tracklet_name;
             tracklet_name << "tracklet_"<<this_tracklet->getID(); // identify this marker with the tracklet id
-            publishTransform(pairing_vector_[best_pairing_index].getDetectionCoord(),tracklet_name.str()); // publish a transform even if we are not initialised
-
-            cout <<" publishing a transform at \n"<<pairing_vector_[best_pairing_index].getDetectionCoord()<<" with name "<<tracklet_name.str()<<endl;
-
+            publishTransform(best_pairing_ptr->getDetectionCoord(),tracklet_name.str()); // publish a transform even if we are not initialised
+            if (verbose)
+                cout <<" publishing a transform at \n"<<best_pairing_ptr->getDetectionCoord()<<" with name "<<tracklet_name.str()<<endl;
 
             pairing_vector_.erase(pairing_vector_.begin() + best_pairing_index); // delete this pairing from pairing_vector_
 
@@ -548,23 +549,18 @@ void MOTracker::updateTracklets(vector<VectorXd> &unpaired_detections, double ms
 
                 /// create a title for this marker
                 publishMarker(xhat,tracklet_name.str(), P(0,0),P(1,1),P(2,2)); // publish the marker
-                /////////////// write to excel file
 
-                //              // write
+                /////////////// write to csv
                 if (write_to_csv_)
                 {
-
-                    VectorXd det_coord = pairing_vector_[best_pairing_index].getDetectionCoord();
-                    if (verbose) {
+                    VectorXd det_coord = best_pairing_ptr->getDetectionCoord();
+                    if (verbose)
                        cout <<det_coord[0]<<","<<det_coord[1]<<","<<det_coord[2]<<endl;
-                    }
+
                     // order : detection XYZ, kf XYZ, kf covariance XYZ
                     results_file_ <<msg_time<<","<<det_coord[0]<<","<<det_coord[1]<<","<<det_coord[2]<<","<<this_tracklet->getID()<<","<< xhat[0]<<","<<xhat[1]<<","<<xhat[2]<<","<<P(0,0)<<","<<P(1,1)<<","<<P(2,2)<<","<<isRGBD<<"\n";
                 }
-
-                /////////////////
             }
-
         }
         else
         {
@@ -685,11 +681,12 @@ void MOTracker::initiateLongTracklets(double msg_time, bool verbose)
         }
     }
 }
-void MOTracker::processCentroidCoords(vector<VectorXd> unpaired_detections, double msg_time, bool isRGBD) {
+/////////////////////////////////// MANAGE THE TRACKLETS ///////////////////////////////////
+void MOTracker::manageTracklets(vector<VectorXd> unpaired_detections, double msg_time, bool isRGBD) {
     // Loops through a vector of centroids and updates the kalman filter with the one closest to previous estimate.
     // Publishes transforms for all estimates. Uses time of message msg_time
     if (verbose_) {
-        cout << "***********************************************\nprocessCentroidCoords()"<<endl;
+        cout << "***********************************************\nmanageTracklets()"<<endl;
         cout << "There are "<<tracklet_vector_.size()<<" live tracklets."<<endl;
     }
     // if time not started yet, start the time
@@ -706,7 +703,8 @@ void MOTracker::processCentroidCoords(vector<VectorXd> unpaired_detections, doub
         ss << "detection_"<<i;
         publishTransform(unpaired_detections[i], ss.str());
     }
-    updatePairings(unpaired_detections,msg_time, isRGBD, false); // get a bunch of pairings
+    ////// PERFORM THE TRACKLET ALGORITHM
+    updatePairings(unpaired_detections,msg_time, isRGBD, false); // get a bunch of pairings between tracklets and detections
     updateTracklets(unpaired_detections, msg_time, isRGBD, true); // update each tracklet with the best pairing for that tracklet, increment the misses for tracklets without pairings
     createNewTracklets(unpaired_detections, false); // generate new tracklets from any unassociated pairings
     deleteDeadTracklets(false); // delete any tracklets that have been missed too many times

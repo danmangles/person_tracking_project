@@ -110,7 +110,7 @@ private:
     ////// Centroid Pointcloud Methods
     void getCentroidsOfClusters (vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> cloud_cluster_vector, vector<Eigen::VectorXd> &centroid_coord_array);
     void getClusterCentroid(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cluster_ptr, VectorXd &coord_centroid); //returns a vector of centroid coordinates
-    void processCentroidCoords(vector<VectorXd> unpaired_detections, double msg_time, bool isRGBD);
+    void manageTracklets(vector<VectorXd> unpaired_detections, double msg_time, bool isRGBD);
 
 
     ////// Realsense Detector Methods

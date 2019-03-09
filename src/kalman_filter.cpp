@@ -44,7 +44,6 @@ void KalmanFilter::init(double t0, const VectorXd& x0) {
         cout << "initialising Kalman Filter" <<endl;
     x_hat = x0;
     //    P = P0;
-    this->t0 = t0;
     t_ = t0;
     initialized = true;
     if (verbose_) {
