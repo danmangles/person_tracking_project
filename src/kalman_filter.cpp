@@ -43,7 +43,6 @@ void KalmanFilter::init(double t0, const VectorXd& x0) {
     if (verbose_)
         cout << "initialising Kalman Filter" <<endl;
     x_hat = x0;
-    //    P = P0;
     t_ = t0;
     initialized = true;
     if (verbose_) {
@@ -56,6 +55,7 @@ void KalmanFilter::predict(double time, bool verbose){
     //check if we are initialised
     if (!initialized)
         throw runtime_error("Filter is not initialised... :3");
+
     double walking_speed = 2; // in ms-1
 
     /////// Prediction
@@ -94,7 +94,6 @@ void KalmanFilter::predict(double time, bool verbose){
 }
 
 void KalmanFilter::update(const VectorXd& z) {
-
     //check if we are initialised
     if (!initialized)
         throw runtime_error("Filter is not initialised... :3");
@@ -115,7 +114,6 @@ void KalmanFilter::update(const VectorXd& z) {
 }
 MatrixXd KalmanFilter::getP()
 {
-
     if (!initialized)
         throw std::runtime_error("Filter is not initialised... :3");
     return P;
