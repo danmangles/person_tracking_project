@@ -74,24 +74,6 @@ group "3.navigation" {
     }
 }
 
-group "3.planning" {
-    cmd "multi-gait-plan" {
-        exec = "rosrun multi_gait_planner multi_gait_planner.py";
-        host = "localhost";
-    }
-    cmd "multi-gait-execute" {
-        exec = "rosrun multi_gait_executor multi_gait_executor.py";
-        host = "localhost";
-    }
-}
-
-group "4.velodyne_collector" {
-    cmd "velodyne_collector" {
-        exec = "roslaunch position_controller velodyne_collector.launch";
-        host = "localhost";
-    }
-}
-
 group "5.april_tags" {
     cmd "person_follower" {
         exec = "roslaunch position_controller apriltag_follower_anymal_sim.launch";
@@ -131,18 +113,7 @@ script "0.start_sim_tracker_sim" {
     start group "0.core";
     wait ms 2000;
     start group "2.vis";
-    wait ms 2000;
+    wait ms 4000;
     start cmd "icp_tools_from_rosbag";
     start group "x.misc";
 }
-
-
-
-script "start_sim_april_box" {
-    start group "0.core";
-    wait ms 1000;
-    start cmd "sim_sensors_april_box";
-    start group "2.vis";
-    start group "5.april_tags";
-}
-
