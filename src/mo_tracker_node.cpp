@@ -24,8 +24,8 @@ pcl_param_struct getPclParams() {
                 .min_cluster_size = 40,
                 .cluster_tolerance = .4, // too small, we split one object into many, too big, we merge objects into one. In metres
                 .seg_dist_threshold = .03, // how close a point must be to the model in order to be considered an inlier in metres
-                .box_x = 13.0,
-                .box_y = 10.0
+                .box_x = 15.0,
+                .box_y = 8.0
     };
 }
 
@@ -35,9 +35,9 @@ tracker_param_struct getTrackerParams() {
     return {.gating_dist_constant = 0.5, //this is used in max_gating_dist calcs e.g.
                           // max = sqrt(tracker_params.gating_dist_constant*(P(0,0) + P(1,1))/2);
             .base_gating_dist = 1, // gating distance for uninitiated tracklets in m
-            .max_consecutive_misses = 3,// if we've missed this tracklet too many times in a row, delete it
+            .max_consecutive_misses = 6,// if we've missed this tracklet too many times in a row, delete it
             .min_initialisation_length = 4,// min number of detections needed to start the kalman filter
-            .only_init_rgb_tracklet = true};
+            .only_init_rgb_tracklet = false};
 }
 
 kf_param_struct getKfParams() {
@@ -93,11 +93,14 @@ io_param_struct getIOParams(){
 //    cout << 1 + ltm->tm_min << ":";
 //    cout << 1 + ltm->tm_sec << endl;
 
-    stringstream filename;
-    filename << "results_CSVs/res_0"<<1+ ltm->tm_mon<<  ltm->tm_mday<<ltm->tm_hour<<1 + ltm->tm_min<<".csv";
+    stringstream res_filename, gnd_filename;
+    res_filename << "results_CSVs/res_0"<<1+ ltm->tm_mon<<  ltm->tm_mday<<"_"<<ltm->tm_hour<<1 + ltm->tm_min<< ".csv";
+    gnd_filename << "results_CSVs/gnd_0"<<1+ ltm->tm_mon<<  ltm->tm_mday<<"_"<<ltm->tm_hour<<1 + ltm->tm_min<< ".csv";
+
     return {.publishing = true,
-                .write_to_csv = true,
-                .filename = filename.str()};
+                .res_filename = res_filename.str(),
+                .gnd_filename = gnd_filename.str()
+    };
 }
 
 int main (int argc, char** argv) // runs the tracker node

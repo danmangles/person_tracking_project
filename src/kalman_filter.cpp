@@ -55,7 +55,7 @@ void KalmanFilter::predict(double time, bool verbose){
     if (!initialized)
         throw runtime_error("Filter is not initialised... :3");
 
-    double walking_speed = 2; // in ms-1
+    double walking_speed = 1; // in ms-1
 
     /////// Prediction
     cout <<"dt may not be initialsed and may throw an error"<<endl;

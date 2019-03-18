@@ -131,7 +131,7 @@ void MOTracker::applyPassthroughFilter(const sensor_msgs::PointCloud2ConstPtr in
     pcl::PCLPointCloud2* cloud = new pcl::PCLPointCloud2;
     pcl_conversions::toPCL(*input_cloud, *cloud); // convert cloud_msg into a pcl edition
 
-//    double radius = pcl_params.; // maximum distance from base we are interested in
+    //    double radius = pcl_params.; // maximum distance from base we are interested in
     double max_height = 2.0; // max height of z filter in metres
     double min_height = -0.3; // min height of z filter in metres
     //    double min_height = -2;
@@ -554,21 +554,22 @@ void MOTracker::updateTracklets(vector<VectorXd> &unpaired_detections, double ms
                 publishMarker(xhat,tracklet_name.str(), P(0,0),P(1,1),P(2,2)); // publish the marker
 
                 /////////////// write to csv
-                if (io_params.write_to_csv)
-                {
-                    VectorXd det_coord = best_pairing_ptr->getDetectionCoord();
-                    if (verbose)
-                        cout <<det_coord[0]<<","<<det_coord[1]<<","<<det_coord[2]<<endl;
 
-                    // order : detection XYZ, kf XYZ, kf covariance XYZ
-                    results_file_ <<msg_time<<","<<det_coord[0]<<","<<det_coord[1]<<","<<det_coord[2]<<","<<this_tracklet->getID()<<","<< xhat[0]<<","<<xhat[1]<<","<<xhat[2]<<","<<P(0,0)<<","<<P(1,1)<<","<<P(2,2)<<","<<isRGBD<<"\n";
-                }
+                if (verbose)
+                    cout << "writing tracklet data and detections to file"<<endl;
+                VectorXd det_coord = best_pairing_ptr->getDetectionCoord();
+                if (verbose)
+                    cout <<det_coord[0]<<","<<det_coord[1]<<","<<det_coord[2]<<endl;
+
+                // order : detection XYZ, kf XYZ, kf covariance XYZ. Skip 4 cells so have 4+ 1 commas
+                results_file_ <<msg_time<<",,,,,"<<this_tracklet->getID()<<","<< xhat[0]<<","<<xhat[1]<<","<<xhat[2]<<","<<P(0,0)<<","<<P(1,1)<<","<<P(2,2)<<"\n";
             }
         }
         else
         {
             if (verbose)
                 cout << "No pairings match this tracker"<<endl;
+
         }
     }
     ///// put any remaining pairings back in the unpaired detections
@@ -577,7 +578,6 @@ void MOTracker::updateTracklets(vector<VectorXd> &unpaired_detections, double ms
     for (int i = 0; i < pairing_vector_.size(); i++)
         unpaired_detections.push_back(pairing_vector_[i].getDetectionCoord()); // move the detection coordinate back onto detections
     pairing_vector_.clear(); // remove all elements from pairing_vector_, since we've just copied them across
-
 }
 
 
@@ -699,10 +699,16 @@ void MOTracker::manageTracklets(vector<VectorXd> unpaired_detections, double msg
     //// PUBLISH A TRANSFORM FOR EACH DETECTION
     ///
     for (int i = 0; i < unpaired_detections.size(); i++){
+
         stringstream ss;
-        ss << "detection_"<<i;
+        ss << "detection";
         publishTransform(unpaired_detections[i], ss.str());
+
+        // if in GND truth mode, write the detections straight to file
+        cout << "writing raw detections to GND truth file"<<endl;
+        gnd_file_<<msg_time<<","<<isRGBD<<","<<unpaired_detections[i][0]<<","<<unpaired_detections[i][1]<<","<<unpaired_detections[i][2]<<"\n";
     }
+
     ////// PERFORM THE TRACKLET ALGORITHM
     updatePairings(unpaired_detections,msg_time, isRGBD, false); // get a bunch of pairings between tracklets and detections
     updateTracklets(unpaired_detections, msg_time, isRGBD, true); // update each tracklet with the best pairing for that tracklet, increment the misses for tracklets without pairings
@@ -796,27 +802,15 @@ void MOTracker::publishMarker(VectorXd x_hat, string marker_name,double scale_x,
 
 
 }
-void MOTracker::setupResultsCSV(){
-    cout<<"opening results file"<<io_params.filename<<endl;
-    results_file_.open(io_params.filename);
-    results_file_ << "Time,Detection_X,Detection_Y,Detection_Z,Tracklet_ID,KF_X,KF_Y,KF_Z,KF_cov_X,KF_cov_Y,KF_cov_Z,isRGBD\n";
-}
+void MOTracker::setupResultsCSV() {
+    // results file
+    cout<<"opening results file "<<io_params.res_filename<<endl;
+    results_file_.open(io_params.res_filename);
+    results_file_ << "Time,isRGBD,Detection_X,Detection_Y,Detection_Z,Tracklet_ID,KF_X,KF_Y,KF_Z,KF_cov_X,KF_cov_Y,KF_cov_Z\n";
 
-////// Kalman Filter Methods
-/*
-KalmanFilter MOTracker::getNewKalmanFilter() { // THIS MAY GIVE US AN ERROR
-    // returns a new Kalman Filter initialised at x0
-    //KalmanFilter kf(kf_params_.dt, kf_params_.A, kf_params_.C, kf_params_.Q, kf_params_.R, kf_params_.P, false);
-    //kf.init(0,x0); // initialise the kalman filter ////POSSIBLY SHOULD USE ACTUAL TIME TO INITIALISE- NOT SURE IT MAKES A DIFFERENCE
-    return KalmanFilter(kf_params_.dt, kf_params_.A, kf_params_.C, kf_params_.Q, kf_params_.R, kf_params_.P, false);
-}
+    // gnd file stores detections only at a higher frequency
+        cout<<"opening gnd file "<<io_params.gnd_filename<<endl;
+        gnd_file_.open(io_params.gnd_filename);
+        gnd_file_ << "Time,isRGBD,Detection_X,Detection_Y,Detection_Z\n";
 
-void MOTracker::updateKf(VectorXd y) { //update our state estimate with measurement y
-    //    cout<<"updateKf()"<<endl;
-    kf_.update(y); // call the update method of our (private) kalman filter
 }
-
-VectorXd MOTracker::getState() { // talks to our kalman filter
-    return kf_.getState();
-}
-*/

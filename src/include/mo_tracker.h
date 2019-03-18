@@ -75,7 +75,7 @@ struct pcl_param_struct {bool apply_passthrough_filter;bool apply_planar_outlier
 // holds params for the tracker
 struct tracker_param_struct {double gating_dist_constant; double base_gating_dist; int max_consecutive_misses; int min_initialisation_length; bool only_init_rgb_tracklet;};
 // holds io params
-struct io_param_struct {bool publishing; bool write_to_csv; string filename;};
+struct io_param_struct {bool publishing; string res_filename; string gnd_fiename;};
 
 class MOTracker {
 
@@ -136,12 +136,14 @@ private:
     void publishMarker(VectorXd x_hat,string marker_name, double scale_x,double scale_y,double scale_z);
     void publishTransform(VectorXd coordinates, string target_frame_id); // publishes a transform at the 3D coordinate Vector coordinates
     void setupResultsCSV(); // sets up the results spreasheet
+
     ////// Kalman Filter Methods
     //vector <KalmanFilter> kf_vector_; // our private copy of a kalman filter
     vector <KalmanFilter> kf_vector_;
     VectorXd getState(); // returns the current position estimate
     //KalmanFilter getNewKalmanFilter(); // returns a new Kalman Filter initialised at x0
     int getIndexOfClosestKf(VectorXd centroid_coord); // returns the index of the coordinate
+
 
     ////// I/O Variables
     ros::Subscriber point_cloud_sub_; // private copy of subscriber for velodyne
@@ -160,6 +162,7 @@ private:
     boost::shared_ptr<tf::TransformListener> odom_realsense_ls_; // setup the transform listener so we can transform realsense coords into odom frame
     bool verbose_; // do we print? do we publish pointclouds>? do we write results to a csv?
     ofstream results_file_; // stores output results in
+    ofstream gnd_file_; // stores output gnd in
 
     ////// Tracklet variables
     vector <Tracklet> tracklet_vector_;
