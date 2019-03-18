@@ -4,9 +4,13 @@ python/results
 python/.ipynb_checkpoints
 
 # Files
-matlab/*.png
+*.png
 *.user
+*.eps
 
 build/*
 src/.metadata/*
 results_CSVs/*
+
+# .idea
+.idea/*
