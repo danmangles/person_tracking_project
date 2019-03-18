@@ -23,7 +23,9 @@ pcl_param_struct getPclParams() {
                 .max_cluster_size = 150,
                 .min_cluster_size = 40,
                 .cluster_tolerance = .4, // too small, we split one object into many, too big, we merge objects into one. In metres
-                .seg_dist_threshold = .03 // how close a point must be to the model in order to be considered an inlier in metres
+                .seg_dist_threshold = .03, // how close a point must be to the model in order to be considered an inlier in metres
+                .box_x = 13.0,
+                .box_y = 10.0
     };
 }
 
@@ -92,7 +94,7 @@ io_param_struct getIOParams(){
 //    cout << 1 + ltm->tm_sec << endl;
 
     stringstream filename;
-    filename << "results_CSVs/res_0"<<1+ ltm->tm_mon<<"0"<<  ltm->tm_mday<<ltm->tm_hour<<".csv";
+    filename << "results_CSVs/res_0"<<1+ ltm->tm_mon<<  ltm->tm_mday<<ltm->tm_hour<<1 + ltm->tm_min<<".csv";
     return {.publishing = true,
                 .write_to_csv = true,
                 .filename = filename.str()};
