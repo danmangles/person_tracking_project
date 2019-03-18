@@ -131,14 +131,14 @@ void MOTracker::applyPassthroughFilter(const sensor_msgs::PointCloud2ConstPtr in
     pcl::PCLPointCloud2* cloud = new pcl::PCLPointCloud2;
     pcl_conversions::toPCL(*input_cloud, *cloud); // convert cloud_msg into a pcl edition
 
-    double radius = 8.0; // maximum distance from base we are interested in
+//    double radius = pcl_params.; // maximum distance from base we are interested in
     double max_height = 2.0; // max height of z filter in metres
     double min_height = -0.3; // min height of z filter in metres
     //    double min_height = -2;
     // setup the x filter
     pcl::PassThrough<pcl::PCLPointCloud2> pass;
     pass.setFilterFieldName ("x");
-    pass.setFilterLimits (-radius, radius); // limits
+    pass.setFilterLimits (-pcl_params.box_x, pcl_params.box_x); // limits
     pcl::PCLPointCloud2ConstPtr cloudPtr_x(cloud); // create a pointer called cloudPtr to use for our filter
     pass.setInputCloud (cloudPtr_x); //set the input cloud for our filter
     pcl::PCLPointCloud2* output_cloud_x = new pcl::PCLPointCloud2; // initiate our PC2 to send
@@ -147,7 +147,7 @@ void MOTracker::applyPassthroughFilter(const sensor_msgs::PointCloud2ConstPtr in
 
     // setup the  y filter
     pass.setFilterFieldName ("y");
-    pass.setFilterLimits (-radius, radius); // limits
+    pass.setFilterLimits (-pcl_params.box_y, pcl_params.box_y); // limits
     pcl::PCLPointCloud2ConstPtr cloudPtr_y(output_cloud_x); // create a pointer called cloudPtr to use for our filter
     pass.setInputCloud (cloudPtr_y); //set the input cloud for our filter
     pcl::PCLPointCloud2* output_cloud_y = new pcl::PCLPointCloud2; // initiate our PC2 to send
