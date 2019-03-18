@@ -3,16 +3,19 @@ filepath = '/home/ori/catkin_ws/src/multi_sensor_tracker/results_CSVs';
 addpath(filepath)
 
 %% results file
-res_filename = "res_0318_151.csv";
+res_filename = "res_0318_1622.csv";
 res_table = readtable(res_filename);
 fprintf('res_table has size (%d,%d)',size(res_table,1),size(res_table,2))
 res_table(1:3,:) %print the first few rows
 
 %% ground truth file
-gnd_filename = "gnd_0318_151.csv";
-gnd_table = readtable(gnd_filename);
-fprintf('gnd_table has size (%d,%d)',size(gnd_table,1),size(gnd_table,2))
-gnd_table(1:3,:) %print the first few rows
+% gnd_filename = "gnd_0318_1622.csv";
+% gnd_table = readtable(gnd_filename);
+% fprintf('gnd_table has size (%d,%d)',size(gnd_table,1),size(gnd_table,2))
+% gnd_table(1:3,:) %print the first few rows
+
+%% plot the KF_X etc and Detection_X
+doEDAPlots(res_table)
 
 %% Split into tracklet tables
 max_tracklet_id = max(res_table.Tracklet_ID);
@@ -36,6 +39,7 @@ plot(gnd_table.Time,gnd_table.Detection_X,'k.','LineWidth',1)
 
 subplot(2,1,2)
 plot(gnd_table.Time,gnd_table.Detection_Y,'k.','LineWidth',1)
+
 
 %%
 colors_o = {'ro','go','bo','co','mo','yo','ro','go','bo','co','mo','yo','ro','go','bo','co','mo','yo'};
@@ -78,5 +82,10 @@ ylabel('Detection and Tracklet Y (m)')
 saveas(gcf,'detections_and_tracklets_0.eps')
 saveas(gcf,'detections_and_tracklets_0.png')
 
-%% get current score
+%% create figure for gnd truth
+figure
+plot3(gnd_table.Time,gnd_table.Detection_X,gnd_table.Detection_Y,'k.','LineWidth',1)
+xlabel('Time (s)')
+ylabel('Detection X (m)')
+zlabel('Detection Y (m)')
 
