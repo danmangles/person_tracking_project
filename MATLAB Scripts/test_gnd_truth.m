@@ -32,7 +32,6 @@ test_table(1:20,:) %print the first few rows
 
 %%
 % for each time window
-dt = 0.6; % window size in seconds
 for i = 1:size(true_tracklets,2)
     true_tracklet = true_tracklets{i};
     %     true_tracklet. = [true_tracklet.Properties.VariableNames, 'temp_ID']
@@ -50,7 +49,8 @@ FP = 0
 FN = 0
 IDSW = 0
 GT = 0
-DISTANCE_THRESHOLD = 0.8 % m 
+DISTANCE_THRESHOLD = 0.4 % m 
+dt = 0.3; % window size in seconds
 mota = []
 % for t = 0:dt:max(smaller_table.Time) % loop thru timestamps in table
 times = min(test_table.Time):dt:max(test_table.Time)
@@ -59,11 +59,12 @@ mota = zeros(1,size(times,2))
 figure
 subplot(2,1,1)
 xlabel('Time (s)')
-ylabel('MOTA')
-axis([min(test_table.Time) max(test_table.Time) 0 1])
+ylabel('MOTA (%)')
+axis([min(test_table.Time) max(test_table.Time) 0 100])
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 subplot(2,1,2)
 hold on
+
 xlabel('Time (s)')
 ylabel('X')
 zlabel('Y')
@@ -77,6 +78,8 @@ end
 hold on
 
 plot3(test_table.Time, test_table.KF_X, test_table.KF_Y,'ro') 
+
+axis([min(test_table.Time) max(test_table.Time) 0 14 0 14])
 hold on
 for k = 1:size(times,2) % loop thru timestamps in table
     t = times(k)
@@ -151,7 +154,7 @@ for k = 1:size(times,2) % loop thru timestamps in table
         end
     end
         
-    mota(k) =  1 - (FN + FP + IDSW)/GT
+    mota(k) =  100.*(1 - (FN + FP + IDSW)/GT)
     %2. Evaluate FNs and FPs
     %     for i =
     %for each unassociated true tracklet
@@ -164,7 +167,7 @@ for k = 1:size(times,2) % loop thru timestamps in table
     hold on
     plot(t,mota(k),'rx')
     hold on
-    pause(0.1)
+    pause(0.03)
 end
 %% if time, modify the IDSW algo to adjust test point ID not GND truth
 FN
