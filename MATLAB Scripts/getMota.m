@@ -1,4 +1,4 @@
-function mota = getMota(res_table)
+function mota = getMota(res_table, gnd_table)
 % INPUTS res_table: a table of all groundtruth points with NaNs where there
 % are no detections
 % calculates FP, FN, IDSW, GT

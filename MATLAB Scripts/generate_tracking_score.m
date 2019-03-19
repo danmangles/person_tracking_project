@@ -3,19 +3,19 @@ filepath = '/home/ori/catkin_ws/src/multi_sensor_tracker/results_CSVs';
 addpath(filepath)
 
 %% results file
-res_filename = "res_0318_1622.csv";
+res_filename = "res_0319_959.csv";
 res_table = readtable(res_filename);
 fprintf('res_table has size (%d,%d)',size(res_table,1),size(res_table,2))
 res_table(1:3,:) %print the first few rows
 
 %% ground truth file
-% gnd_filename = "gnd_0318_1622.csv";
-% gnd_table = readtable(gnd_filename);
-% fprintf('gnd_table has size (%d,%d)',size(gnd_table,1),size(gnd_table,2))
-% gnd_table(1:3,:) %print the first few rows
+gnd_filename = "gnd_0319_959.csv";
+gnd_table = readtable(gnd_filename);
+fprintf('gnd_table has size (%d,%d)',size(gnd_table,1),size(gnd_table,2))
+gnd_table(1:3,:) %print the first few rows
 
 %% plot the KF_X etc and Detection_X
-doEDAPlots(res_table)
+doEDAPlots(res_table, gnd_table)
 
 %% Split into tracklet tables
 max_tracklet_id = max(res_table.Tracklet_ID);
@@ -88,4 +88,17 @@ plot3(gnd_table.Time,gnd_table.Detection_X,gnd_table.Detection_Y,'k.','LineWidth
 xlabel('Time (s)')
 ylabel('Detection X (m)')
 zlabel('Detection Y (m)')
+%% create figure for gnd truth
+figure
+plot3(tracklet_A(:,1),tracklet_A(:,2),tracklet_A(:,3),'r.','LineWidth',1)
+xlabel('Time (s)')
+ylabel('Detection X (m)')
+zlabel('Detection Y (m)')
+%%
+table_A = table(tracklet_A(:,1),tracklet_A(:,2),tracklet_A(:,3));
+table_A.Properties.VariableNames = {'Time','X','Y'};
+table_A
+%%
 
+
+generateMatFileFromTrackletArrays(tracklet_A,tracklet_B,tracklet_C)
