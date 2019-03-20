@@ -14,7 +14,7 @@ tracklet_temp_IDs = ones(1,size(gnd_tracklet_array,2))*-1; % set all to -1 initi
 
 DISTANCE_THRESHOLD = 1; % m
 %% times
-dt = 0.2; % window size in seconds
+dt = 0.4; % window size in seconds
 START_TIME = 7; %s start this one late because the cfit objects are poorly behaved before this time
 time_array = START_TIME:dt:max(test_table.Time); % set times based on start and end times of test_table
 
@@ -29,7 +29,7 @@ IDSW = 0;
 GT = 0;
 MOTA = zeros(1,size(time_array,2)); % set MOTA as an array of zeros
 
-global n_gnd_truth_objects;
+global n_gnd_truth_objects; global gnd_fit_array;
 n_gnd_truth_objects = 3; % hardcoded: there are 3 people
 
 %% INITIALISE THE PLOTS
@@ -37,7 +37,7 @@ figure
 % first pane has the MOTA score
 subplot(2,1,1)
 hold on
-title('Plot of MOTA against time. Symbols at bottom indicate FN (magenta triangle), FN (cyan cross), IDSW (blue cross)')
+title('Plot of MOTA against time. Symbols at bottom indicate FP (magenta triangle), FN (cyan cross), IDSW (blue cross)')
 xlabel('Time (s)')
 ylabel('MOTA (%)')
 % legend('2','3','4')
@@ -69,18 +69,18 @@ for k = 1:size(time_array,2) % loop thru timestamps in table
     
     %% index of true tracklet for each test point by evaluating the distance
     % matrix at time t + dt/2 (halway thru window
-    dist_matrix = getDistanceMatrix(test_window,gnd_fit_array, t+dt/2);
+    dist_matrix = getDistanceMatrix(test_window,gnd_fit_array, t+dt/2)
     [M, associated_tracklet_index] = min(dist_matrix,[],2);
-%     M
-%     associated_tracklet_index
+    %     M
+    %     associated_tracklet_index
     %     fprintf('we are associating the test points with the following indice:\n')
     matched_tracklets = []; % this array carries the IDs of all tracklets that have been matched, enabling us to calculate false negatives.
     false_positive_registered = boolean([0 0 0]);  % this array tells us if we've already registered an FP for this tracklet
     %%%%%%%%%%%%%%%%%% for each test point, check IDs
     for j = 1:size(test_window) % loop thru each point in the window
         if M(j) > DISTANCE_THRESHOLD & ~false_positive_registered(associated_tracklet_index(j)) % register a false positive if min distance is too great
-            registerFP(t,test_window, j, M)
-            false_positive_registered(associated_tracklet_index(j)) = 1; % prevent us registering another false positive from the same test point. 
+            registerFP(t,test_window, j, M, associated_tracklet_index)
+            false_positive_registered(associated_tracklet_index(j)) = 1; % prevent us registering another false positive from the same test point.
         else % e.g. we have a detection that's within range of this tracklet
             
             % add the ID of this tracklet to the list of matched tracklets so we know that it's been detected
@@ -96,13 +96,13 @@ for k = 1:size(time_array,2) % loop thru timestamps in table
             if true_id_of_this_tracklet == -1
                 % set the initial temp_ID of each tracklet to the ID of this test point
                 true_id_of_this_tracklet = test_window.Tracklet_ID(j);
-                fprintf('matching gnd_tracklet %d to test_tracklet %d\n',associated_tracklet_index(j),test_window.Tracklet_ID(j))
+                fprintf('matching gnd_tracklet_%d to test_tracklet_%d\n',associated_tracklet_index(j),j)
                 
             else
                 % if the ass tracklet has got a different ID to the test tracklet, switch it
                 if true_id_of_this_tracklet  ~= test_window.Tracklet_ID(j)
                     % register an IDSW, and plot it
-                    true_id_of_this_tracklet = registerIDSW(t,test_window, j)
+                    true_id_of_this_tracklet = registerIDSW(t,test_window, associated_tracklet_index,true_id_of_this_tracklet, j)
                     
                 else
                     %else we have a correct association
@@ -116,7 +116,7 @@ for k = 1:size(time_array,2) % loop thru timestamps in table
     
     for i = 1:size(gnd_tracklet_array,2) % loop through thru associated tracklet indices. If there are any unmatched tracklets, increment FN
         if ~ismember(i, matched_tracklets)
-            registerFN(t,test_window,j)
+            registerFN(t,i)
         end
     end
     
@@ -129,8 +129,8 @@ for k = 1:size(time_array,2) % loop thru timestamps in table
     subplot(2,1,1)
     plot(t,MOTA(k),'rx')
     hold on
-        pause(0.001)
-%     pause
+    pause(0.001)
+    %         pause
     
 end
 
@@ -167,13 +167,14 @@ end
 
 end
 
-function true_id_of_this_tracklet = registerIDSW(t,test_window, j)
+function true_id_of_this_tracklet = registerIDSW(t,test_window, associated_tracklet_index, true_id_of_this_tracklet, j)
 % VOID: increments IDSW and plots a point on the X 3d plot, using j the
 % index of this test point
 global IDSW
 IDSW = IDSW + 1; % increment IDSW
 
 % reset the ID of this tracklet
+fprintf('gnd_tracklet_%d ID was %d but test_tracklet_%d has ID %d. Registering IDSW.\n',associated_tracklet_index(j),test_window.Tracklet_ID(j),j,true_id_of_this_tracklet)
 true_id_of_this_tracklet = test_window.Tracklet_ID(j);
 
 %plot
@@ -181,23 +182,24 @@ subplot(2,1,2)
 hold on
 plot3(t, test_window.KF_X(j), test_window.KF_Y(j),'bx','Markersize',30,'LineWidth',3)
 
-fprintf('switched tracklet to ID %d\n', true_id_of_this_tracklet)
 end
 
-function registerFN(t,test_window,j)
-global FN
+function registerFN(t,i)
+global FN; global gnd_fit_array
 FN = FN + 1;
+fprintf('couldnt find a match for gnd_tracklet_%d. registering FN\n',i)
+
 hold on
 subplot(2,1,2)
 hold on
-plot3(t, test_window.KF_X(j), test_window.KF_Y(j),'cx','Markersize',20,'LineWidth',1)
+% plot a cyan cross on the gnd truth where it was missed.
+plot3(t, feval(gnd_fit_array{2*i-1},t), feval(gnd_fit_array{2*i},t),'cx','Markersize',20,'LineWidth',1)
 
-fprintf('couldnt find a match for tracklet %d. registering FN\n',i,FN)
 end
 
-function registerFP(t, test_window, j, M)
+function registerFP(t, test_window, j, M, associated_tracklet_index)
 
-fprintf('distance is %.3fm, registering FP\n',M(j))
+fprintf('distance from test_tracklet_%d to gnd_tracklet_%d is %.3fm, registering FP\n',j,associated_tracklet_index(j), M(j))
 
 global FP
 FP = FP + 1;
