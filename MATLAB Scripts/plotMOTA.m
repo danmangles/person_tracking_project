@@ -42,7 +42,8 @@ hold on
 % second pane has the gnd truth estimates
 subplot(2,1,2)
 hold on
-% plots
+% plo
+save('dataset_2_gnd_truth_mod.mat','fit1x','fit1y','fit2x','fit2y','fit3x','fit3y','tracklet_0','tracklet_1','tracklet_2')ts
             hold on
 plot3(time_array,feval(t1x_t,time_array),feval(t1y_t,time_array),'r','LineWidth',2)
             hold on
@@ -79,9 +80,9 @@ for k = 1:size(time_array,2) % loop thru timestamps in table
             fprintf('distance is %.3fm, registering false positive\n',M(j))
             FP = FP + 1;
             hold on
-                    subplot(2,1,1)
-                    hold on
-            plot(t, 0,'ro','LineWidth',2)
+            subplot(2,1,2)
+            hold on
+            plot3(t, test_window.KF_X(j), test_window.KF_Y(j),'m^','Markersize',20,'LineWidth',1)
         else
             matched_tracklets = [matched_tracklets, associated_tracklet_index(j)];
             ass_tracklet = true_tracklet_cell{associated_tracklet_index(j)}; % get the tracklet at min distance to this test point
@@ -99,9 +100,10 @@ for k = 1:size(time_array,2) % loop thru timestamps in table
                 if true_id_of_this_tracklet  ~= test_window.Tracklet_ID(j)
                     % we have an IDSW
                     IDSW = IDSW + 1; % increment
-                    subplot(2,1,1)
+                    subplot(2,1,2)
                     hold on
-                    plot(t, 0,'bx','MarkerSize',20,'LineWidth',2)
+                    plot3(t, test_window.KF_X(j), test_window.KF_Y(j),'bx','Markersize',30,'LineWidth',3)
+            
                     true_id_of_this_tracklet = test_window.Tracklet_ID(j);
                     fprintf('switched tracklet %d to ID %d\n',associated_tracklet_index(j),test_window.Tracklet_ID(j))
                 else
@@ -118,9 +120,10 @@ for k = 1:size(time_array,2) % loop thru timestamps in table
         if ~ismember(i, matched_tracklets)
             FN = FN + 1;
             hold on
-                    subplot(2,1,1)
+                    subplot(2,1,2)
                     hold on
-            plot(t, 0,'co','LineWidth',2)
+            plot3(t, test_window.KF_X(j), test_window.KF_Y(j),'cx','Markersize',20,'LineWidth',1)
+            
             fprintf('couldnt find a match for tracklet %d. Incrementing FN to %d',i,FN)
         end
     end
