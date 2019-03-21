@@ -27,12 +27,15 @@ KalmanFilter::KalmanFilter(
 {
     cout << "KalmanFilter constructor called" << endl;
     I.setIdentity();
-    //print out the chosen matrices
-    cout << "delF: \n" << delF << endl;
-    cout << "delH: \n" << delH << endl;
-    cout << "delGQdelGT: \n" << delGQdelGT << endl;
-    cout << "R: \n" << R << endl;
-    cout << "P: \n" << P << endl;
+
+    if (verbose_) {
+        //print out the chosen matrices
+        cout << "delF: \n" << delF << endl;
+        cout << "delH: \n" << delH << endl;
+        cout << "delGQdelGT: \n" << delGQdelGT << endl;
+        cout << "R: \n" << R << endl;
+        cout << "P: \n" << P << endl;
+    }
 
 }
 
@@ -75,10 +78,10 @@ void KalmanFilter::predict(double time, bool verbose){
 
     if (verbose)
     {
-            cout <<"time is "<<t_<<endl;
-            cout <<"dt is "<<dt_<<endl;
-            cout <<"delF is \n"<<delF<<endl;
-            cout <<"delGQdelGT is \n"<<delGQdelGT<<endl;
+        cout <<"time is "<<t_<<endl;
+        cout <<"dt is "<<dt_<<endl;
+        cout <<"delF is \n"<<delF<<endl;
+        cout <<"delGQdelGT is \n"<<delGQdelGT<<endl;
     }
 
     x_hat = delF*x_hat; // predicted  state = plant_model(old_state) but using a linear plant model delF
