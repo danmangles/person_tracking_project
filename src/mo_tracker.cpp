@@ -206,10 +206,10 @@ void MOTracker::removeOutOfPlanePoints(pcl::PointCloud<pcl::PointXYZRGB>::Ptr &c
 
     // Loop through the cloud, performing the segmentation operation
     int i=0, nr_points = (int) cloud_ptr->points.size ();
-    double downsample_factor = 0.3;// downsampling to a factor of 0.3
+    double downsample_factor = 0.7;// downsampling to a factor of 0.3
     if(verbose)
         cout << "Segmenting planar components" << endl;
-    while (cloud_ptr->points.size () > downsample_factor * nr_points) // note
+    while (cloud_ptr->points.size () > pcl_params.downsample_factor * nr_points) // note
     {
         // Segment the largest planar component from the remaining cloud
         seg.setInputCloud (cloud_ptr);
@@ -229,7 +229,7 @@ void MOTracker::removeOutOfPlanePoints(pcl::PointCloud<pcl::PointXYZRGB>::Ptr &c
         // remove the outlying points from cloud_ptr
         extract.setNegative(true);
         extract.filter(*cloud_ptr);
-        if (verbose_)
+        if (verbose)
             cout << "cloud_ptr has "<<cloud_ptr->points.size ()<<" points left" << endl;
     }
     if (verbose)
@@ -454,13 +454,13 @@ void MOTracker::updatePairings(vector<VectorXd> &unpaired_detections, double msg
             cout << "has the tracklet been initialised? "<<this_tracklet->isInitialised()<<endl;
             if (this_tracklet->isInitialised()) {
                 // update the kalman filter variance so the covariance circle grows for missed
-                cout << "!!!!!!!Growing the covariance cylinder!!!!!!!"<<endl;
+//                cout << "!!!!!!!Growing the covariance cylinder!!!!!!!"<<endl;
                 KalmanFilter kf = this_tracklet->getKf(); // get the Kf from this tracklet vector
                 MatrixXd P = kf.getP(); //get covariance
                 VectorXd xhat = kf.getState();
-                if (verbose) {
-                    cout << "New measurement covariance is\n"<<P <<endl;
-                    cout << "new Kf state is\n"<<xhat <<endl; }
+//                if (verbose) {
+//                    cout << "New measurement covariance is\n"<<P <<endl;
+//                    cout << "new Kf state is\n"<<xhat <<endl; }
                 stringstream tracklet_name;
                 tracklet_name << "tracklet_"<<this_tracklet->getID(); // identify this marker with the tracklet id
                 /// create a title for this marker
@@ -555,9 +555,9 @@ void MOTracker::updateTracklets(vector<VectorXd> &unpaired_detections, double ms
                 KalmanFilter kf = this_tracklet->getKf(); // get the Kf from this tracklet vector
                 MatrixXd P = kf.getP(); //get covariance
                 VectorXd xhat = kf.getState();
-                if (verbose) {
-                    cout << "New measurement covariance is\n"<<P <<endl;
-                    cout << "new Kf state is\n"<<xhat <<endl; }
+//                if (verbose) {
+//                    cout << "New measurement covariance is\n"<<P <<endl;
+//                    cout << "new Kf state is\n"<<xhat <<endl; }
 
                 /// create a title for this marker
                 publishMarker(xhat,tracklet_name.str(), P(0,0),P(1,1),P(2,2)); // publish the marker

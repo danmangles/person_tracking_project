@@ -23,7 +23,7 @@ KalmanFilter::KalmanFilter(
 
     : delF(delF), delH(delH), delGQdelGT(delGQdelGT), R(R), P(P0), //populate matrices values given in constructor
       m(delH.rows()), n(delF.rows()), initialized(false), //populate m with number of rows in C, n with number of rows in A
-      I(n, n), x_hat(n), verbose_(verbose)
+      I(3, 3), x_hat(n), verbose_(verbose)
 {
     cout << "KalmanFilter constructor called" << endl;
     I.setIdentity();
@@ -65,19 +65,19 @@ void KalmanFilter::predict(double time, bool verbose){
     if (dt_ < 0)
         cout<<"\n********************************\n!!!!!! dt is negative!!!"<<endl;
 
-    MatrixXd I3(3,3);
-    I3.setIdentity();
+//    MatrixXd I3(3,3);
+//    I3.setIdentity();
 
     // change the matrices which are a function of time
-    delF.block(0,3,3,3) = I3*dt_; // set the top right to make fcn of dt
+    delF.block(0,3,3,3) = I*dt_; // set the top right to make fcn of dt
     /////////////////
     /// \brief var_pos
     double timestep = 0.1; //s e.g. we are splitting time into timesteps
     double var_pos = pow((0.5*dt_/timestep),2); // e.g. we have progressed dt/timestep timesteps since the past predict; and in each our position uncertainty has grown 0.5m
     double var_vel = pow((0.5*dt_/timestep),2); // e.g. we have progressed dt/timestep timesteps since the past predict; and in each our velocity uncertainty has grown 3ms-1
 
-    delGQdelGT.block(0,0,3,3) = I3*var_pos; //update delGQdelGT in 2 blocks.
-    delGQdelGT.block(3,3,3,3) = I3*var_vel;
+    delGQdelGT.block(0,0,3,3) = I*var_pos; //update delGQdelGT in 2 blocks.
+    delGQdelGT.block(3,3,3,3) = I*var_vel;
 
 
 

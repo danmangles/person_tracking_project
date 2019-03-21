@@ -71,7 +71,7 @@ using namespace std;
 // holds params for the kalman filter
 struct kf_param_struct {double dt; MatrixXd delF; MatrixXd delH; MatrixXd delGQdelGT; MatrixXd R; MatrixXd P0;};
 // holds params for the pointcloud
-struct pcl_param_struct {bool apply_passthrough_filter;bool apply_planar_outlier_removal; bool apply_voxel_grid; int max_cluster_size; int min_cluster_size; double cluster_tolerance; double seg_dist_threshold; double box_x; double box_y; double min_height;};
+struct pcl_param_struct {bool apply_passthrough_filter;bool apply_planar_outlier_removal; bool apply_voxel_grid; int max_cluster_size; int min_cluster_size; double cluster_tolerance; double seg_dist_threshold; double box_x; double box_y; double min_height; double downsample_factor;};
 // holds params for the tracker
 struct tracker_param_struct {double gating_dist_constant; double base_gating_dist; int max_consecutive_misses; int min_initialisation_length; bool only_init_rgb_tracklet;};
 // holds io params

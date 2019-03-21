@@ -24,17 +24,18 @@ pcl_param_struct getPclParams() {
                 .max_cluster_size = 250,
                 .min_cluster_size = 40,
                 .cluster_tolerance = .4, // too small, we split one object into many, too big, we merge objects into one. In metres
-                .seg_dist_threshold = .05, // how close a point must be to the model in order to be considered an inlier in metres
+                .seg_dist_threshold = .1, // how close a point must be to the model in order to be considered an inlier in metres
                 .box_x = 10.0,
                 .box_y = 9.0,
-                .min_height = -0.1 // min height of z filter in metres below base
+                .min_height = -0.1, // min height of z filter in metres below base
+                .downsample_factor = 0.7
     };
 }
 
 tracker_param_struct getTrackerParams() {
     // Sets the tracker's kalman filter kf's parameters dt,A,C,Q,R,P
     // add a velocity state
-    return {.gating_dist_constant = 0.5, //this is used in max_gating_dist calcs e.g.
+    return {.gating_dist_constant = 0.4, //this is used in max_gating_dist calcs e.g.
                           // max = sqrt(tracker_params.gating_dist_constant*(P(0,0) + P(1,1))/2);
             .base_gating_dist = 1, // gating distance for uninitiated tracklets in m
             .max_consecutive_misses = 6,// if we've missed this tracklet too many times in a row, delete it
