@@ -58,23 +58,30 @@ void KalmanFilter::predict(double time, bool verbose){
     if (!initialized)
         throw runtime_error("Filter is not initialised... :3");
 
-    double walking_speed = 1; // in ms-1  NEED TO MOVE THIS TO THE NODE
-    double q_hat = 1;
     /////// Prediction
     dt_ = time - t_; // compute dt_ as new time - previous time
     t_ = time; // update previous time
 
     if (dt_ < 0)
-        cout<<"\n!!!!!! dt is negative!!!"<<endl;
+        cout<<"\n********************************\n!!!!!! dt is negative!!!"<<endl;
 
-    MatrixXd uncertainty_distance(3,3);
-    uncertainty_distance.setIdentity();
-    uncertainty_distance = uncertainty_distance*walking_speed*dt_;
+    MatrixXd I3(3,3);
+    I3.setIdentity();
 
     // change the matrices which are a function of time
-    delF.block(0,3,3,3) = uncertainty_distance; // set the top right to make fcn of dt
-    delGQdelGT.block(0,0,3,3) = uncertainty_distance; // possibly need to take sqrt of this
+    delF.block(0,3,3,3) = I3*dt_; // set the top right to make fcn of dt
     /////////////////
+    /// \brief var_pos
+    double timestep = 0.1; //s e.g. we are splitting time into timesteps
+    double var_pos = pow((0.5*dt_/timestep),2); // e.g. we have progressed dt/timestep timesteps since the past predict; and in each our position uncertainty has grown 0.5m
+    double var_vel = pow((0.5*dt_/timestep),2); // e.g. we have progressed dt/timestep timesteps since the past predict; and in each our velocity uncertainty has grown 3ms-1
+
+    delGQdelGT.block(0,0,3,3) = I3*var_pos; //update delGQdelGT in 2 blocks.
+    delGQdelGT.block(3,3,3,3) = I3*var_vel;
+
+
+
+    ////////////////
 
     if (verbose)
     {
@@ -85,7 +92,9 @@ void KalmanFilter::predict(double time, bool verbose){
     }
 
     x_hat = delF*x_hat; // predicted  state = plant_model(old_state) but using a linear plant model delF
+
     P = delF*P*delF.transpose() + delGQdelGT; // predicted covariance = transformed old covariance + process noise
+
     z_pred = delH*x_hat; // predicted observation
 
     if (verbose)

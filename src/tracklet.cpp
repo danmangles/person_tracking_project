@@ -19,7 +19,7 @@ void Tracklet::updateTracklet(Pairing pairing, double current_time) {
     if (isInitialised_)
     {
         cout << "predicting and updating kf for Tracklet_"<<ID_<<endl;
-        kf_.predict(current_time, false);
+        kf_.predict(current_time, true);
         kf_.update(pairing.getDetectionCoord(), false);
     }
 }

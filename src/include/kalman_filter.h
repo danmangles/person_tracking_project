@@ -5,6 +5,7 @@
  *      Author: ori
  */
 #include <Eigen/Dense>
+#include <cmath>
 #define KALMAN_FILTER_H_
 
 using namespace Eigen;
