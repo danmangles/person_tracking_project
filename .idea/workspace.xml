@@ -2,27 +2,11 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="1509c2cf-310d-4d0e-ad87-7e100f2e88e3" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/anakin_ros/CMakeLists.txt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/anakin_ros/launch/anakin_ros.launch" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/anakin_ros/launch/anakin_ros_person1203.launch" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/anakin_ros/launch/average_tracker.launch" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/anakin_ros/package.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/anakin_ros/src/anakin_detector_node.cpp" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/anakin_ros/src/average_tracker.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/anakin_ros/src/average_tracker_v2.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/anakin_ros/src/net.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/anakin_ros/src/ros_realsense_1203.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/anakin_ros/src/transform_publisher.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/anakin_ros/src/weights_loader.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/anakin_ros/src/yolov2-tiny-voc.weights" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/drs-main/code/src/personal/person_tracker/scripts/ckpt/checkpoint" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/drs-main/code/src/personal/person_tracker/scripts/ckpt/model.ckpt.data-00000-of-00001" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/drs-main/code/src/personal/person_tracker/scripts/ckpt/model.ckpt.index" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/drs-main/code/src/personal/person_tracker/scripts/ckpt/model.ckpt.meta" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/mo_tracker.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/mo_tracker.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/nearest_cluster_tracker.cpp" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/old_files/tracker.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/old_files/tracker.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/realsense_detector.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/realsense_detector.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/multi_sensor_tracker.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/multi_sensor_tracker.iml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/include/mo_tracker.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/include/mo_tracker.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/mo_tracker_node.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/mo_tracker_node.cpp" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -34,17 +18,20 @@
     <session id="1132751923">
       <usages-collector id="statistics.lifecycle.project">
         <counts>
+          <entry key="project.closed" value="2" />
           <entry key="project.open.time.0" value="1" />
           <entry key="project.open.time.12" value="1" />
+          <entry key="project.open.time.4" value="1" />
           <entry key="project.open.time.5" value="1" />
+          <entry key="project.open.time.8" value="1" />
           <entry key="project.open.time.9" value="1" />
-          <entry key="project.opened" value="4" />
+          <entry key="project.opened" value="6" />
         </counts>
       </usages-collector>
       <usages-collector id="statistics.file.extensions.open">
         <counts>
           <entry key="cpp" value="1" />
-          <entry key="py" value="10" />
+          <entry key="py" value="12" />
           <entry key="txt" value="1" />
         </counts>
       </usages-collector>
@@ -52,70 +39,60 @@
         <counts>
           <entry key="C++" value="1" />
           <entry key="PLAIN_TEXT" value="1" />
-          <entry key="Python" value="10" />
+          <entry key="Python" value="12" />
         </counts>
       </usages-collector>
       <usages-collector id="statistics.file.extensions.edit">
         <counts>
-          <entry key="py" value="11704" />
+          <entry key="py" value="15456" />
           <entry key="txt" value="107" />
         </counts>
       </usages-collector>
       <usages-collector id="statistics.file.types.edit">
         <counts>
           <entry key="PLAIN_TEXT" value="107" />
-          <entry key="Python" value="11704" />
+          <entry key="Python" value="15456" />
         </counts>
       </usages-collector>
     </session>
   </component>
   <component name="FileEditorManager">
-    <splitter split-orientation="horizontal" split-proportion="0.5">
-      <split-first>
-        <leaf>
-          <file pinned="false" current-in-tab="true">
-            <entry file="file://$PROJECT_DIR$/src/realsense_detector.py">
-              <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="471">
-                  <caret line="488" column="44" selection-start-line="488" selection-start-column="44" selection-end-line="488" selection-end-column="44" />
-                  <folding>
-                    <element signature="e#43#60#0" expanded="true" />
-                    <element signature="e#4386#5828#0" />
-                    <element signature="e#4715#5899#0" />
-                    <element signature="e#5926#6605#0" />
-                    <element signature="e#7128#13253#0" />
-                    <marker date="1551951380049" expanded="true" signature="18632:19231" ph="..." />
-                  </folding>
-                </state>
-              </provider>
-            </entry>
-          </file>
-        </leaf>
-      </split-first>
-      <split-second>
-        <leaf>
-          <file pinned="false" current-in-tab="true">
-            <entry file="file://$PROJECT_DIR$/src/realsense_detector.py">
-              <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="1085">
-                  <caret line="572" column="55" selection-start-line="572" selection-start-column="55" selection-end-line="572" selection-end-column="55" />
-                  <folding>
-                    <element signature="e#43#60#0" expanded="true" />
-                    <element signature="e#4715#5899#0" />
-                    <element signature="e#5926#6605#0" />
-                    <element signature="e#18974#19003#0" />
-                    <element signature="e#19038#19114#0" />
-                    <element signature="e#19163#20083#0" />
-                    <element signature="e#20157#21195#0" />
-                    <marker date="1551951380049" expanded="true" signature="18632:19231" ph="..." />
-                  </folding>
-                </state>
-              </provider>
-            </entry>
-          </file>
-        </leaf>
-      </split-second>
-    </splitter>
+    <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/src/realsense_detector.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="396">
+              <caret line="540" column="82" selection-start-line="540" selection-start-column="82" selection-end-line="540" selection-end-column="82" />
+              <folding>
+                <element signature="e#43#60#0" expanded="true" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="true">
+        <entry file="file://$USER_HOME$/Documents/C18/mypython/submarine.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="345">
+              <caret line="41" column="52" lean-forward="true" selection-start-line="41" selection-start-column="52" selection-end-line="41" selection-end-column="52" />
+              <folding>
+                <element signature="e#15#33#0" expanded="true" />
+                <marker date="1553022424145" expanded="true" signature="1031:1040" ph="..." />
+                <marker date="1553022424145" expanded="true" signature="1196:1205" ph="..." />
+                <marker date="1553022424145" expanded="true" signature="2904:3162" ph="..." />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+    </leaf>
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Python Script" />
+      </list>
+    </option>
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
@@ -161,20 +138,23 @@
         <option value="$PROJECT_DIR$/src/realsense_detector_node.py" />
         <option value="$PROJECT_DIR$/src/weights_loader.py" />
         <option value="$PROJECT_DIR$/src/realsense_detector.py" />
+        <option value="$PROJECT_DIR$/build/submarine.py" />
+        <option value="$USER_HOME$/Documents/C18/mypython/submarine.py" />
       </list>
     </option>
   </component>
   <component name="ProjectFrameBounds" extendedState="6">
-    <option name="x" value="-241" />
-    <option name="y" value="204" />
-    <option name="width" value="1246" />
-    <option name="height" value="1372" />
+    <option name="x" value="409" />
+    <option name="y" value="-2" />
+    <option name="width" value="1244" />
+    <option name="height" value="1084" />
   </component>
   <component name="ProjectView">
     <navigator proportions="" version="1">
       <foldersAlwaysOnTop value="true" />
     </navigator>
     <panes>
+      <pane id="Scope" />
       <pane id="ProjectPane">
         <subPane>
           <expand>
@@ -185,17 +165,21 @@
             <path>
               <item name="multi_sensor_tracker" type="b2602c69:ProjectViewProjectNode" />
               <item name="multi_sensor_tracker" type="462c0819:PsiDirectoryNode" />
+              <item name="build" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="multi_sensor_tracker" type="b2602c69:ProjectViewProjectNode" />
+              <item name="multi_sensor_tracker" type="462c0819:PsiDirectoryNode" />
               <item name="src" type="462c0819:PsiDirectoryNode" />
             </path>
           </expand>
           <select />
         </subPane>
       </pane>
-      <pane id="Scope" />
     </panes>
   </component>
   <component name="PropertiesComponent">
-    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
+    <property name="last_opened_file_path" value="$USER_HOME$/Documents/C18/mypython/submarine.py" />
     <property name="settings.editor.selected.configurable" value="com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable" />
   </component>
   <component name="RunDashboard">
@@ -209,6 +193,60 @@
         </RuleState>
       </list>
     </option>
+  </component>
+  <component name="RunManager" selected="Python.submarine (1)">
+    <configuration name="submarine (1)" type="PythonConfigurationType" factoryName="Python" temporary="true">
+      <module name="multi_sensor_tracker" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$USER_HOME$/Documents/C18/mypython" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$USER_HOME$/Documents/C18/mypython/submarine.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="submarine" type="PythonConfigurationType" factoryName="Python" temporary="true">
+      <module name="multi_sensor_tracker" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/build" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/build/submarine.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <list>
+      <item itemvalue="Python.submarine" />
+      <item itemvalue="Python.submarine (1)" />
+    </list>
+    <recent_temporary>
+      <list>
+        <item itemvalue="Python.submarine (1)" />
+        <item itemvalue="Python.submarine" />
+      </list>
+    </recent_temporary>
   </component>
   <component name="SvnConfiguration">
     <configuration />
@@ -224,23 +262,22 @@
     <servers />
   </component>
   <component name="ToolWindowManager">
-    <frame x="1985" y="-4" width="2495" height="1444" extended-state="6" />
-    <editor active="true" />
+    <frame x="65" y="-4" width="1855" height="1084" extended-state="6" />
     <layout>
-      <window_info active="true" content_ui="combo" id="Project" order="0" side_tool="true" visible="true" weight="0.12702265" />
+      <window_info content_ui="combo" id="Project" order="0" side_tool="true" visible="true" weight="0.24181223" />
       <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
       <window_info id="Favorites" order="2" side_tool="true" />
       <window_info anchor="bottom" id="Message" order="0" />
       <window_info anchor="bottom" id="Find" order="1" />
-      <window_info anchor="bottom" id="Run" order="2" />
+      <window_info anchor="bottom" id="Run" order="2" weight="0.3294979" />
       <window_info anchor="bottom" id="Debug" order="3" weight="0.4" />
       <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
       <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
       <window_info anchor="bottom" id="TODO" order="6" />
       <window_info anchor="bottom" id="Version Control" order="7" />
-      <window_info anchor="bottom" id="Terminal" order="8" />
+      <window_info anchor="bottom" id="Terminal" order="8" weight="0.3294979" />
       <window_info anchor="bottom" id="Event Log" order="9" side_tool="true" />
-      <window_info anchor="bottom" id="Python Console" order="10" />
+      <window_info anchor="bottom" id="Python Console" order="10" weight="0.3294979" />
       <window_info anchor="right" id="Commander" internal_type="SLIDING" order="0" type="SLIDING" weight="0.4" />
       <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
       <window_info anchor="right" content_ui="combo" id="Hierarchy" order="2" weight="0.25" />
@@ -257,20 +294,11 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/ros_realsense_1203.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="1206">
-          <caret line="405" column="18" selection-start-line="405" selection-start-column="18" selection-end-line="405" selection-end-column="18" />
-        </state>
-      </provider>
-    </entry>
+    <entry file="file://$PROJECT_DIR$/src/ros_realsense_1203.py" />
     <entry file="file://$PROJECT_DIR$/src/weights_loader.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="210">
           <caret line="68" column="32" lean-forward="true" selection-start-line="68" selection-start-column="32" selection-end-line="68" selection-end-column="32" />
-          <folding>
-            <element signature="e#0#23#0" expanded="true" />
-          </folding>
         </state>
       </provider>
     </entry>
@@ -288,17 +316,35 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/build/submarine.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="195">
+          <caret line="13" column="32" selection-start-line="13" selection-start-column="32" selection-end-line="13" selection-end-column="32" />
+          <folding>
+            <element signature="e#15#33#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/src/realsense_detector.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="471">
-          <caret line="488" column="44" selection-start-line="488" selection-start-column="44" selection-end-line="488" selection-end-column="44" />
+        <state relative-caret-position="396">
+          <caret line="540" column="82" selection-start-line="540" selection-start-column="82" selection-end-line="540" selection-end-column="82" />
           <folding>
             <element signature="e#43#60#0" expanded="true" />
-            <element signature="e#4386#5828#0" />
-            <element signature="e#4715#5899#0" />
-            <element signature="e#5926#6605#0" />
-            <element signature="e#7128#13253#0" />
-            <marker date="1551951380049" expanded="true" signature="18632:19231" ph="..." />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$USER_HOME$/Documents/C18/mypython/submarine.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="345">
+          <caret line="41" column="52" lean-forward="true" selection-start-line="41" selection-start-column="52" selection-end-line="41" selection-end-column="52" />
+          <folding>
+            <element signature="e#15#33#0" expanded="true" />
+            <marker date="1553022424145" expanded="true" signature="1031:1040" ph="..." />
+            <marker date="1553022424145" expanded="true" signature="1196:1205" ph="..." />
+            <marker date="1553022424145" expanded="true" signature="2904:3162" ph="..." />
           </folding>
         </state>
       </provider>

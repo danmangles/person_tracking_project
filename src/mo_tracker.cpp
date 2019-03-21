@@ -133,7 +133,7 @@ void MOTracker::applyPassthroughFilter(const sensor_msgs::PointCloud2ConstPtr in
 
     //    double radius = pcl_params.; // maximum distance from base we are interested in
     double max_height = 2.0; // max height of z filter in metres
-    double min_height = -0.3; // min height of z filter in metres
+//    double min_height = -0.3; // min height of z filter in metres
     //    double min_height = -2;
     // setup the x filter
     pcl::PassThrough<pcl::PCLPointCloud2> pass;
@@ -155,7 +155,7 @@ void MOTracker::applyPassthroughFilter(const sensor_msgs::PointCloud2ConstPtr in
 
     // setup the z filter
     pass.setFilterFieldName ("z");
-    pass.setFilterLimits (min_height, max_height); // limits
+    pass.setFilterLimits (pcl_params.min_height, max_height); // limits
     pcl::PCLPointCloud2ConstPtr cloudPtr_z(output_cloud_y); // create a pointer called cloudPtr to use for our filter
     pass.setInputCloud (cloudPtr_z); //set the input cloud for our filter
     pcl::PCLPointCloud2* output_cloud_z = new pcl::PCLPointCloud2; // initiate our PC2 to send
