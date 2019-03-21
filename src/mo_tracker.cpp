@@ -68,7 +68,7 @@ void MOTracker::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr &cloud
     //    pub_ds_.publish (msg_to_publish);
 
     //////// Remove non planar points e.g. outliers http://pointclouds.org/documentation/tutorials/planar_segmentation.php#id1
-    removeOutOfPlanePoints(cloud_ptr);
+    removeOutOfPlanePoints(cloud_ptr, true);
     if (io_params.publishing)
     {
         pcl::toROSMsg(*cloud_ptr,msg_to_publish ); // convert from PCL:PC1 to SM:PC2
@@ -181,9 +181,9 @@ void MOTracker::applyBaseOdomTransformation(sensor_msgs::PointCloud2 input_cloud
 }
 
 
-void MOTracker::removeOutOfPlanePoints(pcl::PointCloud<pcl::PointXYZRGB>::Ptr &cloud_ptr) {
+void MOTracker::removeOutOfPlanePoints(pcl::PointCloud<pcl::PointXYZRGB>::Ptr &cloud_ptr, bool verbose) {
     //////// Create a planar segmentation model <- NOT SURE WHAT THIS DOES EXACTLY, SEE http://pointclouds.org/documentation/tutorials/planar_segmentation.php#id1
-    if(verbose_)
+    if(verbose)
         cout << "Initiating Segmentation objects" << endl;
     // Create the segmentation object for the planar model and set all the parameters
     pcl::SACSegmentation<pcl::PointXYZRGB> seg;
@@ -199,7 +199,7 @@ void MOTracker::removeOutOfPlanePoints(pcl::PointCloud<pcl::PointXYZRGB>::Ptr &c
     // Loop through the cloud, performing the segmentation operation
     int i=0, nr_points = (int) cloud_ptr->points.size ();
     double downsample_factor = 0.3;// downsampling to a factor of 0.3
-    if(verbose_)
+    if(verbose)
         cout << "Segmenting planar components" << endl;
     while (cloud_ptr->points.size () > downsample_factor * nr_points) // note
     {
@@ -216,7 +216,7 @@ void MOTracker::removeOutOfPlanePoints(pcl::PointCloud<pcl::PointXYZRGB>::Ptr &c
         extract.setIndices (inliers);
         extract.setNegative (false);
         extract.filter (*cloud_plane); // Get the points associated with the planar surface, reject the rest
-        if (verbose_)
+        if (verbose)
             cout << "PointCloud representing the planar component: " << cloud_plane->points.size () << " data points." << endl;
         // remove the outlying points from cloud_ptr
         extract.setNegative(true);
@@ -224,7 +224,7 @@ void MOTracker::removeOutOfPlanePoints(pcl::PointCloud<pcl::PointXYZRGB>::Ptr &c
         if (verbose_)
             cout << "cloud_ptr has "<<cloud_ptr->points.size ()<<" points left" << endl;
     }
-    if (verbose_)
+    if (verbose)
         cout <<"RANSAC filtering complete, returning cloud_ptr with "<<cloud_ptr->points.size ()<<" points"<<endl;
     return;
 }

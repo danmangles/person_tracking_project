@@ -102,7 +102,7 @@ private:
     void pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr &cloud_msg); // this method is called whenever the Tracker sees a new pointcloud
 
     void applyPassthroughFilter(const sensor_msgs::PointCloud2ConstPtr input_cloud, sensor_msgs::PointCloud2 &output_cloud); // filters points outside of a defined cube
-    void removeOutOfPlanePoints(pcl::PointCloud<pcl::PointXYZRGB>::Ptr &cloud_ptr); // remove non-planar-inlying points
+    void removeOutOfPlanePoints(pcl::PointCloud<pcl::PointXYZRGB>::Ptr &cloud_ptr, bool verbose); // remove non-planar-inlying points
     void applyBaseOdomTransformation(sensor_msgs::PointCloud2 input_cloud, sensor_msgs::PointCloud2 &output_cloud); // transforms the cloud into the odom frame
     void convertSM2ToPclPtr(sensor_msgs::PointCloud2 input_cloud, pcl::PointCloud<pcl::PointXYZRGB>::Ptr &output_ptr);
     void applyVoxelGrid(pcl::PointCloud<pcl::PointXYZRGB>::Ptr &cloud_ptr);
