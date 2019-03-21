@@ -46,7 +46,7 @@ public:
           * time step is assumed to remain constant.
           */
 
-        void update(const VectorXd& z);
+        void update(const VectorXd& z, bool verbose);
         void predict(double time, bool verbose);
     /*
      * Return current state and time

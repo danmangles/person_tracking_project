@@ -96,7 +96,7 @@ void KalmanFilter::predict(double time, bool verbose){
     }
 }
 
-void KalmanFilter::update(const VectorXd& z) {
+void KalmanFilter::update(const VectorXd& z, bool verbose) {
     //check if we are initialised
     if (!initialized)
         throw runtime_error("Filter is not initialised... :3");
@@ -109,7 +109,7 @@ void KalmanFilter::update(const VectorXd& z) {
     x_hat = x_hat + W*v; // estimate = prediction + Gain*Innovation
     P = P - W*S*W.transpose(); // covariance is decreased by the update
 
-    if (verbose_)
+    if (verbose)
         cout << "*UPDATE*\nv = \n"<<v<< "\nS = \n"<<S<<"\nW = \n"<<W<<"\nx_hat_new = \n"<<x_hat<< "\nP_new = \n"<<P<<endl;
     // increment time
     //    t_ += dt_;

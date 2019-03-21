@@ -20,7 +20,7 @@ void Tracklet::updateTracklet(Pairing pairing, double current_time) {
     {
         cout << "predicting and updating kf for Tracklet_"<<ID_<<endl;
         kf_.predict(current_time, false);
-        kf_.update(pairing.getDetectionCoord());
+        kf_.update(pairing.getDetectionCoord(), false);
     }
 }
 double Tracklet::getDistance(VectorXd detection)
