@@ -58,12 +58,11 @@ void KalmanFilter::predict(double time, bool verbose){
     if (!initialized)
         throw runtime_error("Filter is not initialised... :3");
 
-    double walking_speed = 1; // in ms-1
-
+    double walking_speed = 1; // in ms-1  NEED TO MOVE THIS TO THE NODE
+    double q_hat = 1;
     /////// Prediction
-    cout <<"dt may not be initialsed and may throw an error"<<endl;
-    dt_ = time - t_;
-    t_ = time;
+    dt_ = time - t_; // compute dt_ as new time - previous time
+    t_ = time; // update previous time
 
     if (dt_ < 0)
         cout<<"\n!!!!!! dt is negative!!!"<<endl;
@@ -75,6 +74,12 @@ void KalmanFilter::predict(double time, bool verbose){
     // change the matrices which are a function of time
     delF.block(0,3,3,3) = uncertainty_distance; // set the top right to make fcn of dt
     delGQdelGT.block(0,0,3,3) = uncertainty_distance; // possibly need to take sqrt of this
+    /////////////////
+
+
+    delGQdelGT <<
+
+
 
     if (verbose)
     {
@@ -111,8 +116,6 @@ void KalmanFilter::update(const VectorXd& z, bool verbose) {
 
     if (verbose)
         cout << "*UPDATE*\nv = \n"<<v<< "\nS = \n"<<S<<"\nW = \n"<<W<<"\nx_hat_new = \n"<<x_hat<< "\nP_new = \n"<<P<<endl;
-    // increment time
-    //    t_ += dt_;
 
 }
 MatrixXd KalmanFilter::getP()
