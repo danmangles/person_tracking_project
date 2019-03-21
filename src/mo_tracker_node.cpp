@@ -20,6 +20,7 @@ pcl_param_struct getPclParams() {
     // sets all the parameters for the pcl_params struct:
     return {.apply_passthrough_filter = true,
                 .apply_planar_outlier_removal = true, ///////////////////////////////////// TODO
+                .apply_voxel_grid = true,
                 .max_cluster_size = 250,
                 .min_cluster_size = 40,
                 .cluster_tolerance = .4, // too small, we split one object into many, too big, we merge objects into one. In metres

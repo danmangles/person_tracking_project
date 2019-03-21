@@ -28,9 +28,6 @@ public:
             const MatrixXd& P0,
             bool verbose
     );
-    /**
-      * Create a blank estimator.
-      */
     void init();
     /*
      * Initial states are zero

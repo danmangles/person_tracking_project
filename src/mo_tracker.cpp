@@ -61,12 +61,18 @@ void MOTracker::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr &cloud
     }
 
     //////// Downsample with a Voxel Grid and publish
+    // Convert variable to correct type for VoxelGrid
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_ptr;
-    convertSM2ToPclPtr(transformed_cloud, cloud_ptr); // Convert variable to correct type for VoxelGrid
-    //    applyVoxelGrid(cloud_ptr); // apply the voxel_grid using a leaf size of 1cm
-    //    pcl::toROSMsg(*cloud_ptr,msg_to_publish ); // convert from PCL:PC1 to SM:PC2
-    //    pub_ds_.publish (msg_to_publish);
+    convertSM2ToPclPtr(transformed_cloud, cloud_ptr);
 
+    if (pcl_params.apply_voxel_grid) {
+        applyVoxelGrid(cloud_ptr, true); // apply the voxel_grid using a leaf size of 1cm
+        // publish
+        if (io_params.publishing) {
+            pcl::toROSMsg(*cloud_ptr,msg_to_publish ); // convert from PCL:PC1 to SM:PC2
+            pub_ds_.publish (msg_to_publish);
+        }
+    }
     //////// Remove non planar points e.g. outliers http://pointclouds.org/documentation/tutorials/planar_segmentation.php#id1
     removeOutOfPlanePoints(cloud_ptr, true);
     if (io_params.publishing)
@@ -176,7 +182,6 @@ void MOTracker::applyBaseOdomTransformation(sensor_msgs::PointCloud2 input_cloud
         cout<<"transforming pcloud using time "<< ros::Time::now()<<endl;
     pcl_ros::transformPointCloud(target_frame, input_cloud, output_cloud, *odom_base_ls_); // perform the transformation
 
-    cout << "1"<<endl;
     return;
 }
 
@@ -241,13 +246,13 @@ void MOTracker::convertSM2ToPclPtr(sensor_msgs::PointCloud2 input_cloud, pcl::Po
     return;
 }
 
-void MOTracker::applyVoxelGrid(pcl::PointCloud<pcl::PointXYZRGB>::Ptr &cloud_ptr){
-    // applies a
+void MOTracker::applyVoxelGrid(pcl::PointCloud<pcl::PointXYZRGB>::Ptr &cloud_ptr, bool verbose){
+    // applies a vg to the pointcloud cloud_ptr
     pcl::VoxelGrid<pcl::PointXYZRGB> vg; // Create the filtering object:
     vg.setInputCloud (cloud_ptr); // set vg input to input cloud
     vg.setLeafSize (0.01f, 0.01f, 0.01f); // downsample the dataset using a leaf size of 1cm
     vg.filter (*cloud_ptr);
-    if (verbose_)
+    if (verbose)
         cout << "PointCloud after filtering has: " << cloud_ptr->points.size ()  << " data points." << endl;
     return;
 }
