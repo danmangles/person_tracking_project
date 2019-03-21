@@ -76,11 +76,6 @@ void KalmanFilter::predict(double time, bool verbose){
     delGQdelGT.block(0,0,3,3) = uncertainty_distance; // possibly need to take sqrt of this
     /////////////////
 
-
-    delGQdelGT <<
-
-
-
     if (verbose)
     {
         cout <<"time is "<<t_<<endl;
