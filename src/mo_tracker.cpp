@@ -133,7 +133,7 @@ void MOTracker::applyPassthroughFilter(const sensor_msgs::PointCloud2ConstPtr in
 
     //    double radius = pcl_params.; // maximum distance from base we are interested in
     double max_height = 2.0; // max height of z filter in metres
-//    double min_height = -0.3; // min height of z filter in metres
+    //    double min_height = -0.3; // min height of z filter in metres
     //    double min_height = -2;
     // setup the x filter
     pcl::PassThrough<pcl::PCLPointCloud2> pass;
@@ -534,10 +534,11 @@ void MOTracker::updateTracklets(vector<VectorXd> &unpaired_detections, double ms
 
             stringstream tracklet_name;
             tracklet_name << "tracklet_"<<this_tracklet->getID(); // identify this marker with the tracklet id
-            publishTransform(best_pairing_ptr->getDetectionCoord(),tracklet_name.str()); // publish a transform even if we are not initialised
-            if (verbose)
-                cout <<" publishing a transform at \n"<<best_pairing_ptr->getDetectionCoord()<<" with name "<<tracklet_name.str()<<endl;
-
+            if (io_params.publishing) {
+                publishTransform(best_pairing_ptr->getDetectionCoord(),tracklet_name.str()); // publish a transform even if we are not initialised
+                if (verbose)
+                    cout <<" publishing a transform at \n"<<best_pairing_ptr->getDetectionCoord()<<" with name "<<tracklet_name.str()<<endl;
+            }
             pairing_vector_.erase(pairing_vector_.begin() + best_pairing_index); // delete this pairing from pairing_vector_
 
             if (this_tracklet->isInitialised()) // start publishing if we are initialised
@@ -699,11 +700,11 @@ void MOTracker::manageTracklets(vector<VectorXd> unpaired_detections, double msg
     //// PUBLISH A TRANSFORM FOR EACH DETECTION
     ///
     for (int i = 0; i < unpaired_detections.size(); i++){
-
-        stringstream ss;
-        ss << "detection";
-        publishTransform(unpaired_detections[i], ss.str());
-
+        if (io_params.publishing) {
+            stringstream ss;
+            ss << "detection_"<<i;
+            publishTransform(unpaired_detections[i], ss.str());
+        }
         // if in GND truth mode, write the detections straight to file
         cout << "writing raw detections to GND truth file"<<endl;
         gnd_file_<<msg_time<<","<<isRGBD<<","<<unpaired_detections[i][0]<<","<<unpaired_detections[i][1]<<","<<unpaired_detections[i][2]<<"\n";
@@ -809,8 +810,8 @@ void MOTracker::setupResultsCSV() {
     results_file_ << "Time,isRGBD,Detection_X,Detection_Y,Detection_Z,Tracklet_ID,KF_X,KF_Y,KF_Z,KF_cov_X,KF_cov_Y,KF_cov_Z\n";
 
     // gnd file stores detections only at a higher frequency
-        cout<<"opening gnd file "<<io_params.gnd_filename<<endl;
-        gnd_file_.open(io_params.gnd_filename);
-        gnd_file_ << "Time,isRGBD,Detection_X,Detection_Y,Detection_Z\n";
+    cout<<"opening gnd file "<<io_params.gnd_filename<<endl;
+    gnd_file_.open(io_params.gnd_filename);
+    gnd_file_ << "Time,isRGBD,Detection_X,Detection_Y,Detection_Z\n";
 
 }
