@@ -51,6 +51,7 @@ public:
      */
     VectorXd getState();
     MatrixXd getP(); // return covariance matrix
+    VectorXd getV(){ return v;};
     double time() { return t_; };
 
 private:

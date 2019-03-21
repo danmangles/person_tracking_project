@@ -555,7 +555,9 @@ void MOTracker::updateTracklets(vector<VectorXd> &unpaired_detections, double ms
                 KalmanFilter kf = this_tracklet->getKf(); // get the Kf from this tracklet vector
                 MatrixXd P = kf.getP(); //get covariance
                 VectorXd xhat = kf.getState();
-//                if (verbose) {
+                VectorXd v = kf.getV();
+                cout << "innovation is\n"<<v <<endl;
+                //                if (verbose) {
 //                    cout << "New measurement covariance is\n"<<P <<endl;
 //                    cout << "new Kf state is\n"<<xhat <<endl; }
 
@@ -571,7 +573,7 @@ void MOTracker::updateTracklets(vector<VectorXd> &unpaired_detections, double ms
                     cout <<det_coord[0]<<","<<det_coord[1]<<","<<det_coord[2]<<endl;
 
                 // order : detection XYZ, kf XYZ, kf covariance XYZ. Skip 4 cells so have 4+ 1 commas
-                results_file_ <<msg_time<<",,,,,"<<this_tracklet->getID()<<","<< xhat[0]<<","<<xhat[1]<<","<<xhat[2]<<","<<P(0,0)<<","<<P(1,1)<<","<<P(2,2)<<"\n";
+                results_file_ <<msg_time<<",,,,,"<<this_tracklet->getID()<<","<< xhat[0]<<","<<xhat[1]<<","<<xhat[2]<<","<<P(0,0)<<","<<P(1,1)<<","<<P(2,2)<<","<<v[0]<<","<<v[1]<<"\n";
             }
         }
         else
@@ -815,7 +817,7 @@ void MOTracker::setupResultsCSV() {
     // results file
     cout<<"opening results file "<<io_params.res_filename<<endl;
     results_file_.open(io_params.res_filename);
-    results_file_ << "Time,isRGBD,Detection_X,Detection_Y,Detection_Z,Tracklet_ID,KF_X,KF_Y,KF_Z,KF_cov_X,KF_cov_Y,KF_cov_Z\n";
+    results_file_ << "Time,isRGBD,Detection_X,Detection_Y,Detection_Z,Tracklet_ID,KF_X,KF_Y,KF_Z,KF_cov_X,KF_cov_Y,KF_cov_Z,v_X,v_Y\n";
 
     // gnd file stores detections only at a higher frequency
     cout<<"opening gnd file "<<io_params.gnd_filename<<endl;

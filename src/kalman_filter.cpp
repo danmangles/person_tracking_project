@@ -79,10 +79,6 @@ void KalmanFilter::predict(double time, bool verbose){
     delGQdelGT.block(0,0,3,3) = I*var_pos; //update delGQdelGT in 2 blocks.
     delGQdelGT.block(3,3,3,3) = I*var_vel;
 
-
-
-    ////////////////
-
     if (verbose)
     {
         cout <<"time is "<<t_<<endl;
