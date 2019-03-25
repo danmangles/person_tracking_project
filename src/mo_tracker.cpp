@@ -32,7 +32,6 @@ void MOTracker::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr &cloud
         pub_raw_.publish (*cloud_msg); // publish the raw cloud
 
     /////////// Apply a passthrough filter and publish the result
-    ///
     sensor_msgs::PointCloud2 bounded_cloud;
 
     if (pcl_params.apply_passthrough_filter == 1) {
@@ -451,7 +450,7 @@ void MOTracker::updatePairings(vector<VectorXd> &unpaired_detections, double msg
                 //                cout << "!!!!!!!Growing the covariance cylinder!!!!!!!"<<endl;
                 KalmanFilter kf = this_tracklet->getKf(); // get the Kf from this tracklet vector
                 MatrixXd P = kf.getP(); //get covariance
-                VectorXd xhat = kf.getState();
+                VectorXd xhat = kf.getState(), v = kf.getV();
                 //                if (verbose) {
                 //                    cout << "New measurement covariance is\n"<<P <<endl;
                 //                    cout << "new Kf state is\n"<<xhat <<endl; }
@@ -460,11 +459,10 @@ void MOTracker::updatePairings(vector<VectorXd> &unpaired_detections, double msg
                 /// create a title for this marker
                 publishMarker(xhat,tracklet_name.str(), P(0,0),P(1,1),P(2,2)); // publish the marker
 
-
                 //////////////////////////////////////////////////// ACTIVATE THIS WHEN WE HAVE TIME TO TEST
                 cout << "TEST ME: I'M AT LINE 471"<<endl;
-                VectorXd v = kf.getV();
-                // order : detection XYZ, kf XYZ, kf covariance XYZ. Skip 4 cells so have 4+ 1 commas
+
+                // order : detection XYZ, kf XYZ, kf covariance XYZ. Skip 4 cells so have 4+1 commas
                 results_file_ <<msg_time<<",,,,,"<<this_tracklet->getID()<<","<< xhat[0]<<","<<xhat[1]<<","<<xhat[2]<<","<<P(0,0)<<","<<P(1,1)<<","<<P(2,2)<<","<<v[0]<<","<<v[1]<<"\n";
             }
 
@@ -518,8 +516,8 @@ void MOTracker::updateTracklets(vector<VectorXd> &unpaired_detections, double ms
                 if (pairing_vector_[j].getDistanceToTracklet() < best_distance) //if this pairing is closer than previous one
                 {
                     best_pairing_index = j; // set the best pairing index
-                    //                    cout << "updating best distance, best_pairing_index = "<<best_pairing_index<<endl;
                     best_distance = pairing_vector_[j].getDistanceToTracklet(); // update best distance
+
                 } else {
                     cout << "not better than best distance" <<endl;
                 }
@@ -530,7 +528,6 @@ void MOTracker::updateTracklets(vector<VectorXd> &unpaired_detections, double ms
         {
             ///// using the best_pairing_index we've just found, update the tracklet and remove this pairing from the vector
             /// so it doesn't get associated with another tracker
-            //            double new_time = ros::Time::now().toSec() - tracker_start_time;
             if (verbose) {
                 cout << "Updating Tracklet "<<this_tracklet->getID()<< " with pairing at index "<<best_pairing_index<<endl;
                 cout<<"\n!!!!!!!!!!!!!!!!!!!!!time is now "<<msg_time<<endl;
@@ -538,8 +535,8 @@ void MOTracker::updateTracklets(vector<VectorXd> &unpaired_detections, double ms
             // make a pointer to the best pairing
             Pairing* best_pairing_ptr = &pairing_vector_[best_pairing_index];
             this_tracklet->updateTracklet(*best_pairing_ptr, msg_time); // update the tracklet with this pairing
-            ///// now publish the output of this tracklet with a marker
 
+            ///// now publish the output of this tracklet with a marker
             stringstream tracklet_name;
             tracklet_name << "tracklet_"<<this_tracklet->getID(); // identify this marker with the tracklet id
             if (io_params.publishing) {
@@ -547,30 +544,28 @@ void MOTracker::updateTracklets(vector<VectorXd> &unpaired_detections, double ms
                 if (verbose)
                     cout <<" publishing a transform at \n"<<best_pairing_ptr->getDetectionCoord()<<" with name "<<tracklet_name.str()<<endl;
             }
+
             pairing_vector_.erase(pairing_vector_.begin() + best_pairing_index); // delete this pairing from pairing_vector_
 
             if (this_tracklet->isInitialised()) // start publishing if we are initialised
             {
-
                 KalmanFilter kf = this_tracklet->getKf(); // get the Kf from this tracklet vector
                 MatrixXd P = kf.getP(); //get covariance
-                VectorXd xhat = kf.getState();
-                VectorXd v = kf.getV();
+                VectorXd xhat = kf.getState(), v = kf.getV();
+
                 cout << "innovation is\n"<<v <<endl;
-                //                if (verbose) {
-                //                    cout << "New measurement covariance is\n"<<P <<endl;
-                //                    cout << "new Kf state is\n"<<xhat <<endl; }
+                if (verbose) {
+                    cout << "New measurement covariance is\n"<<P <<endl;
+                    cout << "new Kf state is\n"<<xhat <<endl;
+                    cout << "innovation is\n"<<v <<endl;
+                }
 
                 /// create a title for this marker
                 publishMarker(xhat,tracklet_name.str(), P(0,0),P(1,1),P(2,2)); // publish the marker
 
                 /////////////// write to csv
-
                 if (verbose)
                     cout << "writing tracklet data and detections to file"<<endl;
-                VectorXd det_coord = best_pairing_ptr->getDetectionCoord();
-                if (verbose)
-                    cout <<det_coord[0]<<","<<det_coord[1]<<","<<det_coord[2]<<endl;
 
                 // order : detection XYZ, kf XYZ, kf covariance XYZ. Skip 4 cells so have 4+ 1 commas
                 results_file_ <<msg_time<<",,,,,"<<this_tracklet->getID()<<","<< xhat[0]<<","<<xhat[1]<<","<<xhat[2]<<","<<P(0,0)<<","<<P(1,1)<<","<<P(2,2)<<","<<v[0]<<","<<v[1]<<"\n";
@@ -580,7 +575,6 @@ void MOTracker::updateTracklets(vector<VectorXd> &unpaired_detections, double ms
         {
             if (verbose)
                 cout << "No pairings match this tracker"<<endl;
-
         }
     }
     ///// put any remaining pairings back in the unpaired detections
