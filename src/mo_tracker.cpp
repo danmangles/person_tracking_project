@@ -394,17 +394,11 @@ void MOTracker::getClusterCentroid(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cluste
 
 void MOTracker::updatePairings(vector<VectorXd> &unpaired_detections, double msg_time, bool isRGBD, bool verbose)
 {
-    if (verbose)
+    if (verbose) {
         cout << "\nupdatePairings() with "<<unpaired_detections.size()<<" unpaired_detections"<<endl;
-    cout << "and "<<tracklet_vector_.size()<<" live tracklets"<<endl;
-    /*4. for each tracklet
-            for each unpaired detection < gating_threshold (a max radius)
-                create a pairing instance with tracklet ID and detection
-                delete this detection (so we only have a pairing OR a detection)
-                    num_consectutive_misses = 0
-            if no detections paired
-                tracklet.num_consecutive_misses ++
-    */
+        cout << "and "<<tracklet_vector_.size()<<" live tracklets"<<endl;
+    }
+
     double new_distance; // specific for each tracklet
     bool isPaired;
     for (int i = 0; i < tracklet_vector_.size(); i++) // loop through all live tracklets
@@ -448,23 +442,30 @@ void MOTracker::updatePairings(vector<VectorXd> &unpaired_detections, double msg
         if (!isPaired && !isRGBD) // only record misses if we miss it in the pointcloud
         {
             cout << "Couldn't find a detection for tracklet "<< this_tracklet->getID()<<endl;
-            //            double time = ros::Time::now().toSec() - tracker_start_time;
             cout<<"time is now "<<msg_time<<endl;
             this_tracklet->recordMiss(msg_time);
             cout << "has the tracklet been initialised? "<<this_tracklet->isInitialised()<<endl;
+
             if (this_tracklet->isInitialised()) {
                 // update the kalman filter variance so the covariance circle grows for missed
-//                cout << "!!!!!!!Growing the covariance cylinder!!!!!!!"<<endl;
+                //                cout << "!!!!!!!Growing the covariance cylinder!!!!!!!"<<endl;
                 KalmanFilter kf = this_tracklet->getKf(); // get the Kf from this tracklet vector
                 MatrixXd P = kf.getP(); //get covariance
                 VectorXd xhat = kf.getState();
-//                if (verbose) {
-//                    cout << "New measurement covariance is\n"<<P <<endl;
-//                    cout << "new Kf state is\n"<<xhat <<endl; }
+                //                if (verbose) {
+                //                    cout << "New measurement covariance is\n"<<P <<endl;
+                //                    cout << "new Kf state is\n"<<xhat <<endl; }
                 stringstream tracklet_name;
                 tracklet_name << "tracklet_"<<this_tracklet->getID(); // identify this marker with the tracklet id
                 /// create a title for this marker
                 publishMarker(xhat,tracklet_name.str(), P(0,0),P(1,1),P(2,2)); // publish the marker
+
+
+                //////////////////////////////////////////////////// ACTIVATE THIS WHEN WE HAVE TIME TO TEST
+                cout << "TEST ME: I'M AT LINE 471"<<endl;
+                VectorXd v = kf.getV();
+                // order : detection XYZ, kf XYZ, kf covariance XYZ. Skip 4 cells so have 4+ 1 commas
+                results_file_ <<msg_time<<",,,,,"<<this_tracklet->getID()<<","<< xhat[0]<<","<<xhat[1]<<","<<xhat[2]<<","<<P(0,0)<<","<<P(1,1)<<","<<P(2,2)<<","<<v[0]<<","<<v[1]<<"\n";
             }
 
         } else {
@@ -489,13 +490,12 @@ double MOTracker::getMaxGatingDistance(Tracklet *tracklet_ptr, bool verbose) {
 
 }
 void MOTracker::updateTracklets(vector<VectorXd> &unpaired_detections, double msg_time,bool isRGBD, bool verbose)
-{
-    /*5. for each tracklet
-            1. for each pairing with this tracklet ID
-                1. get the pairing with shortest distance to tracklet.getState()
-                    1. update the tracklet with this pairing
-                    2. delete this pairing
-    */
+{ /*param: vector<VectorXd> &unpaired_detections: address of the unpaired_detections vector
+    param: double msg_time: time at which these detections were recorded
+    param: bool isRGBD: true if the detection is from the RGBD detector, false if from LIDAR
+    param: bool verbose: do we print stuff out?
+    method: update the tracklets in tracklet_vector_ with the pairings in pairing_vector_, then put any unused pairings into unpaired_detections
+  */
     if (verbose)
         cout << "\nupdateTracklets()"<<endl;
 
@@ -504,7 +504,7 @@ void MOTracker::updateTracklets(vector<VectorXd> &unpaired_detections, double ms
         Tracklet *this_tracklet = &tracklet_vector_[i]; // create a pointer to current tracklet
 
         if (verbose)
-            cout << "Looping through "<<pairing_vector_.size()<<" pairings for tracklet "<<i<<endl;
+            cout << "Looping through "<<pairing_vector_.size()<<" pairings for tracklet "<<this_tracklet->getID()<<endl;
         double best_distance = 100; //in m. try and beat this ////////////////////////////////////////////////
         int best_pairing_index = -1; // index for pairing with shortest distance
 
@@ -558,8 +558,8 @@ void MOTracker::updateTracklets(vector<VectorXd> &unpaired_detections, double ms
                 VectorXd v = kf.getV();
                 cout << "innovation is\n"<<v <<endl;
                 //                if (verbose) {
-//                    cout << "New measurement covariance is\n"<<P <<endl;
-//                    cout << "new Kf state is\n"<<xhat <<endl; }
+                //                    cout << "New measurement covariance is\n"<<P <<endl;
+                //                    cout << "new Kf state is\n"<<xhat <<endl; }
 
                 /// create a title for this marker
                 publishMarker(xhat,tracklet_name.str(), P(0,0),P(1,1),P(2,2)); // publish the marker
@@ -590,8 +590,6 @@ void MOTracker::updateTracklets(vector<VectorXd> &unpaired_detections, double ms
         unpaired_detections.push_back(pairing_vector_[i].getDetectionCoord()); // move the detection coordinate back onto detections
     pairing_vector_.clear(); // remove all elements from pairing_vector_, since we've just copied them across
 }
-
-
 
 int MOTracker::getNextTrackletID(bool verbose)
 {
