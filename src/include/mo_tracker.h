@@ -156,7 +156,7 @@ private:
     ros::Publisher pub_zfilt_; // passthrough filtered cloud
     ros::Publisher pub_ds_; // downsampled cloud
     ros::Publisher pub_seg_filter_; // downsampled cloud
-    ros::Publisher pub_centroid_; // centroid cluster
+    vector<ros::Publisher> pub_centroid_; // centroid cluster
     ros::Publisher pub_marker_; // for markers
     boost::shared_ptr<tf::TransformListener> odom_base_ls_; // setup the transform listener so we can listen to the odom_base_tf
     boost::shared_ptr<tf::TransformListener> odom_realsense_ls_; // setup the transform listener so we can transform realsense coords into odom frame

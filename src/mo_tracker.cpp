@@ -14,7 +14,7 @@ MOTracker::MOTracker(ros::NodeHandle nh,
     nh_(nh),  pcl_params(pcl_params), kf_params(kf_params), tracker_params(tracker_params), io_params(io_params), verbose_(verbose)// initiate the nodehandle
 {
     // Constructor: sets up
-    cout<< "MOTracker constructor called "<<endl;
+    cout<< "Calling MOTracker constructor"<<endl;
     initialiseSubscribersAndPublishers(); //initialise the subscribers and publishers
     setupResultsCSV();
 
@@ -350,7 +350,7 @@ void MOTracker::getCentroidsOfClusters (vector<pcl::PointCloud<pcl::PointXYZRGB>
             sensor_msgs::PointCloud2 msg_to_publish; // initiate intermediate message variable
             pcl::toROSMsg(*cloud_cluster,msg_to_publish);
             msg_to_publish.header.frame_id = "odom"; // CHANGED THIS TO BASE INSTEAD OF ODOM BECAUSE WE WERE PUBLISHING POINTS IN THE WRONG PLACE
-            pub_centroid_.publish (msg_to_publish); // this is not publishing correctly
+            pub_centroid_.at(i).publish (msg_to_publish); // this is not publishing correctly
         }
         if (verbose_)
             cout << "\n\n** Returning cloud with "<<cloud_cluster->points.size() <<" points in it"<<endl;
@@ -457,13 +457,17 @@ void MOTracker::updatePairings(vector<VectorXd> &unpaired_detections, double msg
                 stringstream tracklet_name;
                 tracklet_name << "tracklet_"<<this_tracklet->getID(); // identify this marker with the tracklet id
                 /// create a title for this marker
-                publishMarker(xhat,tracklet_name.str(), P(0,0),P(1,1),P(2,2)); // publish the marker
+                publishMarker(xhat,tracklet_name.str(), getMaxGatingDistance(this_tracklet, true),getMaxGatingDistance(this_tracklet, false),2); // publish the marker
 
                 //////////////////////////////////////////////////// ACTIVATE THIS WHEN WE HAVE TIME TO TEST
                 cout << "TEST ME: I'M AT LINE 471"<<endl;
 
+                cout << "about to write all this to file "<<this_tracklet->getID();
+                cout<<v<<endl;
+                cout <<"\n\n\n\n****************************************************************\n\n\n\n"<<endl;
                 // order : detection XYZ, kf XYZ, kf covariance XYZ. Skip 4 cells so have 4+1 commas
                 results_file_ <<msg_time<<",,,,,"<<this_tracklet->getID()<<","<< xhat[0]<<","<<xhat[1]<<","<<xhat[2]<<","<<P(0,0)<<","<<P(1,1)<<","<<P(2,2)<<","<<v[0]<<","<<v[1]<<"\n";
+                cout << "results file is fine"<<endl;
             }
 
         } else {
@@ -477,6 +481,9 @@ double MOTracker::getMaxGatingDistance(Tracklet *tracklet_ptr, bool verbose) {
         KalmanFilter kf = tracklet_ptr->getKf(); // get the Kf from this tracklet vector
         MatrixXd P = kf.getP(); //get covariance
         double max = tracker_params.gating_dist_constant*sqrt((P(0,0) + P(1,1))/2);
+        // don't let it get too big
+        if (max > tracker_params.base_gating_dist)
+            max = tracker_params.base_gating_dist;
         if (verbose)
             cout <<"MAX_GATING_DIST = "<<max<<"m"<<endl;
         return max; // return sqrt of average covariance is basically the std dev in x, y
@@ -561,7 +568,7 @@ void MOTracker::updateTracklets(vector<VectorXd> &unpaired_detections, double ms
                 }
 
                 /// create a title for this marker
-                publishMarker(xhat,tracklet_name.str(), P(0,0),P(1,1),P(2,2)); // publish the marker
+                publishMarker(xhat,tracklet_name.str(), getMaxGatingDistance(this_tracklet, true),getMaxGatingDistance(this_tracklet, false),2); // publish the marker
 
                 /////////////// write to csv
                 if (verbose)
@@ -746,7 +753,19 @@ void MOTracker::initialiseSubscribersAndPublishers() {
         pub_zfilt_ = nh_.advertise<sensor_msgs::PointCloud2> (topic_zfilt, 1);
         pub_ds_ = nh_.advertise<sensor_msgs::PointCloud2> (topic_ds, 1);
         pub_seg_filter_ = nh_.advertise<sensor_msgs::PointCloud2> (topic_seg_filt, 1);
-        pub_centroid_ = nh_.advertise<sensor_msgs::PointCloud2> (topic_centroid, 1);
+        cout <<"hi"<<endl;
+
+        int numofpubs = 6;
+        for (int i = 0; i<numofpubs; i++)
+        {   cout <<"hi"<<i<<endl;
+            stringstream ss;
+            ss << "pcl_centroid_"<<i;
+            cout <<ss.str();
+            cout <<"hi"<<i<<endl;
+            ros::Publisher new_pub = nh_.advertise<sensor_msgs::PointCloud2> (ss.str(), 1);
+            pub_centroid_.push_back(new_pub);
+        }
+
     }
     // Create a publisher for the kf marker
     pub_marker_ = nh_.advertise<visualization_msgs::Marker>( "Tracklet_markers", 0 ); // this name shows up in RVIZ
@@ -759,8 +778,6 @@ void MOTracker::initialiseSubscribersAndPublishers() {
 
 void MOTracker::publishMarker(VectorXd x_hat, string marker_name,double scale_x,double scale_y,double scale_z) {
     /// This publishes a cylinder, size set by scale_* onto publisher vis_pub at location x_hat
-
-
 
     visualization_msgs::Marker marker; // initiate the marker
 
@@ -787,8 +804,12 @@ void MOTracker::publishMarker(VectorXd x_hat, string marker_name,double scale_x,
     // set the marker size as an input params
     //    marker.scale.x = scale_x*scaler;
     //    marker.scale.y = scale_y*scaler;
-    marker.scale.x = sqrt(scale_x)*scaler;
-    marker.scale.y = sqrt(scale_y)*scaler;
+//    marker.scale.x = sqrt(scale_x)*scaler;
+//    marker.scale.y = sqrt(scale_y)*scaler;
+    marker.scale.x = scale_x;
+    marker.scale.y = scale_y;
+
+
     //    marker.scale.z = scale_z*scaler;
     marker.scale.z = 2; // keeping z at a constant 2 metres tall
 
