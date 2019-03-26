@@ -476,7 +476,7 @@ double MOTracker::getMaxGatingDistance(Tracklet *tracklet_ptr, bool verbose) {
     if (tracklet_ptr->isInitialised()) {
         KalmanFilter kf = tracklet_ptr->getKf(); // get the Kf from this tracklet vector
         MatrixXd P = kf.getP(); //get covariance
-        double max = sqrt(tracker_params.gating_dist_constant*(P(0,0) + P(1,1))/2);
+        double max = tracker_params.gating_dist_constant*sqrt((P(0,0) + P(1,1))/2);
         if (verbose)
             cout <<"MAX_GATING_DIST = "<<max<<"m"<<endl;
         return max; // return sqrt of average covariance is basically the std dev in x, y
@@ -612,6 +612,7 @@ int MOTracker::getNextTrackletID(bool verbose)
         return tracklet_vector_.size(); // return an ID 1 greater than current one
     }
 }
+
 void MOTracker::createNewTracklets(vector<VectorXd> &unpaired_detections, bool verbose)
 {
     ////// birth
@@ -622,11 +623,6 @@ void MOTracker::createNewTracklets(vector<VectorXd> &unpaired_detections, bool v
 
     for (int i = 0; i < unpaired_detections.size(); i++) // loop though the unpaired detections
     {
-        // create a new tracklet with a KF initialised at the last detection
-
-        //        cout << "Kf_params.A is " << kf_params_.A << endl;
-        //        int next_tracklet_ID = getNextTrackletID(true);
-        //        int next_tracklet_ID = next_tracklet_ID_;
         Tracklet new_tracklet(next_tracklet_ID_,
                               unpaired_detections[i],
                               KalmanFilter(kf_params.delF, kf_params.delH, kf_params.delGQdelGT, kf_params.R, kf_params.P0, true));
@@ -634,13 +630,12 @@ void MOTracker::createNewTracklets(vector<VectorXd> &unpaired_detections, bool v
         if (verbose)
             cout << "Tracklet with ID "<<next_tracklet_ID_<<" added to tracklet_vector_"<<endl;
 
-        //        next_tracklet_ID_++; // update the next_tracklet_ID
-        next_tracklet_ID_ ++;
+        next_tracklet_ID_ ++; // increment ID so that the next tracklet will get a unique one
         if (next_tracklet_ID_ > 20) // prevent the program getting an overflow after a really long time
             next_tracklet_ID_ = 0;
-
     }
 }
+
 void MOTracker::deleteDeadTracklets(bool verbose)
 {
     //    // death

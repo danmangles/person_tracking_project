@@ -35,8 +35,8 @@ pcl_param_struct getPclParams() {
 tracker_param_struct getTrackerParams() {
     // Sets the tracker's kalman filter kf's parameters dt,A,C,Q,R,P
     // add a velocity state
-    return {.gating_dist_constant = 0.4, //this is used in max_gating_dist calcs e.g.
-                          // max = sqrt(tracker_params.gating_dist_constant*(P(0,0) + P(1,1))/2);
+    return {.gating_dist_constant = 0.65, //this is used in max_gating_dist calcs e.g.
+                          // max = tracker_params.gating_dist_constant*sqrt((P(0,0) + P(1,1))/2);
             .base_gating_dist = 1, // gating distance for uninitiated tracklets in m
             .max_consecutive_misses = 6,// if we've missed this tracklet too many times in a row, delete it
             .min_initialisation_length = 4,// min number of detections needed to start the kalman filter
