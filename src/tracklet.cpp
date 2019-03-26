@@ -29,6 +29,7 @@ double Tracklet::getDistance(VectorXd detection)
     VectorXd state = detection_vector_.back(); // use last detection in vector
     return sqrt((detection - state).squaredNorm()); // return euclidean norm
 }
+
 void Tracklet::initKf(double current_time){
     kf_.init(current_time, detection_vector_.back());
     isInitialised_ = true;

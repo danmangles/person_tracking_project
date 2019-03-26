@@ -23,7 +23,7 @@ KalmanFilter::KalmanFilter(
 
     : delF(delF), delH(delH), delGQdelGT(delGQdelGT), R(R), P(P0), //populate matrices values given in constructor
       m(delH.rows()), n(delF.rows()), initialized(false), //populate m with number of rows in C, n with number of rows in A
-      I(3, 3), x_hat(n), verbose_(verbose)
+      I(3, 3), x_hat(n), verbose_(verbose), v(n)
 {
     cout << "KalmanFilter constructor called" << endl;
     I.setIdentity();
@@ -45,6 +45,7 @@ void KalmanFilter::init(double t0, const VectorXd& x0) {
     if (verbose_)
         cout << "initialising Kalman Filter" <<endl;
     x_hat = x0;
+    v.setZero(); //set v as zero so there is something to reference the first time
     t_ = t0;
     initialized = true;
     if (verbose_) {
@@ -118,16 +119,34 @@ void KalmanFilter::update(const VectorXd& z, bool verbose) {
         cout << "*UPDATE*\nv = \n"<<v<< "\nS = \n"<<S<<"\nW = \n"<<W<<"\nx_hat_new = \n"<<x_hat<< "\nP_new = \n"<<P<<endl;
 
 }
+
 MatrixXd KalmanFilter::getP()
 {
+    cout <<"returning P"<<endl;
     if (!initialized)
-        throw std::runtime_error("Filter is not initialised... :3");
+    {
+        throw std::runtime_error("Can't return P when filter not initialised ... :3");
+    }
     return P;
 }
+
+VectorXd KalmanFilter::getV()
+{
+    cout <<"returning v"<<endl;
+    if (!initialized)
+    {
+        throw std::runtime_error("Can't return v when filter not initialised ... :3");
+    }
+    return v;
+}
+
 VectorXd KalmanFilter::getState()
 {
+    cout <<"returning xhat"<<endl;
     if (!initialized)
-        throw std::runtime_error("Filter is not initialised... :3");
+    {
+        throw std::runtime_error("Can't return xhat when filter not initialised ... :3");
+    }
     return x_hat;
 }
 
