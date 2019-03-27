@@ -64,14 +64,14 @@ kf_param_struct getKfParams() {
     delH.block(0,0,3,3) = I3; // set left 3x3 block to identity
     //delGQdelGT
     MatrixXd delGQdelGT(n, n); // Process noise covariance
-    delGQdelGT.setIdentity(); //MAKE THIS A FUNCTION OF TIMESTEP^2
-    delGQdelGT = delGQdelGT*2; // to do with walking speed
+    delGQdelGT.setZero(); //MAKE THIS A FUNCTION OF TIMESTEP^2
     //R
     MatrixXd R(m, m); // Measurement noise covariance
-    R << 20, 0, 0, 0, 20, 0, 0, 0, 1; //I3 * .05 // MAKE THIS A FUNCTION OF TIMESTEP^2
+    R << 10, 0, 0, 0, 10, 0, 0, 0, 10; //I3 * .05 // MAKE THIS A FUNCTION OF TIMESTEP^2
     //P0
     MatrixXd P0(n, n); // Estimate error covariance initial state
-    P0 = delGQdelGT; // set to same as process noise initially
+    P0.setIdentity();
+    P0 = P0*2;
 
 
    // initialise the kalman filter with the given parameters
@@ -101,7 +101,7 @@ io_param_struct getIOParams(){
     res_filename << "results_CSVs/res_0"<<1+ ltm->tm_mon<<  ltm->tm_mday<<"_"<<ltm->tm_hour<<1 + ltm->tm_min<< ".csv";
     gnd_filename << "results_CSVs/gnd_0"<<1+ ltm->tm_mon<<  ltm->tm_mday<<"_"<<ltm->tm_hour<<1 + ltm->tm_min<< ".csv";
 
-    return {.publishing = true,
+    return {.publishing = false,
                 .res_filename = res_filename.str(),
                 .gnd_filename = gnd_filename.str()
     };
