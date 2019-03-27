@@ -37,8 +37,8 @@ tracker_param_struct getTrackerParams() {
     // add a velocity state
     return {.gating_dist_constant = 0.65, //this is used in max_gating_dist calcs e.g.
                           // max = tracker_params.gating_dist_constant*sqrt((P(0,0) + P(1,1))/2);
-            .base_gating_dist = 2.0, // gating distance for uninitiated tracklets in m
-            .max_consecutive_misses = 6,// if we've missed this tracklet too many times in a row, delete it
+            .base_gating_dist = 3.0, // gating distance for uninitiated tracklets in m
+            .max_consecutive_misses = 4,// if we've missed this tracklet too many times in a row, delete it
             .min_initialisation_length = 4,// min number of detections needed to start the kalman filter
             .only_init_rgb_tracklet = false
     };
