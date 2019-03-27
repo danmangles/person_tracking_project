@@ -691,10 +691,11 @@ void MOTracker::initiateLongTracklets(double msg_time, bool verbose)
 void MOTracker::manageTracklets(vector<VectorXd> unpaired_detections, double msg_time, bool isRGBD) {
     // Loops through a vector of centroids and updates the kalman filter with the one closest to previous estimate.
     // Publishes transforms for all estimates. Uses time of message msg_time
-    if (verbose_) {
-        cout << "***********************************************\nmanageTracklets()"<<endl;
-        cout << "There are "<<tracklet_vector_.size()<<" live tracklets."<<endl;
-    }
+
+    cout << "***********************************************\nmanageTracklets()\n*******************************"<<endl;
+    cout << "There are "<<tracklet_vector_.size()<<" live tracklets,"<<endl;
+    cout << "There are "<<unpaired_detections.size()<<" unpaired_detections"<<endl;
+
     // if time not started yet, start the time
     if (tracker_start_time == -1) {
         tracker_start_time = msg_time;
@@ -714,6 +715,7 @@ void MOTracker::manageTracklets(vector<VectorXd> unpaired_detections, double msg
         //        cout << "writing raw detections to GND truth file"<<endl;
         gnd_file_<<msg_time<<","<<isRGBD<<","<<unpaired_detections[i][0]<<","<<unpaired_detections[i][1]<<","<<unpaired_detections[i][2]<<"\n";
     }
+
     // initiate a cost matrix to populate
     MatrixXd cost_matrix(unpaired_detections.size(),tracklet_vector_.size());
     populateCostMatrix(unpaired_detections, cost_matrix, true);
@@ -749,18 +751,29 @@ void MOTracker::populateCostMatrix(vector<VectorXd> unpaired_detections, MatrixX
 
 void MOTracker::updateTrackletsWithCM(vector<VectorXd> unpaired_detections, MatrixXd &cost_matrix, double msg_time, bool isRGBD, bool verbose)
 {
+
     if (verbose)
         cout << "updateTrackletsWithCM()"<<endl;
-    for (int i = 0; i < tracklet_vector_.size(); i++)
+    if (tracklet_vector_.size() < 1)
     {
         if (verbose)
-            cout << "cost matrix is now\n"<<cost_matrix<<endl;
+            cout << "no tracklets, exiting method"<<endl;
+        return;
+    }
+    vector <int> paired_tracklet_indices;
+    while(true) // this loop is broken out of by two conditions: all detections are far away or there are no detectinos left
+    {
+        if (verbose)
+            cout << "cost_matrix is now\n"<<cost_matrix<<endl;
+
         //get location of minimum
         MatrixXd::Index minRow, minCol;
         float min_dist = cost_matrix.minCoeff(&minRow, &minCol);
         cout << "Min: " << min_dist << ", at: " << minRow << "," << minCol << endl;
         // if ok, update tracklet with this detection
         Tracklet * this_tracklet = &tracklet_vector_[minCol];
+        paired_tracklet_indices.push_back(minCol);
+
         if (min_dist < getMaxGatingDistance(this_tracklet, true))
         {
             Tracklet * this_tracklet = &tracklet_vector_[minCol];
@@ -774,9 +787,9 @@ void MOTracker::updateTrackletsWithCM(vector<VectorXd> unpaired_detections, Matr
             }
         }
 
-        else // detections are too far away from tracklets
+        else // closest detection is too far away from tracklets
         {
-            break; //out of the for loop
+            break; //out of the loop
         }
         //       delete the row and the column and repeat
         removeRow(cost_matrix, minRow);
@@ -791,17 +804,87 @@ void MOTracker::updateTrackletsWithCM(vector<VectorXd> unpaired_detections, Matr
             break;
         }
     }
+    // now record misses with all remaining tracklets
+    for (int i = 0; i < tracklet_vector_.size(); i++)
+    {
+        // if paired_tracklet_indices contains i, we are ok
+        if(find(paired_tracklet_indices.begin(), paired_tracklet_indices.end(), i) == paired_tracklet_indices.end())
+        {
+            Tracklet * this_tracklet = &tracklet_vector_[i]; // create a ptr for readibility
+            // paired_tracklet_indices doesn't contain i
+            cout << "Couldn't find a detection for tracklet "<< this_tracklet->getID()<<endl;
+            cout<<"time is now "<<msg_time<<endl;
+            this_tracklet->recordMiss(msg_time);
+            cout << "has the tracklet been initialised? "<<this_tracklet->isInitialised()<<endl;
+
+            if (this_tracklet->isInitialised())
+            {
+                // update the kalman filter variance so the covariance circle grows for missed
+                KalmanFilter kf = this_tracklet->getKf(); // get the Kf from this tracklet vector
+                MatrixXd P = kf.getP(); //get covariance
+                VectorXd xhat = kf.getState(), v = kf.getV();
+                //                if (verbose) {
+                //                    cout << "New measurement covariance is\n"<<P <<endl;
+                //                    cout << "new Kf state is\n"<<xhat <<endl; }
+                stringstream tracklet_name;
+                tracklet_name << "tracklet_"<<this_tracklet->getID(); // identify this marker with the tracklet id
+                /// create a title for this marker
+                publishMarker(xhat,tracklet_name.str(), getMaxGatingDistance(this_tracklet, false),getMaxGatingDistance(this_tracklet, false),2); // publish the marker
+
+                cout << "about to write all this to file "<<this_tracklet->getID();
+                cout<<v<<endl;
+                cout <<"\n\n\n\n****************************************************************\n\n\n\n"<<endl;
+                // order : detection XYZ, kf XYZ, kf covariance XYZ. Skip 4 cells so have 4+1 commas
+                results_file_ <<msg_time<<",,,,,"<<this_tracklet->getID()<<","<< xhat[0]<<","<<xhat[1]<<","<<xhat[2]<<","<<P(0,0)<<","<<P(1,1)<<","<<P(2,2)<<","<<v[0]<<","<<v[1]<<"\n";
+                cout << "results file is fine"<<endl;
+            }
+        }
+        else
+        {
+            cout <<"tracklet vector "<<i<<" is paired"<<endl;
+        }
+    }
+
 }
-void MOTracker::updateTracklet(Tracklet *tracklet, VectorXd detection, double msg_time, bool isRGBD, bool verbose)
+void MOTracker::updateTracklet(Tracklet *tracklet, VectorXd det_coord, double msg_time, bool isRGBD, bool verbose)
 {
     // updates tracklet this_tracklet with detection detection
     if (verbose)
     {
         cout <<"updateTracklet() called"<<endl;
     }
-    tracklet->update(detection, msg_time, isRGBD, true); // update the tracklet with this detection
+    tracklet->update(det_coord, msg_time, isRGBD, true); // update the tracklet with this detection
+    ///// now publish the output of this tracklet with a marker
+    stringstream tracklet_name;
+    tracklet_name << "tracklet_"<<tracklet->getID(); // identify this marker with the tracklet id
+    if (io_params.publishing)
+    {
+        publishTransform(det_coord,tracklet_name.str()); // publish a transform even if we are not initialised
+        if (verbose)
+            cout <<" publishing a transform at \n"<<det_coord<<" with name "<<tracklet_name.str()<<endl;
+    }
+    if (tracklet->isInitialised()) // start publishing if we are initialised
+    {
+        KalmanFilter kf = tracklet->getKf(); // get the Kf from this tracklet vector
+        MatrixXd P = kf.getP(); //get covariance
+        VectorXd xhat = kf.getState(), v = kf.getV();
 
+        if (verbose) {
+            cout << "New measurement covariance:\n"<<P <<endl;
+            cout << "new Kf state is\n"<<xhat <<endl;
+            cout << "innovation is\n"<<v <<endl;
+        }
 
+        /// create a title for this marker
+        publishMarker(xhat,tracklet_name.str(), getMaxGatingDistance(tracklet, false),getMaxGatingDistance(tracklet, false),2); // publish the marker
+
+        /////////////// write to csv
+        if (verbose)
+            cout << "writing tracklet data and detections to file"<<endl;
+
+        // order : detection XYZ, kf XYZ, kf covariance XYZ. Skip 4 cells so have 4+ 1 commas
+        results_file_ <<msg_time<<",,,,,"<<tracklet->getID()<<","<< xhat[0]<<","<<xhat[1]<<","<<xhat[2]<<","<<P(0,0)<<","<<P(1,1)<<","<<P(2,2)<<","<<v[0]<<","<<v[1]<<"\n";
+    }
 
 
 }
