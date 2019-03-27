@@ -123,7 +123,7 @@ private:
 
     tf::Transformer pose_transformer_;
     ////// Tracklet methods
-    void populateCostMatrix(vector<VectorXd> unpaired_detections, MatrixXd &cost_matrix);
+    void populateCostMatrix(vector<VectorXd> unpaired_detections, MatrixXd &cost_matrix, bool verbose);
     void updatePairings(vector<VectorXd> &unpaired_detections, double msg_time, bool isRGBD, bool verbose);
     void updateTracklets(vector<VectorXd> &unpaired_detections, double msg_time, bool isRGBD, bool verbose);
     void createNewTracklets(vector<VectorXd> &unpaired_detections, bool verbose);

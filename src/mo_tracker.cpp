@@ -121,7 +121,7 @@ void MOTracker::poseArrayCallback(const geometry_msgs::PoseArray &pose_array)
         }
         // call manageTracklets with the time in seconds as a double
         manageTracklets(realsense_coords, pose_array.header.stamp.toSec(), true);
-//        cout << "centroid coords updated with a new pose"<<endl;
+        //        cout << "centroid coords updated with a new pose"<<endl;
 
     } catch(const std::exception&)
     {
@@ -717,7 +717,7 @@ void MOTracker::manageTracklets(vector<VectorXd> unpaired_detections, double msg
     }
     // initiate a cost matrix to populate
     MatrixXd cost_matrix(unpaired_detections.size(),tracklet_vector_.size());
-    populateCostMatrix(unpaired_detections, cost_matrix);
+    populateCostMatrix(unpaired_detections, cost_matrix, true);
     cout<<cost_matrix<<endl;
 
 
@@ -729,11 +729,24 @@ void MOTracker::manageTracklets(vector<VectorXd> unpaired_detections, double msg
     deleteDeadTracklets(false); // delete any tracklets that have been missed too many times
     initiateLongTracklets(msg_time, false); // initiate the kalman filters and publisher for any tracklets with a long sequence of detections
 }
-void MOTracker::populateCostMatrix(vector<VectorXd> unpaired_detections, MatrixXd &cost_matrix)
+void MOTracker::populateCostMatrix(vector<VectorXd> unpaired_detections, MatrixXd &cost_matrix, bool verbose)
 {
-    cost_matrix.setOnes();
-    cout <<"cost matrix populated"<<endl;
+    if (verbose)
+        cout <<"populateCostMatrix()"<<endl;
+    for (int i = 0; i < unpaired_detections.size(); i++) // loop through all unpaired detections
+    {
+        if (verbose)
+            cout << "assessing detection "<<i<<endl;
+        for (int j = 0; j < tracklet_vector_.size(); j++) // loop through all live tracklets
+        {
+            if (verbose)
+                cout << "assessing tracklet "<<j<<endl;
 
+            cost_matrix(i,j) = tracklet_vector_[j].getDistance(unpaired_detections[i]);
+        }
+    }
+    if (verbose)
+        cout <<"cost matrix populated"<<endl;
 }
 
 ///// I/O Methods
