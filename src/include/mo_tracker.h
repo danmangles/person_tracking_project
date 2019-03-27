@@ -69,7 +69,7 @@ using namespace std;
 #define mo_tracker_H
 
 // holds params for the kalman filter
-struct kf_param_struct {double dt; MatrixXd F; MatrixXd H; MatrixXd GQG; MatrixXd R; MatrixXd P0;};
+struct kf_param_struct {double dt; MatrixXd F; MatrixXd H; MatrixXd GQG; MatrixXd R_rgbd; MatrixXd R_velodyne;MatrixXd P0;};
 // holds params for the pointcloud
 struct pcl_param_struct {bool apply_passthrough_filter;bool apply_planar_outlier_removal; bool apply_voxel_grid; int max_cluster_size; int min_cluster_size; double cluster_tolerance; double seg_dist_threshold; double box_x; double box_y; double min_height; double downsample_factor;};
 // holds params for the tracker
@@ -124,8 +124,8 @@ private:
     tf::Transformer pose_transformer_;
     ////// Tracklet methods
     void populateCostMatrix(vector<VectorXd> unpaired_detections, MatrixXd &cost_matrix, bool verbose);
-    void updateTrackletsWithCM(vector<VectorXd> unpaired_detections, MatrixXd &cost_matrix,double msg_time, bool verbose);
-    void updateTracklet(Tracklet *tracklet, VectorXd detection, double msg_time, bool verbose);
+    void updateTrackletsWithCM(vector<VectorXd> unpaired_detections, MatrixXd &cost_matrix,double msg_time, bool isRGBD, bool verbose);
+    void updateTracklet(Tracklet *tracklet, VectorXd detection, double msg_time, bool isRGBD, bool verbose);
     void updatePairings(vector<VectorXd> &unpaired_detections, double msg_time, bool isRGBD, bool verbose);
     void updateTracklets(vector<VectorXd> &unpaired_detections, double msg_time, bool isRGBD, bool verbose);
     void createNewTracklets(vector<VectorXd> &unpaired_detections, bool verbose);
@@ -169,7 +169,7 @@ private:
 
     ////// Tracklet variables
     vector <Tracklet> tracklet_vector_;
-    vector <Pairing> pairing_vector_;
+//    vector <Pairing> pairing_vector_;
     int next_tracklet_ID_ = 0; // unique id for tracklets
     vector <int> dead_tracklet_IDs_; // a vector of tracklet IDs that have been deleted
     double tracker_start_time = -1; // time when the filter is initiated

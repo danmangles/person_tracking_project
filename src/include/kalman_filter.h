@@ -25,7 +25,8 @@ public:
             const MatrixXd& F,
             const MatrixXd& H,
             const MatrixXd& GQG,
-            const MatrixXd& R,
+            const MatrixXd& R_rgbd,
+            const MatrixXd& R_velodyne,
             const MatrixXd& P0,
             bool verbose
     );
@@ -44,7 +45,7 @@ public:
           * time step is assumed to remain constant.
           */
 
-        void update(const VectorXd& z, bool verbose);
+        void update(const VectorXd& z, bool isRGBD, bool verbose);
         void predict(double time, bool verbose);
     /*
      * Return current state and time
@@ -56,8 +57,8 @@ public:
 
 private:
     // Matrices for computation
-    MatrixXd F, H, GQG, R, P, S, W, I;
-
+    MatrixXd F, H, GQG, R_rgbd, R_velodyne, P, S, W, I;
+    MatrixXd R;
     // System dimensions
     int m, n;
 

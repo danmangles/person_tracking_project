@@ -66,8 +66,9 @@ kf_param_struct getKfParams() {
     MatrixXd GQG(n, n); // Process noise covariance
     GQG.setZero(); //MAKE THIS A FUNCTION OF TIMESTEP^2
     //R
-    MatrixXd R(m, m); // Measurement noise covariance
-    R << 10, 0, 0, 0, 10, 0, 0, 0, 10; //I3 * .05 // MAKE THIS A FUNCTION OF TIMESTEP^2
+    MatrixXd R_rgbd(m, m), R_velodyne(m,m); // Measurement noise covariance
+    R_rgbd << 5, 0, 0, 0, 5, 0, 0, 0, 10; //I3 * .05 // MAKE THIS A FUNCTION OF TIMESTEP^2
+    R_velodyne << 10, 0, 0, 0, 10, 0, 0, 0, 10; //I3 * .05 // MAKE THIS A FUNCTION OF TIMESTEP^2
     //P0
     MatrixXd P0(n, n); // Estimate error covariance initial state
     P0.setIdentity();
@@ -79,10 +80,11 @@ kf_param_struct getKfParams() {
     cout << "F: \n" << F << endl;
     cout << "H: \n" << H << endl;
     cout << "GQG: \n" << GQG << endl;
-    cout << "R: \n" << R << endl;
+    cout << "R_rgbd: \n" << R_rgbd << endl;
+    cout << "R_velodyne: \n" << R_velodyne << endl;
     cout << "P0: \n" << P0 << endl;
 
-    return {.dt = dt, .F = F, .H = H, .GQG = GQG, .R = R, .P0 = P0}; // move all the params into the struct
+    return {.dt = dt, .F = F, .H = H, .GQG = GQG, .R_rgbd = R_rgbd, .R_velodyne = R_velodyne, .P0 = P0}; // move all the params into the struct
 }
 
 io_param_struct getIOParams(){
@@ -101,7 +103,7 @@ io_param_struct getIOParams(){
     res_filename << "results_CSVs/res_0"<<1+ ltm->tm_mon<<  ltm->tm_mday<<"_"<<ltm->tm_hour<<1 + ltm->tm_min<< ".csv";
     gnd_filename << "results_CSVs/gnd_0"<<1+ ltm->tm_mon<<  ltm->tm_mday<<"_"<<ltm->tm_hour<<1 + ltm->tm_min<< ".csv";
 
-    return {.publishing = false,
+    return {.publishing = true,
                 .res_filename = res_filename.str(),
                 .gnd_filename = gnd_filename.str()
     };

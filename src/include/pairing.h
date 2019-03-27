@@ -1,4 +1,3 @@
-
 #include <Eigen/Dense>
 #include <iostream> // for couts
 using namespace Eigen;

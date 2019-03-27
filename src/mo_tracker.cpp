@@ -17,9 +17,6 @@ MOTracker::MOTracker(ros::NodeHandle nh,
     cout<< "Calling MOTracker constructor"<<endl;
     initialiseSubscribersAndPublishers(); //initialise the subscribers and publishers
     setupResultsCSV();
-
-    //    results_file_.close();
-
 }
 
 ///// General Pointcloud Methods
@@ -390,7 +387,7 @@ void MOTracker::getClusterCentroid(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cluste
     coord_centroid << c.x, c.y, c.z; // assign coords to coord_centroid
     //    cout << "generate_centroid() is returning a coord_centroid at :\n"<<coord_centroid<<endl;
 }
-
+/*
 void MOTracker::updatePairings(vector<VectorXd> &unpaired_detections, double msg_time, bool isRGBD, bool verbose)
 {
     if (verbose) {
@@ -478,6 +475,7 @@ void MOTracker::updatePairings(vector<VectorXd> &unpaired_detections, double msg
         }
     }
 }
+*/
 double MOTracker::getMaxGatingDistance(Tracklet *tracklet_ptr, bool verbose) {
     // returns the max distance at which a new detection can be associated
     if (tracklet_ptr->isInitialised()) {
@@ -497,13 +495,14 @@ double MOTracker::getMaxGatingDistance(Tracklet *tracklet_ptr, bool verbose) {
     }
 
 }
+/*
 void MOTracker::updateTracklets(vector<VectorXd> &unpaired_detections, double msg_time,bool isRGBD, bool verbose)
-{ /*param: vector<VectorXd> &unpaired_detections: address of the unpaired_detections vector
-    param: double msg_time: time at which these detections were recorded
-    param: bool isRGBD: true if the detection is from the RGBD detector, false if from LIDAR
-    param: bool verbose: do we print stuff out?
-    method: update the tracklets in tracklet_vector_ with the pairings in pairing_vector_, then put any unused pairings into unpaired_detections
-  */
+{ //param: vector<VectorXd> &unpaired_detections: address of the unpaired_detections vector
+   // param: double msg_time: time at which these detections were recorded
+   // param: bool isRGBD: true if the detection is from the RGBD detector, false if from LIDAR
+  //  param: bool verbose: do we print stuff out?
+//    method: update the tracklets in tracklet_vector_ with the pairings in pairing_vector_, then put any unused pairings into unpaired_detections
+
     if (verbose)
         cout << "\nupdateTracklets()"<<endl;
 
@@ -593,7 +592,7 @@ void MOTracker::updateTracklets(vector<VectorXd> &unpaired_detections, double ms
         unpaired_detections.push_back(pairing_vector_[i].getDetectionCoord()); // move the detection coordinate back onto detections
     pairing_vector_.clear(); // remove all elements from pairing_vector_, since we've just copied them across
 }
-
+*/
 int MOTracker::getNextTrackletID(bool verbose)
 {
     // Generates an ID for a new tracker
@@ -634,7 +633,7 @@ void MOTracker::createNewTracklets(vector<VectorXd> &unpaired_detections, bool v
     {
         Tracklet new_tracklet(next_tracklet_ID_,
                               unpaired_detections[i],
-                              KalmanFilter(kf_params.F, kf_params.H, kf_params.GQG, kf_params.R, kf_params.P0, true));
+                              KalmanFilter(kf_params.F, kf_params.H, kf_params.GQG, kf_params.R_rgbd,kf_params.R_velodyne, kf_params.P0, true));
         tracklet_vector_.push_back(new_tracklet);
         if (verbose)
             cout << "Tracklet with ID "<<next_tracklet_ID_<<" added to tracklet_vector_"<<endl;
@@ -718,12 +717,12 @@ void MOTracker::manageTracklets(vector<VectorXd> unpaired_detections, double msg
     // initiate a cost matrix to populate
     MatrixXd cost_matrix(unpaired_detections.size(),tracklet_vector_.size());
     populateCostMatrix(unpaired_detections, cost_matrix, true);
-    updateTrackletsWithCM(unpaired_detections, cost_matrix, msg_time, true);
+    updateTrackletsWithCM(unpaired_detections, cost_matrix, msg_time, isRGBD, true);
 
 
     ////// PERFORM THE TRACKLET ALGORITHM
-    updatePairings(unpaired_detections,msg_time, isRGBD, false); // get a bunch of pairings between tracklets and detections
-    updateTracklets(unpaired_detections, msg_time, isRGBD, false); // update each tracklet with the best pairing for that tracklet, increment the misses for tracklets without pairings
+//    updatePairings(unpaired_detections,msg_time, isRGBD, false); // get a bunch of pairings between tracklets and detections
+//    updateTracklets(unpaired_detections, msg_time, isRGBD, false); // update each tracklet with the best pairing for that tracklet, increment the misses for tracklets without pairings
     createNewTracklets(unpaired_detections, false); // generate new tracklets from any unassociated pairings
     deleteDeadTracklets(false); // delete any tracklets that have been missed too many times
     initiateLongTracklets(msg_time, false); // initiate the kalman filters and publisher for any tracklets with a long sequence of detections
@@ -748,11 +747,14 @@ void MOTracker::populateCostMatrix(vector<VectorXd> unpaired_detections, MatrixX
         cout <<"cost matrix populated"<<endl;
 }
 
-void MOTracker::updateTrackletsWithCM(vector<VectorXd> unpaired_detections, MatrixXd &cost_matrix, double msg_time, bool verbose)
+void MOTracker::updateTrackletsWithCM(vector<VectorXd> unpaired_detections, MatrixXd &cost_matrix, double msg_time, bool isRGBD, bool verbose)
 {
+    if (verbose)
+        cout << "updateTrackletsWithCM()"<<endl;
     for (int i = 0; i < tracklet_vector_.size(); i++)
     {
-        cout << "cost matrix is now\n"<<cost_matrix<<endl;
+        if (verbose)
+            cout << "cost matrix is now\n"<<cost_matrix<<endl;
         //get location of minimum
         MatrixXd::Index minRow, minCol;
         float min_dist = cost_matrix.minCoeff(&minRow, &minCol);
@@ -767,7 +769,7 @@ void MOTracker::updateTrackletsWithCM(vector<VectorXd> unpaired_detections, Matr
             if (verbose)
             {
                 cout << "Updating Tracklet "<<this_tracklet->getID()<< " with detection at index "<<minRow<<endl;
-                updateTracklet(this_tracklet, unpaired_detections[minRow], msg_time, true);
+                updateTracklet(this_tracklet, unpaired_detections[minRow], msg_time,isRGBD, true);
                 //              cout<<"\n!!!!!!!!!!!!!!!!!!!!!time is now "<<msg_time<<endl;
             }
         }
@@ -779,23 +781,27 @@ void MOTracker::updateTrackletsWithCM(vector<VectorXd> unpaired_detections, Matr
         //       delete the row and the column and repeat
         removeRow(cost_matrix, minRow);
         removeColumn(cost_matrix, minCol);
-        if (cost_matrix.cols() == 0)
+        if (verbose)
+            cout <<"cost matrix now has the following dimensions: rows: "<<cost_matrix.rows()<<" cols: "<<cost_matrix.cols()<<endl;
+
+        if (cost_matrix.rows() == 0)
         {
-            cout<<"fewer measurements than tracklets"<<endl;
+            if (verbose)
+                cout<<"fewer measurements than tracklets"<<endl;
             break;
         }
     }
-
-
-    // delete this row and column and repeat
-
-
 }
-void MOTracker::updateTracklet(Tracklet *tracklet, VectorXd detection, double msg_time, bool verbose)
+void MOTracker::updateTracklet(Tracklet *tracklet, VectorXd detection, double msg_time, bool isRGBD, bool verbose)
 {
     // updates tracklet this_tracklet with detection detection
     if (verbose)
-        cout <<"updateTracklet()"<<endl;
+    {
+        cout <<"updateTracklet() called"<<endl;
+    }
+    tracklet->update(detection, msg_time, isRGBD, true); // update the tracklet with this detection
+
+
 
 
 }
