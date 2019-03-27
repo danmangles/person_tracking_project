@@ -77,18 +77,23 @@ void KalmanFilter::predict(double time, bool verbose){
     double var_pos = pow((0.5*tau_/timestep),2); // e.g. we have progressed dt/timestep timesteps since the past predict; and in each our position uncertainty has grown 0.5m
     double var_vel = pow((0.5*tau_/timestep),2); // e.g. we have progressed dt/timestep timesteps since the past predict; and in each our velocity uncertainty has grown 3ms-1
 
-    GQG.block(0,0,3,3) = I*var_pos; //update GQG in 2 blocks.
-    GQG.block(3,3,3,3) = I*var_vel;
+    // update process noise
+    double Sa = 10;
+    GQG.block(0,0,3,3) = 20*I*Sa*pow(tau_,3)/3; //update GQG in 2 blocks.
+    GQG.block(0,3,3,3) = I*Sa*pow(tau_,2)/2; //update GQG in 2 blocks.
+    GQG.block(3,0,3,3) = I*Sa*pow(tau_,2)/2; //update GQG in 2 blocks.
+    GQG.block(3,3,3,3) = I*Sa*tau_;
 
     if (verbose)
     {
-        cout <<"time is "<<t_<<endl;
-        cout <<"dt is "<<tau_<<endl;
-        cout <<"F is \n"<<F<<endl;
-        cout <<"GQG is \n"<<GQG<<endl;
+        cout <<"time ="<<t_<<endl;
+        cout <<"dt ="<<tau_<<endl;
+        cout <<"F =\n"<<F<<endl;
+        cout <<"GQG =\n"<<GQG<<endl;
     }
 
     x_hat = F*x_hat; // predicted  state = plant_model(old_state) but using a linear plant model F
+    // hack: keep z on the ground
     x_hat[2] = 2;
     P = F*P*F.transpose() + GQG; // predicted covariance = transformed old covariance + process noise
 
@@ -109,6 +114,7 @@ void KalmanFilter::update(const VectorXd& z, bool verbose) {
 
     /////// Update
     v = z - z_pred; // innovation = difference between measurement and predicted measurement
+
     S = H*P*H.transpose() + R; // innovation covariance = kf covariance in observation space + sensor noise R
     W = P*H.transpose()*S.inverse(); // Kalman gain = kf covariance/innovation covariance
 
