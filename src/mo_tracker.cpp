@@ -718,8 +718,7 @@ void MOTracker::manageTracklets(vector<VectorXd> unpaired_detections, double msg
     // initiate a cost matrix to populate
     MatrixXd cost_matrix(unpaired_detections.size(),tracklet_vector_.size());
     populateCostMatrix(unpaired_detections, cost_matrix, true);
-    cout<<cost_matrix<<endl;
-
+    updateTrackletsWithCM(unpaired_detections, cost_matrix, msg_time, true);
 
 
     ////// PERFORM THE TRACKLET ALGORITHM
@@ -729,6 +728,7 @@ void MOTracker::manageTracklets(vector<VectorXd> unpaired_detections, double msg
     deleteDeadTracklets(false); // delete any tracklets that have been missed too many times
     initiateLongTracklets(msg_time, false); // initiate the kalman filters and publisher for any tracklets with a long sequence of detections
 }
+
 void MOTracker::populateCostMatrix(vector<VectorXd> unpaired_detections, MatrixXd &cost_matrix, bool verbose)
 {
     if (verbose)
@@ -741,14 +741,64 @@ void MOTracker::populateCostMatrix(vector<VectorXd> unpaired_detections, MatrixX
         {
             if (verbose)
                 cout << "assessing tracklet "<<j<<endl;
-
-            cost_matrix(i,j) = tracklet_vector_[j].getDistance(unpaired_detections[i]);
+            cost_matrix(i,j) = tracklet_vector_[j].getDistance(unpaired_detections[i]); // update the cost matrix
         }
     }
     if (verbose)
         cout <<"cost matrix populated"<<endl;
 }
 
+void MOTracker::updateTrackletsWithCM(vector<VectorXd> unpaired_detections, MatrixXd &cost_matrix, double msg_time, bool verbose)
+{
+    for (int i = 0; i < tracklet_vector_.size(); i++)
+    {
+        cout << "cost matrix is now\n"<<cost_matrix<<endl;
+        //get location of minimum
+        MatrixXd::Index minRow, minCol;
+        float min_dist = cost_matrix.minCoeff(&minRow, &minCol);
+        cout << "Min: " << min_dist << ", at: " << minRow << "," << minCol << endl;
+        // if ok, update tracklet with this detection
+        Tracklet * this_tracklet = &tracklet_vector_[minCol];
+        if (min_dist < getMaxGatingDistance(this_tracklet, true))
+        {
+            Tracklet * this_tracklet = &tracklet_vector_[minCol];
+            //          ///// using the best_pairing_index we've just found, update the tracklet and remove this pairing from the vector
+            //          /// so it doesn't get associated with another tracker
+            if (verbose)
+            {
+                cout << "Updating Tracklet "<<this_tracklet->getID()<< " with detection at index "<<minRow<<endl;
+                updateTracklet(this_tracklet, unpaired_detections[minRow], msg_time, true);
+                //              cout<<"\n!!!!!!!!!!!!!!!!!!!!!time is now "<<msg_time<<endl;
+            }
+        }
+
+        else // detections are too far away from tracklets
+        {
+            break; //out of the for loop
+        }
+        //       delete the row and the column and repeat
+        removeRow(cost_matrix, minRow);
+        removeColumn(cost_matrix, minCol);
+        if (cost_matrix.cols() == 0)
+        {
+            cout<<"fewer measurements than tracklets"<<endl;
+            break;
+        }
+    }
+
+
+    // delete this row and column and repeat
+
+
+}
+void MOTracker::updateTracklet(Tracklet *tracklet, VectorXd detection, double msg_time, bool verbose)
+{
+    // updates tracklet this_tracklet with detection detection
+    if (verbose)
+        cout <<"updateTracklet()"<<endl;
+
+
+}
 ///// I/O Methods
 void MOTracker::publishTransform(VectorXd coordinates, string target_frame_id) {
     // publishes a transform on broadcaster br_ at the 3D coordinate Vector coordinates
@@ -860,4 +910,25 @@ void MOTracker::setupResultsCSV() {
     gnd_file_.open(io_params.gnd_filename);
     gnd_file_ << "Time,isRGBD,Detection_X,Detection_Y,Detection_Z\n";
 
+}
+void MOTracker::removeRow(MatrixXd& matrix, unsigned int rowToRemove)
+{
+    unsigned int numRows = matrix.rows()-1;
+    unsigned int numCols = matrix.cols();
+
+    if( rowToRemove < numRows )
+        matrix.block(rowToRemove,0,numRows-rowToRemove,numCols) = matrix.block(rowToRemove+1,0,numRows-rowToRemove,numCols);
+
+    matrix.conservativeResize(numRows,numCols);
+}
+
+void MOTracker::removeColumn(MatrixXd& matrix, unsigned int colToRemove)
+{
+    unsigned int numRows = matrix.rows();
+    unsigned int numCols = matrix.cols()-1;
+
+    if( colToRemove < numCols )
+        matrix.block(0,colToRemove,numRows,numCols-colToRemove) = matrix.block(0,colToRemove+1,numRows,numCols-colToRemove);
+
+    matrix.conservativeResize(numRows,numCols);
 }

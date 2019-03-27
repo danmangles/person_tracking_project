@@ -81,12 +81,12 @@ class MOTracker {
 
 public:
     MOTracker(ros::NodeHandle nh,
-            pcl_param_struct pcl_params,
-            kf_param_struct kf_params,
-            tracker_param_struct tracker_params,
-            io_param_struct io_params,
-            bool verbose);
-//            ofstream &results_file  ); // initiate a constructor with a nodehandle and parameters for the kalman filter
+              pcl_param_struct pcl_params,
+              kf_param_struct kf_params,
+              tracker_param_struct tracker_params,
+              io_param_struct io_params,
+              bool verbose);
+    //            ofstream &results_file  ); // initiate a constructor with a nodehandle and parameters for the kalman filter
 
     void setupKalmanFilter(VectorXd x0,
                            double dt,
@@ -124,6 +124,8 @@ private:
     tf::Transformer pose_transformer_;
     ////// Tracklet methods
     void populateCostMatrix(vector<VectorXd> unpaired_detections, MatrixXd &cost_matrix, bool verbose);
+    void updateTrackletsWithCM(vector<VectorXd> unpaired_detections, MatrixXd &cost_matrix,double msg_time, bool verbose);
+    void updateTracklet(Tracklet *tracklet, VectorXd detection, double msg_time, bool verbose);
     void updatePairings(vector<VectorXd> &unpaired_detections, double msg_time, bool isRGBD, bool verbose);
     void updateTracklets(vector<VectorXd> &unpaired_detections, double msg_time, bool isRGBD, bool verbose);
     void createNewTracklets(vector<VectorXd> &unpaired_detections, bool verbose);
@@ -178,7 +180,9 @@ private:
     tracker_param_struct tracker_params;
     io_param_struct io_params;
 
-
+    //// Random methods
+    void removeColumn(MatrixXd& matrix, unsigned int colToRemove);
+    void removeRow(MatrixXd& matrix, unsigned int rowToRemove);
 
 };
 #endif // mo_tracker_h
