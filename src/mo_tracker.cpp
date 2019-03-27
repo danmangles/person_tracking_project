@@ -75,7 +75,7 @@ void MOTracker::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr &cloud
     }
     //////// Remove non planar points e.g. outliers http://pointclouds.org/documentation/tutorials/planar_segmentation.php#id1
     if (pcl_params.apply_planar_outlier_removal == 1) {
-        removeOutOfPlanePoints(cloud_ptr, true);
+        removeOutOfPlanePoints(cloud_ptr, false);
         if (io_params.publishing)
         {
             pcl::toROSMsg(*cloud_ptr,msg_to_publish ); // convert from PCL:PC1 to SM:PC2
@@ -362,15 +362,15 @@ void MOTracker::getCentroidsOfClusters (vector<pcl::PointCloud<pcl::PointXYZRGB>
     }
 
     ///////// Print out a line of stars if there are 2 centroids in the array because this is a
-    cout << "There are "<<centroid_coord_array.size()<<" valid clusters in the pcl"<<endl;
-    if (centroid_coord_array.size() > 1){cout<<"*************************************************************************************************************************"<<endl;}
+//    cout << "There are "<<centroid_coord_array.size()<<" valid clusters in the pcl"<<endl;
+//    if (centroid_coord_array.size() > 1){cout<<"*************************************************************************************************************************"<<endl;}
 
 }
 
 void MOTracker::getClusterCentroid(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cluster_ptr, VectorXd &coord_centroid) {
     // loop through the point cloud cluster_ptr, adding points to a centroid
 
-    cout << "generate_centroid() called" <<endl;
+//    cout << "getClusterCentroid() called" <<endl;
 
     pcl::CentroidPoint<pcl::PointXYZRGB> centroid; // Initialise a point to store the centroid inoutput_topic
     if (verbose_)
@@ -388,7 +388,7 @@ void MOTracker::getClusterCentroid(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cluste
 
     }
     coord_centroid << c.x, c.y, c.z; // assign coords to coord_centroid
-    cout << "generate_centroid() is returning a coord_centroid at :\n"<<coord_centroid<<endl;
+//    cout << "generate_centroid() is returning a coord_centroid at :\n"<<coord_centroid<<endl;
 }
 
 void MOTracker::updatePairings(vector<VectorXd> &unpaired_detections, double msg_time, bool isRGBD, bool verbose)
@@ -716,10 +716,10 @@ void MOTracker::manageTracklets(vector<VectorXd> unpaired_detections, double msg
 
     ////// PERFORM THE TRACKLET ALGORITHM
     updatePairings(unpaired_detections,msg_time, isRGBD, false); // get a bunch of pairings between tracklets and detections
-    updateTracklets(unpaired_detections, msg_time, isRGBD, true); // update each tracklet with the best pairing for that tracklet, increment the misses for tracklets without pairings
+    updateTracklets(unpaired_detections, msg_time, isRGBD, false); // update each tracklet with the best pairing for that tracklet, increment the misses for tracklets without pairings
     createNewTracklets(unpaired_detections, false); // generate new tracklets from any unassociated pairings
     deleteDeadTracklets(false); // delete any tracklets that have been missed too many times
-    initiateLongTracklets(msg_time, true); // initiate the kalman filters and publisher for any tracklets with a long sequence of detections
+    initiateLongTracklets(msg_time, false); // initiate the kalman filters and publisher for any tracklets with a long sequence of detections
 }
 
 ///// I/O Methods
