@@ -121,7 +121,7 @@ void MOTracker::poseArrayCallback(const geometry_msgs::PoseArray &pose_array)
         }
         // call manageTracklets with the time in seconds as a double
         manageTracklets(realsense_coords, pose_array.header.stamp.toSec(), true);
-        cout << "centroid coords updated with a new pose"<<endl;
+//        cout << "centroid coords updated with a new pose"<<endl;
 
     } catch(const std::exception&)
     {
@@ -362,15 +362,15 @@ void MOTracker::getCentroidsOfClusters (vector<pcl::PointCloud<pcl::PointXYZRGB>
     }
 
     ///////// Print out a line of stars if there are 2 centroids in the array because this is a
-//    cout << "There are "<<centroid_coord_array.size()<<" valid clusters in the pcl"<<endl;
-//    if (centroid_coord_array.size() > 1){cout<<"*************************************************************************************************************************"<<endl;}
+    //    cout << "There are "<<centroid_coord_array.size()<<" valid clusters in the pcl"<<endl;
+    //    if (centroid_coord_array.size() > 1){cout<<"*************************************************************************************************************************"<<endl;}
 
 }
 
 void MOTracker::getClusterCentroid(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cluster_ptr, VectorXd &coord_centroid) {
     // loop through the point cloud cluster_ptr, adding points to a centroid
 
-//    cout << "getClusterCentroid() called" <<endl;
+    //    cout << "getClusterCentroid() called" <<endl;
 
     pcl::CentroidPoint<pcl::PointXYZRGB> centroid; // Initialise a point to store the centroid inoutput_topic
     if (verbose_)
@@ -388,7 +388,7 @@ void MOTracker::getClusterCentroid(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cluste
 
     }
     coord_centroid << c.x, c.y, c.z; // assign coords to coord_centroid
-//    cout << "generate_centroid() is returning a coord_centroid at :\n"<<coord_centroid<<endl;
+    //    cout << "generate_centroid() is returning a coord_centroid at :\n"<<coord_centroid<<endl;
 }
 
 void MOTracker::updatePairings(vector<VectorXd> &unpaired_detections, double msg_time, bool isRGBD, bool verbose)
@@ -419,7 +419,7 @@ void MOTracker::updatePairings(vector<VectorXd> &unpaired_detections, double msg
 
             // if the tracklet is initialised, use a multiple of max gating distance
 
-            if (new_distance < getMaxGatingDistance(this_tracklet, verbose = true)) // if detection is within range
+            if (new_distance < getMaxGatingDistance(this_tracklet, verbose = false)) // if detection is within range
             {
                 if (verbose)
                     cout << "detection "<<j<<" in range, creating a new pairing.\n isRGBD: "<<isRGBD<<endl;
@@ -433,8 +433,10 @@ void MOTracker::updatePairings(vector<VectorXd> &unpaired_detections, double msg
 
                 pairing_vector_.push_back(new_pairing); // add to pairing vector
                 if (verbose)
+                {
                     cout << "MOTracker "<<this_tracklet->getID()<<" has been paired"<<endl;
-                cout << "pairing vector has length "<<pairing_vector_.size()<<endl;
+                    cout << "pairing vector has length "<<pairing_vector_.size()<<endl;
+                }
             }
         }
 
@@ -457,7 +459,7 @@ void MOTracker::updatePairings(vector<VectorXd> &unpaired_detections, double msg
                 stringstream tracklet_name;
                 tracklet_name << "tracklet_"<<this_tracklet->getID(); // identify this marker with the tracklet id
                 /// create a title for this marker
-                publishMarker(xhat,tracklet_name.str(), getMaxGatingDistance(this_tracklet, true),getMaxGatingDistance(this_tracklet, false),2); // publish the marker
+                publishMarker(xhat,tracklet_name.str(), getMaxGatingDistance(this_tracklet, false),getMaxGatingDistance(this_tracklet, false),2); // publish the marker
 
                 //////////////////////////////////////////////////// ACTIVATE THIS WHEN WE HAVE TIME TO TEST
                 cout << "TEST ME: I'M AT LINE 471"<<endl;
@@ -471,7 +473,8 @@ void MOTracker::updatePairings(vector<VectorXd> &unpaired_detections, double msg
             }
 
         } else {
-            cout << "this tracklet is paired" <<endl;
+            if (verbose)
+                cout << "this tracklet is paired" <<endl;
         }
     }
 }
@@ -560,15 +563,14 @@ void MOTracker::updateTracklets(vector<VectorXd> &unpaired_detections, double ms
                 MatrixXd P = kf.getP(); //get covariance
                 VectorXd xhat = kf.getState(), v = kf.getV();
 
-                cout << "innovation is\n"<<v <<endl;
                 if (verbose) {
-                    cout << "New measurement covariance is\n"<<P <<endl;
+                    cout << "New measurement covariance:\n"<<P <<endl;
                     cout << "new Kf state is\n"<<xhat <<endl;
                     cout << "innovation is\n"<<v <<endl;
                 }
 
                 /// create a title for this marker
-                publishMarker(xhat,tracklet_name.str(), getMaxGatingDistance(this_tracklet, true),getMaxGatingDistance(this_tracklet, false),2); // publish the marker
+                publishMarker(xhat,tracklet_name.str(), getMaxGatingDistance(this_tracklet, false),getMaxGatingDistance(this_tracklet, false),2); // publish the marker
 
                 /////////////// write to csv
                 if (verbose)
@@ -710,7 +712,7 @@ void MOTracker::manageTracklets(vector<VectorXd> unpaired_detections, double msg
             publishTransform(unpaired_detections[i], ss.str());
         }
         // if in GND truth mode, write the detections straight to file
-        cout << "writing raw detections to GND truth file"<<endl;
+        //        cout << "writing raw detections to GND truth file"<<endl;
         gnd_file_<<msg_time<<","<<isRGBD<<","<<unpaired_detections[i][0]<<","<<unpaired_detections[i][1]<<","<<unpaired_detections[i][2]<<"\n";
     }
 
@@ -804,8 +806,8 @@ void MOTracker::publishMarker(VectorXd x_hat, string marker_name,double scale_x,
     // set the marker size as an input params
     //    marker.scale.x = scale_x*scaler;
     //    marker.scale.y = scale_y*scaler;
-//    marker.scale.x = sqrt(scale_x)*scaler;
-//    marker.scale.y = sqrt(scale_y)*scaler;
+    //    marker.scale.x = sqrt(scale_x)*scaler;
+    //    marker.scale.y = sqrt(scale_y)*scaler;
     marker.scale.x = scale_x;
     marker.scale.y = scale_y;
 
