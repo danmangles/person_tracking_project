@@ -22,9 +22,9 @@ public:
       */
 
     KalmanFilter(
-            const MatrixXd& delF,
-            const MatrixXd& delH,
-            const MatrixXd& delGQdelGT,
+            const MatrixXd& F,
+            const MatrixXd& H,
+            const MatrixXd& GQG,
             const MatrixXd& R,
             const MatrixXd& P0,
             bool verbose
@@ -56,13 +56,13 @@ public:
 
 private:
     // Matrices for computation
-    MatrixXd delF, delH, delGQdelGT, R, P, S, W, I;
+    MatrixXd F, H, GQG, R, P, S, W, I;
 
     // System dimensions
     int m, n;
 
     // current time and discrete time step
-    double t_,dt_;
+    double t_,tau_;
 
     // Is the filter initialized?
     bool initialized;

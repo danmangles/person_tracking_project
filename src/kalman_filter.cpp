@@ -14,15 +14,15 @@ using namespace std;
 
 
 KalmanFilter::KalmanFilter(
-        const MatrixXd& delF,
-        const MatrixXd& delH,
-        const MatrixXd& delGQdelGT,
+        const MatrixXd& F,
+        const MatrixXd& H,
+        const MatrixXd& GQG,
         const MatrixXd& R,
         const MatrixXd& P0,
         bool verbose)
 
-    : delF(delF), delH(delH), delGQdelGT(delGQdelGT), R(R), P(P0), //populate matrices values given in constructor
-      m(delH.rows()), n(delF.rows()), initialized(false), //populate m with number of rows in C, n with number of rows in A
+    : F(F), H(H), GQG(GQG), R(R), P(P0), //populate matrices values given in constructor
+      m(H.rows()), n(F.rows()), initialized(false), //populate m with number of rows in C, n with number of rows in A
       I(3, 3), x_hat(n), verbose_(verbose), v(n)
 {
     cout << "KalmanFilter constructor called" << endl;
@@ -30,9 +30,9 @@ KalmanFilter::KalmanFilter(
 
     if (verbose_) {
         //print out the chosen matrices
-        cout << "delF: \n" << delF << endl;
-        cout << "delH: \n" << delH << endl;
-        cout << "delGQdelGT: \n" << delGQdelGT << endl;
+        cout << "F: \n" << F << endl;
+        cout << "H: \n" << H << endl;
+        cout << "GQG: \n" << GQG << endl;
         cout << "R: \n" << R << endl;
         cout << "P: \n" << P << endl;
     }
@@ -50,7 +50,7 @@ void KalmanFilter::init(double t0, const VectorXd& x0) {
     initialized = true;
     if (verbose_) {
         cout << "P = \n"<<P <<endl;
-        cout << "delF = \n"<<delF <<endl;
+        cout << "F = \n"<<F <<endl;
     }
 }
 
@@ -60,39 +60,39 @@ void KalmanFilter::predict(double time, bool verbose){
         throw runtime_error("Filter is not initialised... :3");
 
     /////// Prediction
-    dt_ = time - t_; // compute dt_ as new time - previous time
+    tau_ = time - t_; // compute tau_ as new time - previous time
     t_ = time; // update previous time
 
-    if (dt_ < 0)
+    if (tau_ < 0)
         cout<<"\n********************************\n!!!!!! dt is negative!!!"<<endl;
 
 //    MatrixXd I3(3,3);
 //    I3.setIdentity();
 
     // change the matrices which are a function of time
-    delF.block(0,3,3,3) = I*dt_; // set the top right to make fcn of dt
+    F.block(0,3,3,3) = I*tau_; // set the top right to make fcn of dt
     /////////////////
     /// \brief var_pos
     double timestep = 0.1; //s e.g. we are splitting time into timesteps
-    double var_pos = pow((0.5*dt_/timestep),2); // e.g. we have progressed dt/timestep timesteps since the past predict; and in each our position uncertainty has grown 0.5m
-    double var_vel = pow((0.5*dt_/timestep),2); // e.g. we have progressed dt/timestep timesteps since the past predict; and in each our velocity uncertainty has grown 3ms-1
+    double var_pos = pow((0.5*tau_/timestep),2); // e.g. we have progressed dt/timestep timesteps since the past predict; and in each our position uncertainty has grown 0.5m
+    double var_vel = pow((0.5*tau_/timestep),2); // e.g. we have progressed dt/timestep timesteps since the past predict; and in each our velocity uncertainty has grown 3ms-1
 
-    delGQdelGT.block(0,0,3,3) = I*var_pos; //update delGQdelGT in 2 blocks.
-    delGQdelGT.block(3,3,3,3) = I*var_vel;
+    GQG.block(0,0,3,3) = I*var_pos; //update GQG in 2 blocks.
+    GQG.block(3,3,3,3) = I*var_vel;
 
     if (verbose)
     {
         cout <<"time is "<<t_<<endl;
-        cout <<"dt is "<<dt_<<endl;
-        cout <<"delF is \n"<<delF<<endl;
-        cout <<"delGQdelGT is \n"<<delGQdelGT<<endl;
+        cout <<"dt is "<<tau_<<endl;
+        cout <<"F is \n"<<F<<endl;
+        cout <<"GQG is \n"<<GQG<<endl;
     }
 
-    x_hat = delF*x_hat; // predicted  state = plant_model(old_state) but using a linear plant model delF
+    x_hat = F*x_hat; // predicted  state = plant_model(old_state) but using a linear plant model F
 
-    P = delF*P*delF.transpose() + delGQdelGT; // predicted covariance = transformed old covariance + process noise
+    P = F*P*F.transpose() + GQG; // predicted covariance = transformed old covariance + process noise
 
-    z_pred = delH*x_hat; // predicted observation
+    z_pred = H*x_hat; // predicted observation
 
     if (verbose)
     {
@@ -109,8 +109,8 @@ void KalmanFilter::update(const VectorXd& z, bool verbose) {
 
     /////// Update
     v = z - z_pred; // innovation = difference between measurement and predicted measurement
-    S = delH*P*delH.transpose() + R; // innovation covariance = kf covariance in observation space + sensor noise R
-    W = P*delH.transpose()*S.inverse(); // Kalman gain = kf covariance/innovation covariance
+    S = H*P*H.transpose() + R; // innovation covariance = kf covariance in observation space + sensor noise R
+    W = P*H.transpose()*S.inverse(); // Kalman gain = kf covariance/innovation covariance
 
     x_hat = x_hat + W*v; // estimate = prediction + Gain*Innovation
     P = P - W*S*W.transpose(); // covariance is decreased by the update

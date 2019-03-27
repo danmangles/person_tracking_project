@@ -55,16 +55,16 @@ kf_param_struct getKfParams() {
     I3.setIdentity();
 
     ///// Setup the matrices
-    // delF
-    MatrixXd delF(n, n); // System dynamics matrix
-    delF.setIdentity(); // delF has a diagonal of ones, don't add the velocity state to the first estimate
-    // delH
-    MatrixXd delH(m, n); // map state space to observation space
-    delH.setZero();
-    delH.block(0,0,3,3) = I3; // set left 3x3 block to identity
-    //delGQdelGT
-    MatrixXd delGQdelGT(n, n); // Process noise covariance
-    delGQdelGT.setZero(); //MAKE THIS A FUNCTION OF TIMESTEP^2
+    // F
+    MatrixXd F(n, n); // System dynamics matrix
+    F.setIdentity(); // F has a diagonal of ones, don't add the velocity state to the first estimate
+    // H
+    MatrixXd H(m, n); // map state space to observation space
+    H.setZero();
+    H.block(0,0,3,3) = I3; // set left 3x3 block to identity
+    //GQG
+    MatrixXd GQG(n, n); // Process noise covariance
+    GQG.setZero(); //MAKE THIS A FUNCTION OF TIMESTEP^2
     //R
     MatrixXd R(m, m); // Measurement noise covariance
     R << 10, 0, 0, 0, 10, 0, 0, 0, 10; //I3 * .05 // MAKE THIS A FUNCTION OF TIMESTEP^2
@@ -76,13 +76,13 @@ kf_param_struct getKfParams() {
 
    // initialise the kalman filter with the given parameters
     //print out the chosen matrices
-    cout << "delF: \n" << delF << endl;
-    cout << "delH: \n" << delH << endl;
-    cout << "delGQdelGT: \n" << delGQdelGT << endl;
+    cout << "F: \n" << F << endl;
+    cout << "H: \n" << H << endl;
+    cout << "GQG: \n" << GQG << endl;
     cout << "R: \n" << R << endl;
     cout << "P0: \n" << P0 << endl;
 
-    return {.dt = dt, .delF = delF, .delH = delH, .delGQdelGT = delGQdelGT, .R = R, .P0 = P0}; // move all the params into the struct
+    return {.dt = dt, .F = F, .H = H, .GQG = GQG, .R = R, .P0 = P0}; // move all the params into the struct
 }
 
 io_param_struct getIOParams(){

@@ -69,7 +69,7 @@ using namespace std;
 #define mo_tracker_H
 
 // holds params for the kalman filter
-struct kf_param_struct {double dt; MatrixXd delF; MatrixXd delH; MatrixXd delGQdelGT; MatrixXd R; MatrixXd P0;};
+struct kf_param_struct {double dt; MatrixXd F; MatrixXd H; MatrixXd GQG; MatrixXd R; MatrixXd P0;};
 // holds params for the pointcloud
 struct pcl_param_struct {bool apply_passthrough_filter;bool apply_planar_outlier_removal; bool apply_voxel_grid; int max_cluster_size; int min_cluster_size; double cluster_tolerance; double seg_dist_threshold; double box_x; double box_y; double min_height; double downsample_factor;};
 // holds params for the tracker
@@ -90,9 +90,9 @@ public:
 
     void setupKalmanFilter(VectorXd x0,
                            double dt,
-                           const MatrixXd& delF,
-                           const MatrixXd& delH,
-                           const MatrixXd& delGQdelGT,
+                           const MatrixXd& F,
+                           const MatrixXd& H,
+                           const MatrixXd& GQG,
                            const MatrixXd& R,
                            const MatrixXd& P0); // call the constructor of and initiate the kalman filter with params x0
     void updateKf(VectorXd z); // update the kalman filter with a new estimate y
