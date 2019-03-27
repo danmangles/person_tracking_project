@@ -89,7 +89,7 @@ void KalmanFilter::predict(double time, bool verbose){
     }
 
     x_hat = F*x_hat; // predicted  state = plant_model(old_state) but using a linear plant model F
-
+    x_hat[2] = 2;
     P = F*P*F.transpose() + GQG; // predicted covariance = transformed old covariance + process noise
 
     z_pred = H*x_hat; // predicted observation
@@ -117,6 +117,9 @@ void KalmanFilter::update(const VectorXd& z, bool verbose) {
 
     if (verbose)
         cout << "*UPDATE*\nv = \n"<<v<< "\nS = \n"<<S<<"\nW = \n"<<W<<"\nx_hat_new = \n"<<x_hat<< "\nP_new = \n"<<P<<endl;
+
+    // hack: keep the z value at 1.5
+    x_hat[2] = 2;
 
 }
 

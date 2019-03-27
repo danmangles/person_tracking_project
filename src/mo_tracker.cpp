@@ -796,6 +796,7 @@ void MOTracker::publishMarker(VectorXd x_hat, string marker_name,double scale_x,
     marker.pose.position.x = x_hat[0];
     marker.pose.position.y = x_hat[1];
     marker.pose.position.z = x_hat[2];
+    //    marker.pose.position.z = x_hat[2];
 
     marker.pose.orientation.x = 0.0;
     marker.pose.orientation.y = 0.0;
