@@ -123,6 +123,7 @@ private:
 
     tf::Transformer pose_transformer_;
     ////// Tracklet methods
+    void populateCostMatrix(vector<VectorXd> unpaired_detections, MatrixXd &cost_matrix);
     void updatePairings(vector<VectorXd> &unpaired_detections, double msg_time, bool isRGBD, bool verbose);
     void updateTracklets(vector<VectorXd> &unpaired_detections, double msg_time, bool isRGBD, bool verbose);
     void createNewTracklets(vector<VectorXd> &unpaired_detections, bool verbose);
@@ -176,6 +177,8 @@ private:
     kf_param_struct kf_params;
     tracker_param_struct tracker_params;
     io_param_struct io_params;
+
+
 
 };
 #endif // mo_tracker_h

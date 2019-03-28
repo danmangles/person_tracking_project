@@ -715,6 +715,12 @@ void MOTracker::manageTracklets(vector<VectorXd> unpaired_detections, double msg
         //        cout << "writing raw detections to GND truth file"<<endl;
         gnd_file_<<msg_time<<","<<isRGBD<<","<<unpaired_detections[i][0]<<","<<unpaired_detections[i][1]<<","<<unpaired_detections[i][2]<<"\n";
     }
+    // initiate a cost matrix to populate
+    MatrixXd cost_matrix(unpaired_detections.size(),tracklet_vector_.size());
+    populateCostMatrix(unpaired_detections, cost_matrix);
+    cout<<cost_matrix<<endl;
+
+
 
     ////// PERFORM THE TRACKLET ALGORITHM
     updatePairings(unpaired_detections,msg_time, isRGBD, false); // get a bunch of pairings between tracklets and detections
@@ -722,6 +728,12 @@ void MOTracker::manageTracklets(vector<VectorXd> unpaired_detections, double msg
     createNewTracklets(unpaired_detections, false); // generate new tracklets from any unassociated pairings
     deleteDeadTracklets(false); // delete any tracklets that have been missed too many times
     initiateLongTracklets(msg_time, false); // initiate the kalman filters and publisher for any tracklets with a long sequence of detections
+}
+void MOTracker::populateCostMatrix(vector<VectorXd> unpaired_detections, MatrixXd &cost_matrix)
+{
+    cost_matrix.setOnes();
+    cout <<"cost matrix populated"<<endl;
+
 }
 
 ///// I/O Methods
