@@ -111,7 +111,7 @@ private:
     vector<pcl::PointIndices> getClusterIndices(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_ptr);
 
     ////// Centroid Pointcloud Methods
-    void getCentroidsOfClusters (vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> cloud_cluster_vector, vector<Eigen::VectorXd> &centroid_coord_array);
+    void getCentroidsOfClusters (vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> cloud_cluster_vector, vector<Eigen::VectorXd> &centroid_coord_array, bool verbose);
     void getClusterCentroid(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cluster_ptr, VectorXd &coord_centroid); //returns a vector of centroid coordinates
     void manageTracklets(vector<VectorXd> unpaired_detections, double msg_time, bool isRGBD);
 
@@ -123,13 +123,12 @@ private:
 
     tf::Transformer pose_transformer_;
     ////// Tracklet methods
-<<<<<<< HEAD
-    void populateCostMatrix(vector<VectorXd> unpaired_detections, MatrixXd &cost_matrix);
-=======
+
+
     void populateCostMatrix(vector<VectorXd> &unpaired_detections, MatrixXd &cost_matrix, bool verbose);
     void updateTrackletsWithCM(vector<VectorXd> &unpaired_detections, MatrixXd &cost_matrix,double msg_time, bool isRGBD, bool verbose);
     void updateTracklet(Tracklet *tracklet, VectorXd detection, double msg_time, bool isRGBD, bool verbose);
->>>>>>> hungarian_algo_dev2
+
     void updatePairings(vector<VectorXd> &unpaired_detections, double msg_time, bool isRGBD, bool verbose);
     void updateTracklets(vector<VectorXd> &unpaired_detections, double msg_time, bool isRGBD, bool verbose);
     void createNewTracklets(vector<VectorXd> &unpaired_detections, bool verbose);
@@ -184,13 +183,10 @@ private:
     tracker_param_struct tracker_params;
     io_param_struct io_params;
 
-<<<<<<< HEAD
-
-=======
     //// Random methods
     void removeColumn(MatrixXd& matrix, unsigned int colToRemove);
     void removeRow(MatrixXd& matrix, unsigned int rowToRemove);
->>>>>>> hungarian_algo_dev2
+
 
 };
 #endif // mo_tracker_h

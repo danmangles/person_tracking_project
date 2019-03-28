@@ -86,7 +86,7 @@ void MOTracker::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr &cloud
 
     //////// Loop through clusters and put their centroids into a vector
     vector <VectorXd> centroid_coord_array;
-    getCentroidsOfClusters(cloud_cluster_vector, centroid_coord_array); // generate a vector of coordinates
+    getCentroidsOfClusters(cloud_cluster_vector, centroid_coord_array, true); // generate a vector of coordinates
 
     /////// Publish the cluster centroids
     if (centroid_coord_array.size() != 0) // if there are any clusters visible
@@ -335,29 +335,62 @@ vector<pcl::PointIndices> MOTracker::getClusterIndices(pcl::PointCloud<pcl::Poin
 }
 
 ////// Centroid Pointcloud Methods
-void MOTracker::getCentroidsOfClusters (vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> cloud_cluster_vector, vector<Eigen::VectorXd> &centroid_coord_array) {
+void MOTracker::getCentroidsOfClusters (vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> cloud_cluster_vector, vector<Eigen::VectorXd> &centroid_coord_array, bool verbose) {
     // loops through cloud_cluster vector and gets the centroid
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_cluster;
 
-    if (verbose_)
+    if (verbose)
         cout << "investigating a vector with "<<cloud_cluster_vector.size()<<" clusters"<<endl;
-
+    int pub_index = 0;
     for (int i = 0; i<cloud_cluster_vector.size(); i++) {
+        if (verbose)
+            cout <<"extracting cloud cluster from index "<<i<<endl;
         cloud_cluster = cloud_cluster_vector[i]; // extract one cluster
-        // publish it!
-        if (io_params.publishing)
+
+        if (verbose)
+            cout << "\n\n** Investigating a centroid cluster with "<<cloud_cluster->points.size() <<" points in it"<<endl;
+
+        Eigen::Vector4f xyz_centroid;
+        compute3DCentroid (*cloud_cluster, xyz_centroid);
+        //// get the covariance in X,Y,Z
+        Matrix3f covariance_matrix;
+        computeCovarianceMatrix (*cloud_cluster, xyz_centroid, covariance_matrix);
+
+        cout <<" this cluster has covariance matrix M = \n"<<covariance_matrix<<endl;
+        cout <<" this cluster has centroid = \n"<<xyz_centroid<<endl;
+        float cov_X = covariance_matrix(0,0);
+        float cov_Y = covariance_matrix(1,1);
+        float cov_Z = covariance_matrix(2,2);
+
+
+        if (cov_Z > 1.0* cov_X & cov_Z > 1.0 * cov_Y)
         {
-            sensor_msgs::PointCloud2 msg_to_publish; // initiate intermediate message variable
-            pcl::toROSMsg(*cloud_cluster,msg_to_publish);
-            msg_to_publish.header.frame_id = "odom"; // CHANGED THIS TO BASE INSTEAD OF ODOM BECAUSE WE WERE PUBLISHING POINTS IN THE WRONG PLACE
-            pub_centroid_.at(i).publish (msg_to_publish); // this is not publishing correctly
+            if (verbose)
+            {
+                cout <<"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!this cluster is a person!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"<<endl;
+                cout <<"V = \n"<<covariance_matrix<<endl;
+                if (io_params.publishing)
+                {
+                    sensor_msgs::PointCloud2 msg_to_publish; // initiate intermediate message variable
+                    pcl::toROSMsg(*cloud_cluster,msg_to_publish);
+                    msg_to_publish.header.frame_id = "odom"; // CHANGED THIS TO BASE INSTEAD OF ODOM BECAUSE WE WERE PUBLISHING POINTS IN THE WRONG PLACE
+                    pub_centroid_.at(pub_index).publish (msg_to_publish); // this is not publishing correctly
+                    pub_index++; // increment the publisher index
+                }
+            }
+
+            // strip out the 4th coordinate which is a 1 for reverse compatibbility with other methods
+            Vector3d coord_centroid(xyz_centroid[0],xyz_centroid[1],xyz_centroid[2]);
+            centroid_coord_array.push_back(coord_centroid); // we want to keep this cluster
         }
-        if (verbose_)
-            cout << "\n\n** Returning cloud with "<<cloud_cluster->points.size() <<" points in it"<<endl;
-        VectorXd coord_centroid(3); // because we are in 3d
-        getClusterCentroid(cloud_cluster, coord_centroid);
-        //            cout << "[inside generate_cluster_array()] coord_centroid is \n"<<coord_centroid<<endl;
-        centroid_coord_array.push_back(coord_centroid); // we want to keep this cluster
+        else
+        {
+            if (verbose)
+            {
+                cout <<"this cluster isn't a person"<<endl;
+                cout <<"V = \n"<<covariance_matrix<<endl;
+            }
+        }
 
     }
 
@@ -535,12 +568,6 @@ void MOTracker::manageTracklets(vector<VectorXd> unpaired_detections, double msg
         //        cout << "writing raw detections to GND truth file"<<endl;
         gnd_file_<<msg_time<<","<<isRGBD<<","<<unpaired_detections[i][0]<<","<<unpaired_detections[i][1]<<","<<unpaired_detections[i][2]<<"\n";
     }
-    // initiate a cost matrix to populate
-    MatrixXd cost_matrix(unpaired_detections.size(),tracklet_vector_.size());
-    populateCostMatrix(unpaired_detections, cost_matrix);
-    cout<<cost_matrix<<endl;
-
-
 
     // initiate a cost matrix to populate
     MatrixXd cost_matrix(unpaired_detections.size(),tracklet_vector_.size());
@@ -715,14 +742,7 @@ void MOTracker::updateTrackletsWithCM(vector<VectorXd> &unpaired_detections, Mat
     if (verbose)
         cout <<"updateTrackletsWithCM() exiting with "<<unpaired_detections.size()<<" detections unpaired"<<endl;
 }
-<<<<<<< HEAD
-void MOTracker::populateCostMatrix(vector<VectorXd> unpaired_detections, MatrixXd &cost_matrix)
-{
-    cost_matrix.setOnes();
-    cout <<"cost matrix populated"<<endl;
 
-}
-=======
 void MOTracker::updateTracklet(Tracklet *tracklet, VectorXd det_coord, double msg_time, bool isRGBD, bool verbose)
 {
     // updates tracklet this_tracklet with detection detection
@@ -758,14 +778,13 @@ void MOTracker::updateTracklet(Tracklet *tracklet, VectorXd det_coord, double ms
         /////////////// write to csv
         if (verbose)
             cout << "writing tracklet data and detections to file"<<endl;
->>>>>>> hungarian_algo_dev2
+
 
         // order : detection XYZ, kf XYZ, kf covariance XYZ. Skip 4 cells so have 4+ 1 commas
         results_file_ <<msg_time<<",,,,,"<<tracklet->getID()<<","<< xhat[0]<<","<<xhat[1]<<","<<xhat[2]<<","<<P(0,0)<<","<<P(1,1)<<","<<P(2,2)<<","<<v[0]<<","<<v[1]<<"\n";
     }
-
-
 }
+
 ///// I/O Methods
 void MOTracker::publishTransform(VectorXd coordinates, string target_frame_id) {
     // publishes a transform on broadcaster br_ at the 3D coordinate Vector coordinates

@@ -19,14 +19,14 @@ using namespace std;
 pcl_param_struct getPclParams() {
     // sets all the parameters for the pcl_params struct:
     return {.apply_passthrough_filter = true,
-                .apply_planar_outlier_removal = true, ///////////////////////////////////// TODO
+                .apply_planar_outlier_removal = false, ///////////////////////////////////// TODO
                 .apply_voxel_grid = false,
-                .max_cluster_size = 250,
-                .min_cluster_size = 40,
-                .cluster_tolerance = .4, // too small, we split one object into many, too big, we merge objects into one. In metres
+                .max_cluster_size = 10000,
+                .min_cluster_size = 50,
+                .cluster_tolerance = .5, // too small, we split one object into many, too big, we merge objects into one. In metres
                 .seg_dist_threshold = .1, // how close a point must be to the model in order to be considered an inlier in metres
-                .box_x = 10.0,
-                .box_y = 9.0,
+                .box_x = 40.0,
+                .box_y = 40.0,
                 .min_height = -0.1, // min height of z filter in metres below base
                 .downsample_factor = 0.7
     };
