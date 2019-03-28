@@ -9,7 +9,7 @@ fprintf('res_table has size (%d,%d)',size(res_table,1),size(res_table,2))
 res_table(1:3,:) %print the first few rows
 
 %% ground truth file
-gnd_filename = "gnd_0319_959.csv";
+gnd_filename = "gnd_0328_1634.csv"
 gnd_table = readtable(gnd_filename);
 fprintf('gnd_table has size (%d,%d)',size(gnd_table,1),size(gnd_table,2))
 gnd_table(1:3,:) %print the first few rows

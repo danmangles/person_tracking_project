@@ -2,7 +2,7 @@
 
 #include "kalman_filter.h"
 #include <vector>
-#include "pairing.h" // includes Eigen
+//#include "pairing.h" // includes Eigen
 using namespace std;
 
 
@@ -17,7 +17,7 @@ public:
 
     VectorXd getState(); // either returns KF state OR last measurement if KF not initialised
 
-    void updateTracklet(Pairing pairing, double time); // update the tracklet with a new pairing
+    void update(VectorXd detection, double current_time, bool isRGBD, bool verbose); // update the tracklet with a new detection registered at time current_time
 
     int getNumConsecutiveMisses() { return num_consecutive_misses;};
     void recordMiss(double time); // increment number of consecutive misses

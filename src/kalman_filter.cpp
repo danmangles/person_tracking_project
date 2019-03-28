@@ -17,11 +17,12 @@ KalmanFilter::KalmanFilter(
         const MatrixXd& F,
         const MatrixXd& H,
         const MatrixXd& GQG,
-        const MatrixXd& R,
+        const MatrixXd& R_rgbd,
+        const MatrixXd& R_velodyne,
         const MatrixXd& P0,
         bool verbose)
 
-    : F(F), H(H), GQG(GQG), R(R), P(P0), //populate matrices values given in constructor
+    : F(F), H(H), GQG(GQG), R_rgbd(R_rgbd), R_velodyne(R_velodyne), R(R_rgbd), P(P0), //populate matrices values given in constructor
       m(H.rows()), n(F.rows()), initialized(false), //populate m with number of rows in C, n with number of rows in A
       I(3, 3), x_hat(n), verbose_(verbose), v(n)
 {
@@ -107,11 +108,16 @@ void KalmanFilter::predict(double time, bool verbose){
     }
 }
 
-void KalmanFilter::update(const VectorXd& z, bool verbose) {
+void KalmanFilter::update(const VectorXd& z, bool isRGBD, bool verbose) {
     //check if we are initialised
     if (!initialized)
         throw runtime_error("Filter is not initialised... :3");
 
+    // select measurement covariance based on where the measurement came from
+    if (isRGBD)
+        R = R_rgbd;
+    else
+        R = R_velodyne;
     /////// Update
     v = z - z_pred; // innovation = difference between measurement and predicted measurement
 

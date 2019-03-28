@@ -1,4 +1,6 @@
 #include "include/tracklet.h"
+#include "include/pairing.h"
+using namespace std;
 
 Tracklet::Tracklet(int ID,
                    VectorXd initial_detection,
@@ -9,18 +11,23 @@ Tracklet::Tracklet(int ID,
     detection_vector_.push_back(initial_detection); // add the first detection to detection_vector_
 }
 
-void Tracklet::updateTracklet(Pairing pairing, double current_time) {
-    // Update the tracklet with a new pairing
-    detection_vector_.push_back(pairing.getDetectionCoord()); // update this tracklet with the detection coord from the pairing
+void Tracklet::update(VectorXd detection, double current_time, bool isRGBD, bool verbose) {
+    // Update the tracklet with a new detection of type isRGBD taken at time current_time
+    if (verbose)
+        cout<<"Tracklet::update()"<<endl;
+
+    detection_vector_.push_back(detection); // update this tracklet with the detection coord
+    if (verbose)
+        cout << "pushed back new coord"<<endl;
     tracklet_length_++; // increase tracklet length
     num_consecutive_misses = 0; // reset num of consecutive misses
-    if (pairing.isRGBD_)
+    if (isRGBD)
         has_RGBD_detection_ = true; // register an RGBD detection
     if (isInitialised_)
     {
         cout << "predicting and updating kf for Tracklet_"<<ID_<<endl;
         kf_.predict(current_time, true);
-        kf_.update(pairing.getDetectionCoord(), false);
+        kf_.update(detection, isRGBD, false);
     }
 }
 double Tracklet::getDistance(VectorXd detection)
