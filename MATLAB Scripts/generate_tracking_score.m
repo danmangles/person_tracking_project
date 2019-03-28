@@ -3,7 +3,7 @@ filepath = '/home/ori/catkin_ws/src/multi_sensor_tracker/results_CSVs';
 addpath(filepath)
 
 %% results file
-res_filename = "res_0319_959.csv";
+res_filename = "gnd_0328_1634.csv";
 res_table = readtable(res_filename);
 fprintf('res_table has size (%d,%d)',size(res_table,1),size(res_table,2))
 res_table(1:3,:) %print the first few rows
