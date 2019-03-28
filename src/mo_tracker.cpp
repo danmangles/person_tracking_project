@@ -543,8 +543,8 @@ void MOTracker::manageTracklets(vector<VectorXd> unpaired_detections, double msg
 
 
     ////// PERFORM THE TRACKLET ALGORITHM
-//    updatePairings(unpaired_detections,msg_time, isRGBD, false); // get a bunch of pairings between tracklets and detections
-//    updateTracklets(unpaired_detections, msg_time, isRGBD, false); // update each tracklet with the best pairing for that tracklet, increment the misses for tracklets without pairings
+    //    updatePairings(unpaired_detections,msg_time, isRGBD, false); // get a bunch of pairings between tracklets and detections
+    //    updateTracklets(unpaired_detections, msg_time, isRGBD, false); // update each tracklet with the best pairing for that tracklet, increment the misses for tracklets without pairings
     createNewTracklets(unpaired_detections, true); // generate new tracklets from any unassociated pairings
     deleteDeadTracklets(true); // delete any tracklets that have been missed too many times
     initiateLongTracklets(msg_time, true); // initiate the kalman filters and publisher for any tracklets with a long sequence of detections
@@ -574,42 +574,66 @@ void MOTracker::populateCostMatrix(vector<VectorXd> &unpaired_detections, Matrix
 
 void MOTracker::updateTrackletsWithCM(vector<VectorXd> &unpaired_detections, MatrixXd &cost_matrix, double msg_time, bool isRGBD, bool verbose)
 {
-    cout<<"tracklet_vector_"<<endl;
+    vector<int> col_IDs, row_IDs;
+
     for (int i = 0; i <tracklet_vector_.size(); i++)
     {
         cout <<i<<": tracklet_"<<tracklet_vector_[i].getID()<<endl;
     }
+    cout << "col_IDs:";
+    for (int i = 0; i <tracklet_vector_.size(); i++)
+    {
+        col_IDs.push_back(i);
+        cout <<i;
+    }
+    cout <<"\nrow_IDs";
+    for (int i = 0; i < unpaired_detections.size(); i++)
+    {
+        row_IDs.push_back(i);
+        cout <<i;
+    }
+
     if (verbose)
-        cout << "updateTrackletsWithCM()"<<endl;
-    if (tracklet_vector_.size() < 1)
+        cout << "\nupdateTrackletsWithCM()"<<endl;
+
+    if (tracklet_vector_.size() == 0)
     {
         if (verbose)
+        {
             cout << "no tracklets, exiting method"<<endl;
+        }
         return;
     }
     vector <int> paired_tracklet_indices;
-    while(true) // this loop is broken out of by two conditions: all detections are far away or there are no detectinos left
+    while (true) // this loop is broken out of by two conditions: all detections are far away or there are no detectinos left
     {
         if (verbose)
             cout << "cost_matrix is now\n"<<cost_matrix<<endl;
 
         //get location of minimum
-        MatrixXd::Index minRow, minCol;
-        float min_dist = cost_matrix.minCoeff(&minRow, &minCol);
+        MatrixXd::Index minRow, minCol; // minRow is the row at which the detection in the min-distance-pair is located, minCol is the column at which the tracklet in that pair is.
+        float min_dist = cost_matrix.minCoeff(&minRow, &minCol); // min_dist is the min distance between any detection and tracklet
         cout << "Min: " << min_dist << ", at: " << minRow << "," << minCol << endl;
-        // if ok, update tracklet with this detection
-        Tracklet * this_tracklet = &tracklet_vector_[minCol];
-        paired_tracklet_indices.push_back(minCol);
 
+
+        // create a pointer to the tracklet from this min_pair
+        //        Tracklet * this_tracklet = &tracklet_vector_[minCol];
+
+        Tracklet * this_tracklet = &tracklet_vector_[col_IDs[minCol]];
+        paired_tracklet_indices.push_back(col_IDs[minCol]);
+        // add the index to the list of paired_tracklet_indices
+        //        paired_tracklet_IDs.push_back(this_tracklet->getID());
+        // if this min_distance is not too great
         if (min_dist < getMaxGatingDistance(this_tracklet, true))
         {
-            Tracklet * this_tracklet = &tracklet_vector_[minCol];
             if (verbose)
             {
                 cout << "Updating tracklet_"<<this_tracklet->getID()<< " with detection at index "<<minRow<<endl;
                 updateTracklet(this_tracklet, unpaired_detections[minRow], msg_time,isRGBD, true);
             }
-            unpaired_detections.erase(unpaired_detections.begin() + minRow); // move this one out of the array
+            // delete the detection from the array of unpaired detections and the tracklet from unpaired tracklets
+            unpaired_detections.erase(unpaired_detections.begin() + minRow);
+
         }
 
         else // closest detection is too far away from tracklets
@@ -617,12 +641,17 @@ void MOTracker::updateTrackletsWithCM(vector<VectorXd> &unpaired_detections, Mat
             cout << "tracklet too far away" <<endl;
             break; //out of the loop
         }
-        //       delete the row and the column and repeat
+        // delete the row and the column and repeat, delete these also from the rowids and col ids
         removeRow(cost_matrix, minRow);
+        row_IDs.erase(row_IDs.begin() + minRow);
         removeColumn(cost_matrix, minCol);
+        col_IDs.erase(col_IDs.begin() + minCol);
+        //        row_adjuster += minRow, col_adjuster +=minCol;
         if (verbose)
+        {
             cout <<"cost matrix now has the following dimensions: rows: "<<cost_matrix.rows()<<" cols: "<<cost_matrix.cols()<<endl;
-
+//            cout <<"row_IDs "<<row_IDs<< " col_IDs: "<<col_IDs<< endl;
+        }
         if (cost_matrix.rows() == 0)
         {
             if (verbose)
@@ -637,6 +666,8 @@ void MOTracker::updateTrackletsWithCM(vector<VectorXd> &unpaired_detections, Mat
         }
     }
     // now record misses with all remaining tracklets
+    if (verbose)
+        cout << "looping through "<<tracklet_vector_.size()<<" tracklets to assess which are unpaired"<<endl;
     for (int i = 0; i < tracklet_vector_.size(); i++)
     {
         // if paired_tracklet_indices contains i, we are ok
@@ -664,12 +695,11 @@ void MOTracker::updateTrackletsWithCM(vector<VectorXd> &unpaired_detections, Mat
                 publishMarker(xhat,tracklet_name.str(), getMaxGatingDistance(this_tracklet, false),getMaxGatingDistance(this_tracklet, false),2); // publish the marker
 
                 cout << "about to write all this to file "<<this_tracklet->getID();
-                cout<<v<<endl;
-                cout <<"\n\n\n\n****************************************************************\n\n\n\n"<<endl;
                 // order : detection XYZ, kf XYZ, kf covariance XYZ. Skip 4 cells so have 4+1 commas
                 results_file_ <<msg_time<<",,,,,"<<this_tracklet->getID()<<","<< xhat[0]<<","<<xhat[1]<<","<<xhat[2]<<","<<P(0,0)<<","<<P(1,1)<<","<<P(2,2)<<","<<v[0]<<","<<v[1]<<"\n";
                 cout << "results file is fine"<<endl;
             }
+
         }
         else
         {
@@ -678,7 +708,6 @@ void MOTracker::updateTrackletsWithCM(vector<VectorXd> &unpaired_detections, Mat
     }
     if (verbose)
         cout <<"updateTrackletsWithCM() exiting with "<<unpaired_detections.size()<<" detections unpaired"<<endl;
-
 }
 void MOTracker::updateTracklet(Tracklet *tracklet, VectorXd det_coord, double msg_time, bool isRGBD, bool verbose)
 {
