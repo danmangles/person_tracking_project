@@ -371,11 +371,14 @@ void MOTracker::getCentroidsOfClusters (vector<pcl::PointCloud<pcl::PointXYZRGB>
                 cout <<"V = \n"<<covariance_matrix<<endl;
                 if (io_params.publishing)
                 {
-                    sensor_msgs::PointCloud2 msg_to_publish; // initiate intermediate message variable
-                    pcl::toROSMsg(*cloud_cluster,msg_to_publish);
-                    msg_to_publish.header.frame_id = "odom"; // CHANGED THIS TO BASE INSTEAD OF ODOM BECAUSE WE WERE PUBLISHING POINTS IN THE WRONG PLACE
-                    pub_centroid_.at(pub_index).publish (msg_to_publish); // this is not publishing correctly
-                    pub_index++; // increment the publisher index
+                    if (pub_index < 20) // don't publish if we've got too many people
+                    {
+                        sensor_msgs::PointCloud2 msg_to_publish; // initiate intermediate message variable
+                        pcl::toROSMsg(*cloud_cluster,msg_to_publish);
+                        msg_to_publish.header.frame_id = "odom"; // CHANGED THIS TO BASE INSTEAD OF ODOM BECAUSE WE WERE PUBLISHING POINTS IN THE WRONG PLACE
+                        pub_centroid_.at(pub_index).publish (msg_to_publish); // this is not publishing correctly
+                        pub_index++; // increment the publisher index
+                    }
                 }
             }
 
@@ -683,7 +686,7 @@ void MOTracker::updateTrackletsWithCM(vector<VectorXd> &unpaired_detections, Mat
         if (verbose)
         {
             cout <<"cost matrix now has the following dimensions: rows: "<<cost_matrix.rows()<<" cols: "<<cost_matrix.cols()<<endl;
-//            cout <<"row_IDs "<<row_IDs<< " col_IDs: "<<col_IDs<< endl;
+            //            cout <<"row_IDs "<<row_IDs<< " col_IDs: "<<col_IDs<< endl;
         }
         if (cost_matrix.rows() == 0)
         {
@@ -818,13 +821,11 @@ void MOTracker::initialiseSubscribersAndPublishers() {
         pub_seg_filter_ = nh_.advertise<sensor_msgs::PointCloud2> (topic_seg_filt, 1);
         cout <<"hi"<<endl;
 
-        int numofpubs = 6;
+        int numofpubs = 20;
         for (int i = 0; i<numofpubs; i++)
-        {   cout <<"hi"<<i<<endl;
+        {
             stringstream ss;
             ss << "pcl_centroid_"<<i;
-            cout <<ss.str();
-            cout <<"hi"<<i<<endl;
             ros::Publisher new_pub = nh_.advertise<sensor_msgs::PointCloud2> (ss.str(), 1);
             pub_centroid_.push_back(new_pub);
         }
