@@ -23,6 +23,11 @@ MOTracker::MOTracker(ros::NodeHandle nh,
 void MOTracker::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr &cloud_msg) { // the callback fcn
     // this is called by pointclouds from the velodyne, processing them, decomposing into clusters, and publishing cluster coordinates
     cout<< "************************************\nInitiating Callback\n***********************************"<<endl;
+
+    clock_t start_time, stop_time;
+    double totalTime;
+    start_time = clock();
+
     sensor_msgs::PointCloud2 msg_to_publish; // we will use this for all the pointclouds we need to publish
     // Publish the cloud
     if (io_params.publishing)
@@ -87,6 +92,10 @@ void MOTracker::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr &cloud
     //////// Loop through clusters and put their centroids into a vector
     vector <VectorXd> centroid_coord_array;
     getCentroidsOfClusters(cloud_cluster_vector, centroid_coord_array, true); // generate a vector of coordinates
+
+    stop_time = clock();
+    totalTime = (stop_time - start_time) / (double)CLOCKS_PER_SEC;
+    cout << "The pointcloud callback() method has taken "<<totalTime<<"s to run."<<endl;
 
     /////// Publish the cluster centroids
     if (centroid_coord_array.size() != 0) // if there are any clusters visible
