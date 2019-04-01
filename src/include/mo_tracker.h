@@ -186,6 +186,12 @@ private:
     //// Random methods
     void removeColumn(MatrixXd& matrix, unsigned int colToRemove);
     void removeRow(MatrixXd& matrix, unsigned int rowToRemove);
+    /// Timing variables
+    double pcl_callback_time = 0.0;
+    int n_pcl_callback_time = 0;
+    double assignment_algo_time = 0.0;
+    int n_assignment_algo_time = 0;
+//    void setupTimingVars();
 
 
 };

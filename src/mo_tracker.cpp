@@ -17,6 +17,7 @@ MOTracker::MOTracker(ros::NodeHandle nh,
     cout<< "Calling MOTracker constructor"<<endl;
     initialiseSubscribersAndPublishers(); //initialise the subscribers and publishers
     setupResultsCSV();
+    //    setupTimingVars();
 }
 
 ///// General Pointcloud Methods
@@ -24,9 +25,9 @@ void MOTracker::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr &cloud
     // this is called by pointclouds from the velodyne, processing them, decomposing into clusters, and publishing cluster coordinates
     cout<< "************************************\nInitiating Callback\n***********************************"<<endl;
 
-    clock_t start_time, stop_time;
-    double totalTime;
-    start_time = clock();
+    clock_t start_clock, stop_clock;
+    double method_duration;
+    start_clock = clock();
 
     sensor_msgs::PointCloud2 msg_to_publish; // we will use this for all the pointclouds we need to publish
     // Publish the cloud
@@ -91,11 +92,16 @@ void MOTracker::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr &cloud
 
     //////// Loop through clusters and put their centroids into a vector
     vector <VectorXd> centroid_coord_array;
-    getCentroidsOfClusters(cloud_cluster_vector, centroid_coord_array, true); // generate a vector of coordinates
+    getCentroidsOfClusters(cloud_cluster_vector, centroid_coord_array, false); // generate a vector of coordinates
 
-    stop_time = clock();
-    totalTime = (stop_time - start_time) / (double)CLOCKS_PER_SEC;
-    cout << "The pointcloud callback() method has taken "<<totalTime<<"s to run."<<endl;
+    stop_clock = clock();
+    method_duration = (stop_clock - start_clock) / (double)CLOCKS_PER_SEC;
+    pcl_callback_time += method_duration;
+    n_pcl_callback_time ++;
+    cout <<"********************************************************************************************"<<endl;
+    cout << "\nPointcloud Callback: Average Runtime for this method: "<<pcl_callback_time/(double)n_pcl_callback_time<<"s."<<endl;
+    cout << "\nruntime for this mehthod is : "<<method_duration<<"s."<<endl;
+    cout <<"********************************************************************************************"<<endl;
 
     /////// Publish the cluster centroids
     if (centroid_coord_array.size() != 0) // if there are any clusters visible
@@ -364,15 +370,17 @@ void MOTracker::getCentroidsOfClusters (vector<pcl::PointCloud<pcl::PointXYZRGB>
         //// get the covariance in X,Y,Z
         Matrix3f covariance_matrix;
         computeCovarianceMatrix (*cloud_cluster, xyz_centroid, covariance_matrix);
-
-        cout <<" this cluster has covariance matrix M = \n"<<covariance_matrix<<endl;
-        cout <<" this cluster has centroid = \n"<<xyz_centroid<<endl;
+        if (verbose)
+        {
+            cout <<" this cluster has covariance matrix M = \n"<<covariance_matrix<<endl;
+            cout <<" this cluster has centroid = \n"<<xyz_centroid<<endl;
+        }
         float cov_X = covariance_matrix(0,0);
         float cov_Y = covariance_matrix(1,1);
         float cov_Z = covariance_matrix(2,2);
 
 
-        if (cov_Z > 1.0* cov_X & cov_Z > 1.0 * cov_Y)
+        if (cov_Z > 2.0* cov_X & cov_Z > 2.0 * cov_Y)
         {
             if (verbose)
             {
@@ -580,17 +588,28 @@ void MOTracker::manageTracklets(vector<VectorXd> unpaired_detections, double msg
         //        cout << "writing raw detections to GND truth file"<<endl;
         gnd_file_<<msg_time<<","<<isRGBD<<","<<unpaired_detections[i][0]<<","<<unpaired_detections[i][1]<<","<<unpaired_detections[i][2]<<"\n";
     }
+    clock_t start_clock, stop_clock;
+    double method_duration;
+    start_clock = clock();
 
     // initiate a cost matrix to populate
     MatrixXd cost_matrix(unpaired_detections.size(),tracklet_vector_.size());
     populateCostMatrix(unpaired_detections, cost_matrix, false);
     updateTrackletsWithCM(unpaired_detections, cost_matrix, msg_time, isRGBD, true);
 
+    stop_clock = clock();
+    method_duration = (stop_clock - start_clock) / (double)CLOCKS_PER_SEC;
+    assignment_algo_time += method_duration;
+    n_assignment_algo_time ++;
+    cout <<"********************************************************************************************"<<endl;
+    cout << "\Assignment Algo: Average Runtime for this method: "<<assignment_algo_time/(double)n_assignment_algo_time<<"s."<<endl;
+    cout << "\nruntime for this mehthod is : "<<method_duration<<"s."<<endl;
+    cout <<"********************************************************************************************"<<endl;
 
     ////// PERFORM THE TRACKLET ALGORITHM
     //    updatePairings(unpaired_detections,msg_time, isRGBD, false); // get a bunch of pairings between tracklets and detections
     //    updateTracklets(unpaired_detections, msg_time, isRGBD, false); // update each tracklet with the best pairing for that tracklet, increment the misses for tracklets without pairings
-    createNewTracklets(unpaired_detections, true); // generate new tracklets from any unassociated pairings
+    createNewTracklets(unpaired_detections, false); // generate new tracklets from any unassociated pairings
     deleteDeadTracklets(true); // delete any tracklets that have been missed too many times
     initiateLongTracklets(msg_time, true); // initiate the kalman filters and publisher for any tracklets with a long sequence of detections
 }
@@ -907,6 +926,10 @@ void MOTracker::setupResultsCSV() {
     gnd_file_ << "Time,isRGBD,Detection_X,Detection_Y,Detection_Z\n";
 
 }
+//void MOTracker::setupTimingVars() {
+//    // sets up all the variables to measure the compute time for different methods
+
+//}
 void MOTracker::removeRow(MatrixXd& matrix, unsigned int rowToRemove)
 {
     unsigned int numRows = matrix.rows()-1;
@@ -928,3 +951,4 @@ void MOTracker::removeColumn(MatrixXd& matrix, unsigned int colToRemove)
 
     matrix.conservativeResize(numRows,numCols);
 }
+
