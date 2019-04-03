@@ -113,7 +113,7 @@ io_param_struct getIOParams(){
     res_filename << "results_CSVs/res_0"<<1+ ltm->tm_mon<<  ltm->tm_mday<<"_"<<ltm->tm_hour<<1 + ltm->tm_min<< ".csv";
     gnd_filename << "results_CSVs/gnd_0"<<1+ ltm->tm_mon<<  ltm->tm_mday<<"_"<<ltm->tm_hour<<1 + ltm->tm_min<< ".csv";
 
-    return {.publishing = false,
+    return {.publishing = true,
                 .res_filename = res_filename.str(),
                 .gnd_filename = gnd_filename.str(),
                 .fixed_frame = "base"

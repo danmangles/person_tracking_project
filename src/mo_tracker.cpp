@@ -73,7 +73,7 @@ void MOTracker::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr &cloud
     if (pcl_params.apply_ogm_filter)
     {
         updateOGM(cloud_ptr, true);
-        removeOccupiedPoints(cloud_ptr, true);
+//        removeOccupiedPoints(cloud_ptr, true);
         // publish this map
         if (io_params.publishing)
         {
@@ -515,6 +515,23 @@ void MOTracker::getCentroidsOfClusters (vector<pcl::PointCloud<pcl::PointXYZRGB>
 
         Eigen::Vector4f xyz_centroid;
         compute3DCentroid (*cloud_cluster, xyz_centroid);
+        ////////// STATIC OR DYNAMIC
+
+        VectorXd this_point(2);
+        this_point<< xyz_centroid(0), xyz_centroid(1);
+
+        grid_map::Index pt_index;
+        occupancy_map_.getIndex(this_point, pt_index);
+        if (occupancy_map_["thresholded_occupancy"](pt_index(0),pt_index(1)) == 1)
+        {
+            // this is a static cluster
+            cout <<"this is a static cluster!!!!!"<<endl;
+            break;
+        }
+
+
+
+
         //// get the covariance in X,Y,Z
         Matrix3f covariance_matrix;
         computeCovarianceMatrix (*cloud_cluster, xyz_centroid, covariance_matrix);
