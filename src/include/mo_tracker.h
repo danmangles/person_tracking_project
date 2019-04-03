@@ -58,11 +58,15 @@
 #include <stdlib.h> // for random
 #include <cmath> // used for euclidean norm
 ////////////////////////////////
+// for grid map
+#include <grid_map_ros/grid_map_ros.hpp>
+////////////////////////////////////////
 
 #include <fstream> // for csv files
 #include <iostream> // also for csv files
 //using namespace Eigen;
 using namespace std;
+using namespace grid_map;
 
 #include "tracklet.h" // this includes pairing.h , kalman_filter.h
 #ifndef mo_tracker_H
@@ -195,9 +199,9 @@ private:
 //    void setupTimingVars();
 
     //// Occupancy grid map
-    void updateOGM(pcl::PointCloud<pcl::PointXYZRGB>::Ptr output_ptr, bool verbose);
+    void updateOGM(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_ptr, bool verbose);
     void initialiseOGM();
-
+    grid_map::GridMap occupancy_map_;
 
 };
 #endif // mo_tracker_h

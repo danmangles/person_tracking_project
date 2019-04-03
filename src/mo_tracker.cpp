@@ -17,7 +17,7 @@ MOTracker::MOTracker(ros::NodeHandle nh,
     cout<< "Calling MOTracker constructor"<<endl;
     initialiseSubscribersAndPublishers(); //initialise the subscribers and publishers
     setupResultsCSV();
-    //    setupTimingVars();
+    initialiseOGM();
 }
 
 ///// General Pointcloud Methods
@@ -67,19 +67,25 @@ void MOTracker::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr &cloud
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_ptr;
     convertSM2ToPclPtr(transformed_cloud, cloud_ptr);
     updateOGM(cloud_ptr, true);
+    // publish this map
     if (io_params.publishing)
     {
         cout << "publishing ogm filtered cloud"<<endl;
-        //        pcl::toROSMsg(*cloud_ptr,msg_to_publish ); // convert from PCL:PC1 to SM:PC2
-        //        pub_ogm_.publish (msg_to_publish);
+
+        occupancy_map_.setTimestamp(cloud_msg->header.stamp.toNSec());
+        grid_map_msgs::GridMap outputMessage;
+        grid_map::GridMapRosConverter::toMessage(occupancy_map_, outputMessage);
+        pub_ogm_.publish(outputMessage);
     }
+
+
 
 
 
     //////// Downsample with a Voxel Grid and publish
     // Convert variable to correct type for VoxelGrid
-//    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_ptr;
-//    convertSM2ToPclPtr(transformed_cloud, cloud_ptr);
+    //    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_ptr;
+    //    convertSM2ToPclPtr(transformed_cloud, cloud_ptr);
 
     if (pcl_params.apply_voxel_grid == 1) {
         applyVoxelGrid(cloud_ptr, true); // apply the voxel_grid using a leaf size of 1cm
@@ -123,12 +129,81 @@ void MOTracker::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr &cloud
     else
         cout << "No valid clusters visible after getCentroidsOfClusters()"<<endl;
 }
-void MOTracker::updateOGM(pcl::PointCloud<pcl::PointXYZRGB>::Ptr output_ptr, bool verbose)
+void MOTracker::updateOGM(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_ptr, bool verbose)
 {
     if (verbose) cout <<"updateOGM() called"<<endl;
 
+    // loop through the cloud
+    for (int i = 0; i < cloud_ptr->size(); i++)
+    {
+        VectorXd this_point(2);
+        this_point<< cloud_ptr->points[i].x, cloud_ptr->points[i].y;
+        if (verbose) cout << "This point is ("<<this_point(0)<<","<<this_point(1)<<")"<<endl;
+
+        // get grid map index corresponding to this point
+        grid_map::Index pt_index;
+        occupancy_map_.getIndex(this_point, pt_index);
+
+        if ( occupancy_map_.isInside(this_point) ){
+            if (verbose) cout <<"inside"<<endl;
+        occupancy_map_["occupancy"](pt_index(0),pt_index(1)) += 0.01;
+        // if we hit 1 set to 1
+        if (occupancy_map_["occupancy"](pt_index(0),pt_index(1)) > 1.0)
+            occupancy_map_["occupancy"](pt_index(0),pt_index(1)) = 1.0;
+        // label as updated
+        occupancy_map_["is_updated"](pt_index(0),pt_index(1)) = 1;
+        if (verbose) cout << "incremented the ogm at index ("<<pt_index(0)<<","<<pt_index(1)<<") to "<<occupancy_map_["occupancy"](pt_index(0),pt_index(1))<<endl;
+        }
+        else
+        {
+            cout << "\n***************************************************outside of map arghhhhhhhhhhhhhhhhh\n*******************************"<<endl;
+        }
+    }
+
+    if(verbose) cout<< "looping thru occ map to decrement missed cells"<<endl;
+    // loop through the gridmap, decrementing the map for all indices that haven't been occupied
+    for (GridMapIterator iterator(occupancy_map_); !iterator.isPastEnd(); ++iterator)
+    {
+        grid_map::Index pt_index(*iterator); // get the index corresponding to this iterator
+        cout << "investigating ogm at index ("<<pt_index<<")"<<endl;
+//        cout << "occupied indices has size "<<occupied_indices.size()<<""<<endl;
+
+        // if we haven't updated this cell this cycle
+        if (occupancy_map_["is_updated"](pt_index(0),pt_index(1)) != 1)
+        {
+            cout <<"not found"<<endl;
+            occupancy_map_["occupancy"](pt_index(0),pt_index(1)) -= 1.0; // decrement this value
+
+            // if we hit zero set to zero
+            if (occupancy_map_["occupancy"](pt_index(0),pt_index(1)) < 0.0)
+                occupancy_map_["occupancy"](pt_index(0),pt_index(1)) = 0.0;
+        }
+        else{
+            // if we have set this value to 1, reset it to 0
+            occupancy_map_["is_updated"](pt_index(0),pt_index(1)) = 0; // and reset the bool
+        }
+    }
+    if (verbose) cout<<"exiting updateOGM()"<<endl;
 }
 
+void MOTracker::initialiseOGM()
+{
+    cout <<"initialising grid map"<<endl;
+    // Sets up the grid map with the correct layers.
+    //    occupancy_map_.add("local_occupancy", Matrix(100, 100)); // add the layer local occupancy for stuff
+
+    // how to initialise this based on base frame location?
+    occupancy_map_.setFrameId("odom");
+    occupancy_map_.setGeometry(Length(50.0, 50.0), .2, Position(0.0,0.0));
+    cout<<("Created map with size %f x %f m (%i x %i cells).\n The center of the map is located at (%f, %f) in the %s frame.",
+           occupancy_map_.getLength().x(), occupancy_map_.getLength().y(),
+           occupancy_map_.getSize()(0), occupancy_map_.getSize()(1),
+           occupancy_map_.getPosition().x(), occupancy_map_.getPosition().y(), occupancy_map_.getFrameId().c_str());
+
+
+    occupancy_map_.add("occupancy", grid_map::Matrix(1000,1000)); // add the layer local occupancy for stuff
+    occupancy_map_.add("is_updated", grid_map::Matrix(1000,1000)); // add the layer local occupancy for stuff
+}
 
 void MOTracker::poseArrayCallback(const geometry_msgs::PoseArray &pose_array)
 {
@@ -867,7 +942,8 @@ void MOTracker::initialiseSubscribersAndPublishers() {
         pub_zfilt_ = nh_.advertise<sensor_msgs::PointCloud2> (topic_zfilt, 1);
         pub_ds_ = nh_.advertise<sensor_msgs::PointCloud2> (topic_ds, 1);
         pub_seg_filter_ = nh_.advertise<sensor_msgs::PointCloud2> (topic_seg_filt, 1);
-        cout <<"hi"<<endl;
+
+        pub_ogm_ = nh_.advertise<grid_map_msgs::GridMap>("multi_sensor_tracker/filtered_map", 1);
 
         int numofpubs = 20;
         for (int i = 0; i<numofpubs; i++)
