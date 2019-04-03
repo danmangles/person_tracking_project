@@ -79,7 +79,7 @@ struct pcl_param_struct {bool apply_passthrough_filter; bool apply_ogm_filter; b
 // holds params for the tracker
 struct tracker_param_struct {double gating_dist_constant; double base_gating_dist; int max_consecutive_misses; int min_initialisation_length; bool only_init_rgb_tracklet;};
 // holds io params
-struct io_param_struct {bool publishing; string res_filename; string gnd_filename;};
+struct io_param_struct {bool publishing; string res_filename; string gnd_filename; string fixed_frame;};
 // holds ogm params
 struct ogm_param_struct {double window_length; double threshold; int increment; int decrement;};
 
@@ -110,7 +110,7 @@ private:
 
     void applyPassthroughFilter(const sensor_msgs::PointCloud2ConstPtr input_cloud, sensor_msgs::PointCloud2 &output_cloud); // filters points outside of a defined cube
     void removeOutOfPlanePoints(pcl::PointCloud<pcl::PointXYZRGB>::Ptr &cloud_ptr, bool verbose); // remove non-planar-inlying points
-    void applyBaseOdomTransformation(sensor_msgs::PointCloud2 input_cloud, sensor_msgs::PointCloud2 &output_cloud); // transforms the cloud into the odom frame
+    void transformFromBaseToFixedFrame(sensor_msgs::PointCloud2 input_cloud, sensor_msgs::PointCloud2 &output_cloud); // transforms the cloud into the odom frame
     void convertSM2ToPclPtr(sensor_msgs::PointCloud2 input_cloud, pcl::PointCloud<pcl::PointXYZRGB>::Ptr &output_ptr);
     void applyVoxelGrid(pcl::PointCloud<pcl::PointXYZRGB>::Ptr &cloud_ptr, bool verbose);
     void splitCloudPtrIntoClusters(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_ptr, vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> &cloud_cluster_vector);
@@ -204,9 +204,9 @@ private:
 //    void setupTimingVars();
 
     //// Occupancy grid map
-    void updateOGM(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_ptr, bool verbose);
+    void updateOGM(pcl::PointCloud<pcl::PointXYZRGB>::Ptr &cloud_ptr, bool verbose);
     void initialiseOGM();
-    void removeOccupiedPoints(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_ptr, bool verbose);
+    void removeOccupiedPoints(pcl::PointCloud<pcl::PointXYZRGB>::Ptr &cloud_ptr, bool verbose);
     grid_map::GridMap occupancy_map_;
 
 };

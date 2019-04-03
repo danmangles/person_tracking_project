@@ -53,7 +53,7 @@ void MOTracker::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr &cloud
 
     ////////// Transform the cloud into the odom frame to eliminate base motion
     sensor_msgs::PointCloud2 transformed_cloud;
-    applyBaseOdomTransformation(bounded_cloud, transformed_cloud);
+    transformFromBaseToFixedFrame(bounded_cloud, transformed_cloud);
     if (io_params.publishing)
         pub_trans_.publish (transformed_cloud); // Publish the cloud
 
@@ -89,9 +89,6 @@ void MOTracker::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr &cloud
         }
     }
 
-
-
-
     //////// Downsample with a Voxel Grid and publish
     if (pcl_params.apply_voxel_grid == 1) {
         applyVoxelGrid(cloud_ptr, true); // apply the voxel_grid using a leaf size of 1cm
@@ -103,14 +100,14 @@ void MOTracker::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr &cloud
         }
     }
     //////// Remove non planar points e.g. outliers http://pointclouds.org/documentation/tutorials/planar_segmentation.php#id1
-    if (pcl_params.apply_planar_outlier_removal == 1) {
-        removeOutOfPlanePoints(cloud_ptr, false);
-        if (io_params.publishing)
-        {
-            pcl::toROSMsg(*cloud_ptr,msg_to_publish ); // convert from PCL:PC1 to SM:PC2
-            pub_seg_filter_.publish (msg_to_publish);
-        }
-    }
+    //    if (pcl_params.apply_planar_outlier_removal) {
+    //        removeOutOfPlanePoints(cloud_ptr, false);
+    //        if (io_params.publishing)
+    //        {
+    //            pcl::toROSMsg(*cloud_ptr,msg_to_publish ); // convert from PCL:PC1 to SM:PC2
+    //            pub_seg_filter_.publish (msg_to_publish);
+    //        }
+    //    }
 
     /////////// Split up pointcloud into a vector of pointclouds, 1 for each cluster
     vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> cloud_cluster_vector;
@@ -136,7 +133,7 @@ void MOTracker::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr &cloud
         cout << "No valid clusters visible after getCentroidsOfClusters()"<<endl;
 }
 
-void MOTracker::updateOGM(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_ptr, bool verbose)
+void MOTracker::updateOGM(pcl::PointCloud<pcl::PointXYZRGB>::Ptr &cloud_ptr, bool verbose)
 {
     if (verbose) cout <<"updateOGM() called"<<endl;
     // loop through the cloud
@@ -196,7 +193,7 @@ void MOTracker::updateOGM(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_ptr, bool
     }
     if (verbose) cout<<"exiting updateOGM()"<<endl;
 }
-void MOTracker::removeOccupiedPoints(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_ptr, bool verbose)
+void MOTracker::removeOccupiedPoints(pcl::PointCloud<pcl::PointXYZRGB>::Ptr &cloud_ptr, bool verbose)
 {
     // removes all the points in occupied cells in the ogm
     if(verbose) cout <<"removeOccupiedPoints() called"<<endl;
@@ -247,7 +244,7 @@ void MOTracker::initialiseOGM()
     // how to initialise this based on base frame location?
     double height = 50.0, width = 50.0, cell_scale = 0.2; // map params in metres
     int matrix_height = (int) (height/cell_scale), matrix_width = (int)(width/cell_scale); // n cells along one size
-    occupancy_map_.setFrameId("odom");
+    occupancy_map_.setFrameId(io_params.fixed_frame);
     occupancy_map_.setGeometry(Length(height, width), cell_scale, Position(0.0,0.0));
     cout<<("Created map with size %f x %f m (%i x %i cells).\n The center of the map is located at (%f, %f) in the %s frame.",
            occupancy_map_.getLength().x(), occupancy_map_.getLength().y(),
@@ -339,11 +336,11 @@ void MOTracker::applyPassthroughFilter(const sensor_msgs::PointCloud2ConstPtr in
     pcl_conversions::moveFromPCL(*output_cloud_z, output_cloud); // convert into the sensor_msgs format
 }
 
-void MOTracker::applyBaseOdomTransformation(sensor_msgs::PointCloud2 input_cloud, sensor_msgs::PointCloud2 &output_cloud) {
+void MOTracker::transformFromBaseToFixedFrame(sensor_msgs::PointCloud2 input_cloud, sensor_msgs::PointCloud2 &output_cloud) {
     // transforms the cloud into the odom frame from base frame
     if (verbose_)
         cout<<"Transforming Pointcloud into odom frame. Waiting for transform"<<endl;
-    string target_frame = "odom", base_frame = "base"; // target frame and base frame for transformfor transform
+    string target_frame = io_params.fixed_frame, base_frame = "base"; // target frame and base frame for transformfor transform
     odom_base_ls_->waitForTransform(target_frame, base_frame, ros::Time::now(), ros::Duration(.1) ); // wait until a tf is available before transforming
 
     if (verbose_)
@@ -543,7 +540,7 @@ void MOTracker::getCentroidsOfClusters (vector<pcl::PointCloud<pcl::PointXYZRGB>
                     {
                         sensor_msgs::PointCloud2 msg_to_publish; // initiate intermediate message variable
                         pcl::toROSMsg(*cloud_cluster,msg_to_publish);
-                        msg_to_publish.header.frame_id = "odom"; // CHANGED THIS TO BASE INSTEAD OF ODOM BECAUSE WE WERE PUBLISHING POINTS IN THE WRONG PLACE
+                        msg_to_publish.header.frame_id = io_params.fixed_frame; // CHANGED THIS TO BASE INSTEAD OF ODOM BECAUSE WE WERE PUBLISHING POINTS IN THE WRONG PLACE
                         pub_centroid_.at(pub_index).publish (msg_to_publish); // this is not publishing correctly
                         pub_index++; // increment the publisher index
                     }
@@ -770,21 +767,21 @@ void MOTracker::populateCostMatrix(vector<VectorXd> &unpaired_detections, Matrix
     // populates the cost_matrix:
     // tracklets are the COLUMNS
     // detections are the ROWS
-    if (verbose)
-        cout <<"populateCostMatrix()"<<endl;
+    if (verbose) cout <<"populateCostMatrix()"<<endl;
+
     for (int i = 0; i < unpaired_detections.size(); i++) // loop through all unpaired detections
     {
-        if (verbose)
-            cout << "assessing detection "<<i<<endl;
+        if (verbose) cout << "assessing detection "<<i<<endl;
+
         for (int j = 0; j < tracklet_vector_.size(); j++) // loop through all live tracklets
         {
-            if (verbose)
-                cout << "assessing tracklet "<<j<<endl;
+            if (verbose) cout << "assessing tracklet "<<j<<endl;
+
             cost_matrix(i,j) = tracklet_vector_[j].getDistance(unpaired_detections[i]); // update the cost matrix
         }
     }
-    if (verbose)
-        cout <<"cost matrix populated"<<endl;
+    if (verbose) cout <<"cost matrix populated"<<endl;
+
 }
 
 void MOTracker::updateTrackletsWithCM(vector<VectorXd> &unpaired_detections, MatrixXd &cost_matrix, double msg_time, bool isRGBD, bool verbose)
@@ -808,22 +805,19 @@ void MOTracker::updateTrackletsWithCM(vector<VectorXd> &unpaired_detections, Mat
         cout <<i;
     }
 
-    if (verbose)
+    if (verbose) cout << "cost_matrix is now\n"<<cost_matrix<<endl;
         cout << "\nupdateTrackletsWithCM()"<<endl;
 
     if (tracklet_vector_.size() == 0)
     {
-        if (verbose)
-        {
-            cout << "no tracklets, exiting method"<<endl;
-        }
+        if (verbose) cout << "no tracklets, exiting method"<<endl;
         return;
     }
     vector <int> paired_tracklet_indices;
     while (true) // this loop is broken out of by two conditions: all detections are far away or there are no detectinos left
     {
-        if (verbose)
-            cout << "cost_matrix is now\n"<<cost_matrix<<endl;
+        if (verbose) cout << "cost_matrix is now\n"<<cost_matrix<<endl;
+
 
         //get location of minimum
         MatrixXd::Index minRow, minCol; // minRow is the row at which the detection in the min-distance-pair is located, minCol is the column at which the tracklet in that pair is.
@@ -841,11 +835,9 @@ void MOTracker::updateTrackletsWithCM(vector<VectorXd> &unpaired_detections, Mat
         // if this min_distance is not too great
         if (min_dist < getMaxGatingDistance(this_tracklet, true))
         {
-            if (verbose)
-            {
-                cout << "Updating tracklet_"<<this_tracklet->getID()<< " with detection at index "<<minRow<<endl;
-                updateTracklet(this_tracklet, unpaired_detections[minRow], msg_time,isRGBD, true);
-            }
+            if (verbose) cout << "Updating tracklet_"<<this_tracklet->getID()<< " with detection at index "<<minRow<<endl;
+            updateTracklet(this_tracklet, unpaired_detections[minRow], msg_time,isRGBD, true);
+
             // delete the detection from the array of unpaired detections and the tracklet from unpaired tracklets
             unpaired_detections.erase(unpaired_detections.begin() + minRow);
 
@@ -862,21 +854,16 @@ void MOTracker::updateTrackletsWithCM(vector<VectorXd> &unpaired_detections, Mat
         removeColumn(cost_matrix, minCol);
         col_IDs.erase(col_IDs.begin() + minCol);
         //        row_adjuster += minRow, col_adjuster +=minCol;
-        if (verbose)
-        {
-            cout <<"cost matrix now has the following dimensions: rows: "<<cost_matrix.rows()<<" cols: "<<cost_matrix.cols()<<endl;
-            //            cout <<"row_IDs "<<row_IDs<< " col_IDs: "<<col_IDs<< endl;
-        }
+        if (verbose)  cout <<"cost matrix now has the following dimensions: rows: "<<cost_matrix.rows()<<" cols: "<<cost_matrix.cols()<<endl;
+
         if (cost_matrix.rows() == 0)
         {
-            if (verbose)
-                cout<<"fewer measurements than tracklets (or both are empty)"<<endl;
+            if (verbose) cout<<"fewer measurements than tracklets (or both are empty)"<<endl;
             break;
         }
         if (cost_matrix.cols() == 0)
         {
-            if (verbose)
-                cout<<"fewer tracklets than measurements"<<endl;
+            if (verbose) cout<<"fewer tracklets than measurements"<<endl;
             break;
         }
     }
@@ -977,7 +964,7 @@ void MOTracker::publishTransform(VectorXd coordinates, string target_frame_id) {
     transform.setRotation(q);
 
     //    string base_frame_id = "map"; // we are based in the odom frame
-    string base_frame_id = "odom"; // we are based in the odom frame
+    string base_frame_id = io_params.fixed_frame; // we are based in the odom frame
     br_.sendTransform(tf::StampedTransform(transform, ros::Time::now(), base_frame_id, target_frame_id));
 }
 
@@ -1026,7 +1013,7 @@ void MOTracker::publishMarker(VectorXd x_hat, string marker_name,double scale_x,
 
     visualization_msgs::Marker marker; // initiate the marker
 
-    marker.header.frame_id = "odom"; // we want to publish relative to the odom frame
+    marker.header.frame_id = io_params.fixed_frame; // we want to publish relative to the odom frame
     marker.header.stamp = ros::Time();
     marker.lifetime = ros::Duration(2);
     //    marker.ns = "kalman_filter_marker";  // call our marker kalman_filter_marker
