@@ -615,7 +615,7 @@ void MOTracker::manageTracklets(vector<VectorXd> unpaired_detections, double msg
     // initiate a cost matrix to populate
     MatrixXd cost_matrix(unpaired_detections.size(),tracklet_vector_.size());
     populateCostMatrix(unpaired_detections, cost_matrix, false);
-    updateTrackletsWithCM(unpaired_detections, cost_matrix, msg_time, isRGBD, true);
+    updateTrackletsWithCM(unpaired_detections, cost_matrix, msg_time, isRGBD, false);
 
     stop_clock = clock();
     method_duration = (stop_clock - start_clock) / (double)CLOCKS_PER_SEC;
@@ -630,8 +630,8 @@ void MOTracker::manageTracklets(vector<VectorXd> unpaired_detections, double msg
     //    updatePairings(unpaired_detections,msg_time, isRGBD, false); // get a bunch of pairings between tracklets and detections
     //    updateTracklets(unpaired_detections, msg_time, isRGBD, false); // update each tracklet with the best pairing for that tracklet, increment the misses for tracklets without pairings
     createNewTracklets(unpaired_detections, false); // generate new tracklets from any unassociated pairings
-    deleteDeadTracklets(true); // delete any tracklets that have been missed too many times
-    initiateLongTracklets(msg_time, true); // initiate the kalman filters and publisher for any tracklets with a long sequence of detections
+    deleteDeadTracklets(false); // delete any tracklets that have been missed too many times
+    initiateLongTracklets(msg_time, false); // initiate the kalman filters and publisher for any tracklets with a long sequence of detections
 }
 
 void MOTracker::populateCostMatrix(vector<VectorXd> &unpaired_detections, MatrixXd &cost_matrix, bool verbose)
