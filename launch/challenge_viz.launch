@@ -1,0 +1,6 @@
+<launch>
+
+  <!-- Launch RViz with the demo configuration. -->
+  <node name="rviz" pkg="rviz" type="rviz" args="-d $(find grid_map_demos)/rviz/navigation_demo_cdt.rviz" />
+
+</launch>
