@@ -80,6 +80,8 @@ struct pcl_param_struct {bool apply_passthrough_filter;bool apply_planar_outlier
 struct tracker_param_struct {double gating_dist_constant; double base_gating_dist; int max_consecutive_misses; int min_initialisation_length; bool only_init_rgb_tracklet;};
 // holds io params
 struct io_param_struct {bool publishing; string res_filename; string gnd_filename;};
+// holds ogm params
+struct ogm_param_struct {double window_length; double threshold; int increment; int decrement;};
 
 class MOTracker {
 
@@ -89,6 +91,7 @@ public:
               kf_param_struct kf_params,
               tracker_param_struct tracker_params,
               io_param_struct io_params,
+              ogm_param_struct ogm_params,
               bool verbose);
     //            ofstream &results_file  ); // initiate a constructor with a nodehandle and parameters for the kalman filter
 
@@ -187,6 +190,7 @@ private:
     kf_param_struct kf_params;
     tracker_param_struct tracker_params;
     io_param_struct io_params;
+    ogm_param_struct ogm_params;
 
     //// Random methods
     void removeColumn(MatrixXd& matrix, unsigned int colToRemove);

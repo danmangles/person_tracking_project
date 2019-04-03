@@ -9,9 +9,10 @@ MOTracker::MOTracker(ros::NodeHandle nh,
                      kf_param_struct kf_params,
                      tracker_param_struct tracker_params,
                      io_param_struct io_params,
+                     ogm_param_struct ogm_params,
                      bool verbose
                      ) :
-    nh_(nh),  pcl_params(pcl_params), kf_params(kf_params), tracker_params(tracker_params), io_params(io_params), verbose_(verbose)// initiate the nodehandle
+    nh_(nh),  pcl_params(pcl_params), kf_params(kf_params), tracker_params(tracker_params), io_params(io_params),ogm_params(ogm_params), verbose_(verbose)// initiate the nodehandle
 {
     // Constructor: sets up
     cout<< "Calling MOTracker constructor"<<endl;
@@ -132,64 +133,55 @@ void MOTracker::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr &cloud
 void MOTracker::updateOGM(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_ptr, bool verbose)
 {
     if (verbose) cout <<"updateOGM() called"<<endl;
-
     // loop through the cloud
     for (int i = 0; i < cloud_ptr->size(); i++)
     {
         VectorXd this_point(2);
         this_point<< cloud_ptr->points[i].x, cloud_ptr->points[i].y;
-        if (verbose) cout << "This point is ("<<this_point(0)<<","<<this_point(1)<<")"<<endl;
+        //        if (verbose) cout << "This point is ("<<this_point(0)<<","<<this_point(1)<<")"<<endl;
 
         // get grid map index corresponding to this point
         grid_map::Index pt_index;
         occupancy_map_.getIndex(this_point, pt_index);
-
+        // update if the point falls inside the ogm
         if ( occupancy_map_.isInside(this_point) ){
-            if (verbose) cout <<"inside"<<endl;
-        occupancy_map_["occupancy"](pt_index(0),pt_index(1)) += 0.01;
-        // if we hit 1 set to 1
-        if (occupancy_map_["occupancy"](pt_index(0),pt_index(1)) > 1.0)
-            occupancy_map_["occupancy"](pt_index(0),pt_index(1)) = 1.0;
-        // label as updated
-        occupancy_map_["is_updated"](pt_index(0),pt_index(1)) = 1;
-        if (verbose) cout << "incremented the ogm at index ("<<pt_index(0)<<","<<pt_index(1)<<") to "<<occupancy_map_["occupancy"](pt_index(0),pt_index(1))<<endl;
-        }
+            // label as updated
+            occupancy_map_["current_occupancy"](pt_index(0),pt_index(1)) = 1;        }
         else
-        {
-            cout << "\n***************************************************outside of map arghhhhhhhhhhhhhhhhh\n*******************************"<<endl;
+        {// we are outside the map, consider resizing it
+            if (verbose) cout << "\n***************************************************outside of map arghhhhhhhhhhhhhhhhh\n*******************************"<<endl;
         }
     }
 
     if(verbose) cout<< "looping thru occ map to decrement missed cells"<<endl;
+
     // loop through the gridmap, decrementing the map for all indices that haven't been occupied
     for (GridMapIterator iterator(occupancy_map_); !iterator.isPastEnd(); ++iterator)
     {
         grid_map::Index pt_index(*iterator); // get the index corresponding to this iterator
-        cout << "investigating ogm at index ("<<pt_index<<")"<<endl;
-//        cout << "occupied indices has size "<<occupied_indices.size()<<""<<endl;
+        if (verbose) cout << "investigating ogm at index ("<<pt_index<<")"<<endl;
+        //        cout << "occupied indices has size "<<occupied_indices.size()<<""<<endl;
 
         // if we haven't updated this cell this cycle
-        if (occupancy_map_["is_updated"](pt_index(0),pt_index(1)) != 1)
+        if (occupancy_map_["current_occupancy"](pt_index(0),pt_index(1)) != 1)
         {
-            occupancy_map_["window_occupancy"](pt_index(0),pt_index(1)) -= 1;
-            if (occupancy_map_["window_occupancy"](pt_index(0),pt_index(1)) < 0.0)
-                occupancy_map_["window_occupancy"](pt_index(0),pt_index(1)) = 0.0;
+            //decrement windowed occupancy
+            occupancy_map_["occupancy"](pt_index(0),pt_index(1)) -= ogm_params.decrement;
 
-            occupancy_map_["occupancy"](pt_index(0),pt_index(1)) -= 1.0; // decrement this value
-
-            // if we hit zero set to zero
+            // threshold at 0
             if (occupancy_map_["occupancy"](pt_index(0),pt_index(1)) < 0.0)
                 occupancy_map_["occupancy"](pt_index(0),pt_index(1)) = 0.0;
         }
         else{
             // if we have set this value to 1, reset it to 0
-            occupancy_map_["window_occupancy"](pt_index(0),pt_index(1)) += 1;
-            occupancy_map_["is_updated"](pt_index(0),pt_index(1)) = 0; // and reset the bool
+            occupancy_map_["occupancy"](pt_index(0),pt_index(1)) += ogm_params.increment;
+            occupancy_map_["current_occupancy"](pt_index(0),pt_index(1)) = 0; // and reset the bool
             // threshold at 10
-            if (occupancy_map_["window_occupancy"](pt_index(0),pt_index(1)) > 20.0)
-                occupancy_map_["window_occupancy"](pt_index(0),pt_index(1)) = 20.0;
+            if (occupancy_map_["occupancy"](pt_index(0),pt_index(1)) > ogm_params.window_length)
+                occupancy_map_["occupancy"](pt_index(0),pt_index(1)) = ogm_params.window_length;
         }
-        if (occupancy_map_["window_occupancy"](pt_index(0),pt_index(1)) > 19.0)
+        // threshold at 14
+        if (occupancy_map_["occupancy"](pt_index(0),pt_index(1)) > ogm_params.threshold)
             occupancy_map_["thresholded_occupancy"](pt_index(0),pt_index(1)) = 1;
         else
             occupancy_map_["thresholded_occupancy"](pt_index(0),pt_index(1)) = 0;
@@ -215,9 +207,9 @@ void MOTracker::initialiseOGM()
            occupancy_map_.getPosition().x(), occupancy_map_.getPosition().y(), occupancy_map_.getFrameId().c_str());
 
 
+    //    occupancy_map_.add("occupancy", grid_map::Matrix(matrix_height,matrix_width)); // add the layer local occupancy for stuff
+    occupancy_map_.add("current_occupancy", grid_map::Matrix(matrix_height,matrix_width)); // add the layer local occupancy for stuff
     occupancy_map_.add("occupancy", grid_map::Matrix(matrix_height,matrix_width)); // add the layer local occupancy for stuff
-    occupancy_map_.add("is_updated", grid_map::Matrix(matrix_height,matrix_width)); // add the layer local occupancy for stuff
-    occupancy_map_.add("window_occupancy", grid_map::Matrix(matrix_height,matrix_width)); // add the layer local occupancy for stuff
     occupancy_map_.add("thresholded_occupancy", grid_map::Matrix(matrix_height,matrix_width)); // add the layer local occupancy for stuff
 }
 

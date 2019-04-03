@@ -31,6 +31,15 @@ pcl_param_struct getPclParams() {
                 .downsample_factor = 0.7
     };
 }
+ogm_param_struct getOGMParams() {
+    return {
+        .window_length = 15.0,
+                .threshold = 14.0,
+                .increment = 1,
+                .decrement = 1,
+    };
+}
+
 
 tracker_param_struct getTrackerParams() {
     // Sets the tracker's kalman filter kf's parameters dt,A,C,Q,R,P
@@ -118,7 +127,7 @@ int main (int argc, char** argv) // runs the tracker node
 
     ros::NodeHandle nh; // setup a nodehandle for communication between methods
     // construct a tracker called our_tracker verbose = false
-    MOTracker our_tracker(nh, getPclParams(), getKfParams(),getTrackerParams(),getIOParams(), false);
+    MOTracker our_tracker(nh, getPclParams(), getKfParams(),getTrackerParams(),getIOParams(), getOGMParams(), false);
     ros::spin ();// spin ros
     return 0;
 }
