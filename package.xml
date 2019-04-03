@@ -75,6 +75,21 @@
   <exec_depend>rospy</exec_depend>
   <exec_depend>std_msgs</exec_depend>
 
+<!-- Copied from lidar_navigation_cdt -->
+<depend>grid_map_core</depend>
+<depend>grid_map_ros</depend>
+<depend>grid_map_cv</depend>
+<depend>grid_map_filters</depend>
+<depend>grid_map_loader</depend>
+<depend>grid_map_msgs</depend>
+<depend>grid_map_octomap</depend>
+<depend>grid_map_rviz_plugin</depend>
+<depend>grid_map_visualization</depend>
+<depend>geometry_msgs</depend>
+<depend>cv_bridge</depend>
+<depend>octomap_msgs</depend>
+<depend>tf_conversions</depend>
+<depend>eigen_conversions</depend>
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>

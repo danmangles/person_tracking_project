@@ -9,6 +9,22 @@ find_package(catkin REQUIRED COMPONENTS
   pcl_ros
   roscpp
   sensor_msgs
+  # for octomap
+
+  grid_map_core
+  grid_map_ros
+  grid_map_cv
+  grid_map_filters
+  grid_map_loader
+  grid_map_msgs
+  grid_map_octomap
+  grid_map_rviz_plugin
+  geometry_msgs
+    cv_bridge
+    octomap_msgs
+    filters
+    tf_conversions
+    eigen_conversions
 #from Rob's code
 #  compressed_image_transport
 #  cv_bridge
@@ -25,12 +41,20 @@ find_package(Eigen3 REQUIRED) # from Rob's code
 catkin_package(
     CATKIN_DEPENDS roscpp sensor_msgs
 )
+# FOR OCTO MAP
+find_package(octomap REQUIRED)
+include_directories(${OCTOMAP_INCLUDE_DIRS})
+#target_link_libraries(${OCTOMAP_LIBRARIES})
+#link_directories(${OCTOMAP_LIBRARY_DIRS})
+#############################################
 
 include_directories(
   src/include
   ${catkin_INCLUDE_DIRS}
   ${PCL_INCLUDE_DIRS}
   ${PROJECT_NAME}
+  # for Octomap
+  ${OCTOMAP_INCLUDE_DIR}
 
   ${EIGEN3_INCLUDE_DIRS} # from Rob's code
   INCLUDE_DIRS include
@@ -85,3 +109,13 @@ target_link_libraries (mo_tracker_node ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${PR
 
 #add_executable (mo_tracker_node src/mo_tracker_node.cpp src/mo_tracker.cpp)
 #target_link_libraries (mo_tracker_node ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${PROJECT_NAME})
+### CDT Navigation Demo
+add_executable(
+  challenge_node
+  src/challenge_node.cpp
+  src/Challenge.cpp
+)
+target_link_libraries(
+  challenge_node
+  ${catkin_LIBRARIES}
+)

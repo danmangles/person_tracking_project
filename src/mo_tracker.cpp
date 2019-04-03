@@ -62,10 +62,23 @@ void MOTracker::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr &cloud
         return;
     }
 
-    //////// Downsample with a Voxel Grid and publish
+
     // Convert variable to correct type for VoxelGrid
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_ptr;
-    convertSM2ToPclPtr(transformed_cloud, cloud_ptr);
+    updateOGM(transformed_cloud, cloud_ptr);
+if (io_params.publishing)
+{
+       cout << "publishing ogm filtered cloud"<<endl;
+//        pcl::toROSMsg(*cloud_ptr,msg_to_publish ); // convert from PCL:PC1 to SM:PC2
+    //        pub_ogm_.publish (msg_to_publish);
+    }
+
+
+
+    //////// Downsample with a Voxel Grid and publish
+    // Convert variable to correct type for VoxelGrid
+//    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_ptr;
+//    convertSM2ToPclPtr(transformed_cloud, cloud_ptr);
 
     if (pcl_params.apply_voxel_grid == 1) {
         applyVoxelGrid(cloud_ptr, true); // apply the voxel_grid using a leaf size of 1cm
