@@ -171,7 +171,10 @@ void MOTracker::updateOGM(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_ptr, bool
         // if we haven't updated this cell this cycle
         if (occupancy_map_["is_updated"](pt_index(0),pt_index(1)) != 1)
         {
-            cout <<"not found"<<endl;
+            occupancy_map_["window_occupancy"](pt_index(0),pt_index(1)) -= 1;
+            if (occupancy_map_["window_occupancy"](pt_index(0),pt_index(1)) < 0.0)
+                occupancy_map_["window_occupancy"](pt_index(0),pt_index(1)) = 0.0;
+
             occupancy_map_["occupancy"](pt_index(0),pt_index(1)) -= 1.0; // decrement this value
 
             // if we hit zero set to zero
@@ -180,8 +183,17 @@ void MOTracker::updateOGM(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_ptr, bool
         }
         else{
             // if we have set this value to 1, reset it to 0
+            occupancy_map_["window_occupancy"](pt_index(0),pt_index(1)) += 1;
             occupancy_map_["is_updated"](pt_index(0),pt_index(1)) = 0; // and reset the bool
+            // threshold at 10
+            if (occupancy_map_["window_occupancy"](pt_index(0),pt_index(1)) > 20.0)
+                occupancy_map_["window_occupancy"](pt_index(0),pt_index(1)) = 20.0;
         }
+        if (occupancy_map_["window_occupancy"](pt_index(0),pt_index(1)) > 19.0)
+            occupancy_map_["thresholded_occupancy"](pt_index(0),pt_index(1)) = 1;
+        else
+            occupancy_map_["thresholded_occupancy"](pt_index(0),pt_index(1)) = 0;
+
     }
     if (verbose) cout<<"exiting updateOGM()"<<endl;
 }
@@ -193,16 +205,20 @@ void MOTracker::initialiseOGM()
     //    occupancy_map_.add("local_occupancy", Matrix(100, 100)); // add the layer local occupancy for stuff
 
     // how to initialise this based on base frame location?
+    double height = 50.0, width = 50.0, cell_scale = 0.2; // map params in metres
+    int matrix_height = (int) (height/cell_scale), matrix_width = (int)(width/cell_scale); // n cells along one size
     occupancy_map_.setFrameId("odom");
-    occupancy_map_.setGeometry(Length(50.0, 50.0), .2, Position(0.0,0.0));
+    occupancy_map_.setGeometry(Length(height, width), cell_scale, Position(0.0,0.0));
     cout<<("Created map with size %f x %f m (%i x %i cells).\n The center of the map is located at (%f, %f) in the %s frame.",
            occupancy_map_.getLength().x(), occupancy_map_.getLength().y(),
            occupancy_map_.getSize()(0), occupancy_map_.getSize()(1),
            occupancy_map_.getPosition().x(), occupancy_map_.getPosition().y(), occupancy_map_.getFrameId().c_str());
 
 
-    occupancy_map_.add("occupancy", grid_map::Matrix(1000,1000)); // add the layer local occupancy for stuff
-    occupancy_map_.add("is_updated", grid_map::Matrix(1000,1000)); // add the layer local occupancy for stuff
+    occupancy_map_.add("occupancy", grid_map::Matrix(matrix_height,matrix_width)); // add the layer local occupancy for stuff
+    occupancy_map_.add("is_updated", grid_map::Matrix(matrix_height,matrix_width)); // add the layer local occupancy for stuff
+    occupancy_map_.add("window_occupancy", grid_map::Matrix(matrix_height,matrix_width)); // add the layer local occupancy for stuff
+    occupancy_map_.add("thresholded_occupancy", grid_map::Matrix(matrix_height,matrix_width)); // add the layer local occupancy for stuff
 }
 
 void MOTracker::poseArrayCallback(const geometry_msgs::PoseArray &pose_array)
