@@ -19,6 +19,7 @@ using namespace std;
 pcl_param_struct getPclParams() {
     // sets all the parameters for the pcl_params struct:
     return {.apply_passthrough_filter = true,
+                .apply_ogm_filter = true,
                 .apply_planar_outlier_removal = false, ///////////////////////////////////// TODO
                 .apply_voxel_grid = false,
                 .max_cluster_size = 10000,

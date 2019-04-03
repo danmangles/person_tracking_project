@@ -75,7 +75,7 @@ using namespace grid_map;
 // holds params for the kalman filter
 struct kf_param_struct {double dt; MatrixXd F; MatrixXd H; MatrixXd GQG; MatrixXd R_rgbd; MatrixXd R_velodyne;MatrixXd P0;};
 // holds params for the pointcloud
-struct pcl_param_struct {bool apply_passthrough_filter;bool apply_planar_outlier_removal; bool apply_voxel_grid; int max_cluster_size; int min_cluster_size; double cluster_tolerance; double seg_dist_threshold; double box_x; double box_y; double min_height; double downsample_factor;};
+struct pcl_param_struct {bool apply_passthrough_filter; bool apply_ogm_filter; bool apply_planar_outlier_removal; bool apply_voxel_grid; int max_cluster_size; int min_cluster_size; double cluster_tolerance; double seg_dist_threshold; double box_x; double box_y; double min_height; double downsample_factor;};
 // holds params for the tracker
 struct tracker_param_struct {double gating_dist_constant; double base_gating_dist; int max_consecutive_misses; int min_initialisation_length; bool only_init_rgb_tracklet;};
 // holds io params
@@ -168,6 +168,7 @@ private:
     ros::Publisher pub_trans_; // transformed cloud
     ros::Publisher pub_zfilt_; // passthrough filtered cloud
     ros::Publisher pub_ogm_; // ogm filtered cloud
+    ros::Publisher pub_ogm_pcl_; // ogm filtered cloud
     ros::Publisher pub_ds_; // downsampled cloud
     ros::Publisher pub_seg_filter_; // downsampled cloud
     vector<ros::Publisher> pub_centroid_; // centroid cluster
@@ -205,6 +206,7 @@ private:
     //// Occupancy grid map
     void updateOGM(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_ptr, bool verbose);
     void initialiseOGM();
+    void removeOccupiedPoints(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_ptr, bool verbose);
     grid_map::GridMap occupancy_map_;
 
 };

@@ -67,27 +67,32 @@ void MOTracker::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr &cloud
     // Convert variable to correct type for VoxelGrid
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_ptr;
     convertSM2ToPclPtr(transformed_cloud, cloud_ptr);
-    updateOGM(cloud_ptr, true);
-    // publish this map
-    if (io_params.publishing)
-    {
-        cout << "publishing ogm filtered cloud"<<endl;
 
-        occupancy_map_.setTimestamp(cloud_msg->header.stamp.toNSec());
-        grid_map_msgs::GridMap outputMessage;
-        grid_map::GridMapRosConverter::toMessage(occupancy_map_, outputMessage);
-        pub_ogm_.publish(outputMessage);
+
+    /////// update an ogm and publish
+    if (pcl_params.apply_ogm_filter)
+    {
+        updateOGM(cloud_ptr, true);
+        removeOccupiedPoints(cloud_ptr, true);
+        // publish this map
+        if (io_params.publishing)
+        {
+            cout << "publishing ogm filtered cloud"<<endl;
+
+            occupancy_map_.setTimestamp(cloud_msg->header.stamp.toNSec());
+            grid_map_msgs::GridMap outputMessage;
+            grid_map::GridMapRosConverter::toMessage(occupancy_map_, outputMessage);
+            pub_ogm_.publish(outputMessage);
+
+            pcl::toROSMsg(*cloud_ptr,msg_to_publish ); // convert from PCL:PC1 to SM:PC2
+            pub_ogm_pcl_.publish (msg_to_publish);
+        }
     }
 
 
 
 
-
     //////// Downsample with a Voxel Grid and publish
-    // Convert variable to correct type for VoxelGrid
-    //    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_ptr;
-    //    convertSM2ToPclPtr(transformed_cloud, cloud_ptr);
-
     if (pcl_params.apply_voxel_grid == 1) {
         applyVoxelGrid(cloud_ptr, true); // apply the voxel_grid using a leaf size of 1cm
         // publish
@@ -130,6 +135,7 @@ void MOTracker::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr &cloud
     else
         cout << "No valid clusters visible after getCentroidsOfClusters()"<<endl;
 }
+
 void MOTracker::updateOGM(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_ptr, bool verbose)
 {
     if (verbose) cout <<"updateOGM() called"<<endl;
@@ -159,7 +165,7 @@ void MOTracker::updateOGM(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_ptr, bool
     for (GridMapIterator iterator(occupancy_map_); !iterator.isPastEnd(); ++iterator)
     {
         grid_map::Index pt_index(*iterator); // get the index corresponding to this iterator
-        if (verbose) cout << "investigating ogm at index ("<<pt_index<<")"<<endl;
+        //        if (verbose) cout << "investigating ogm at index ("<<pt_index<<")"<<endl;
         //        cout << "occupied indices has size "<<occupied_indices.size()<<""<<endl;
 
         // if we haven't updated this cell this cycle
@@ -172,7 +178,8 @@ void MOTracker::updateOGM(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_ptr, bool
             if (occupancy_map_["occupancy"](pt_index(0),pt_index(1)) < 0.0)
                 occupancy_map_["occupancy"](pt_index(0),pt_index(1)) = 0.0;
         }
-        else{
+        else // if we HAVE updated this cell this cycle
+        {
             // if we have set this value to 1, reset it to 0
             occupancy_map_["occupancy"](pt_index(0),pt_index(1)) += ogm_params.increment;
             occupancy_map_["current_occupancy"](pt_index(0),pt_index(1)) = 0; // and reset the bool
@@ -188,6 +195,47 @@ void MOTracker::updateOGM(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_ptr, bool
 
     }
     if (verbose) cout<<"exiting updateOGM()"<<endl;
+}
+void MOTracker::removeOccupiedPoints(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_ptr, bool verbose)
+{
+    // removes all the points in occupied cells in the ogm
+    if(verbose) cout <<"removeOccupiedPoints() called"<<endl;
+
+    pcl::PointIndices::Ptr inliers(new pcl::PointIndices());
+
+    for (int i = 0; i < cloud_ptr->size(); i++)
+    {
+        VectorXd this_point(2);
+        this_point<< cloud_ptr->points[i].x, cloud_ptr->points[i].y;
+        //        if (verbose) cout << "This point is ("<<this_point(0)<<","<<this_point(1)<<")"<<endl;
+
+        // get grid map index corresponding to this point
+        grid_map::Index pt_index;
+        occupancy_map_.getIndex(this_point, pt_index);
+        // update if the point falls inside the ogm
+        if ( occupancy_map_.isInside(this_point) )
+        {
+            // label as updated
+            if (occupancy_map_["thresholded_occupancy"](pt_index(0),pt_index(1)) == 1)
+            {
+                // if this point is occupied, delete it
+                inliers->indices.push_back(i);
+                if (verbose) cout << "added point with index "<<i<<" to the inliers set"<<endl;
+            }
+        }
+        else
+        {// we are outside the map, consider resizing it
+            if (verbose) cout << "\n***************************************************outside of map arghhhhhhhhhhhhhhhhh\n*******************************"<<endl;
+        }
+    }
+
+    if (verbose) cout <<"filtering cloud_ptr from "<<cloud_ptr->points.size()<<" points to ";
+    pcl::ExtractIndices<pcl::PointXYZRGB> extract;
+    extract.setInputCloud(cloud_ptr);
+    extract.setIndices(inliers);
+    extract.setNegative(true);
+    extract.filter(*cloud_ptr);
+    if (verbose) cout <<cloud_ptr->points.size()<<" points"<<endl;
 }
 
 void MOTracker::initialiseOGM()
@@ -950,6 +998,7 @@ void MOTracker::initialiseSubscribersAndPublishers() {
         pub_zfilt_ = nh_.advertise<sensor_msgs::PointCloud2> (topic_zfilt, 1);
         pub_ds_ = nh_.advertise<sensor_msgs::PointCloud2> (topic_ds, 1);
         pub_seg_filter_ = nh_.advertise<sensor_msgs::PointCloud2> (topic_seg_filt, 1);
+        pub_ogm_pcl_ = nh_.advertise<sensor_msgs::PointCloud2> ("pcl_ogm_filt", 1);
 
         pub_ogm_ = nh_.advertise<grid_map_msgs::GridMap>("multi_sensor_tracker/filtered_map", 1);
 
