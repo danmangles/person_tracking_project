@@ -160,6 +160,7 @@ private:
     ros::Publisher pub_raw_; // raw input cloud
     ros::Publisher pub_trans_; // transformed cloud
     ros::Publisher pub_zfilt_; // passthrough filtered cloud
+    ros::Publisher pub_ogm_; // ogm filtered cloud
     ros::Publisher pub_ds_; // downsampled cloud
     ros::Publisher pub_seg_filter_; // downsampled cloud
     vector<ros::Publisher> pub_centroid_; // centroid cluster
@@ -192,6 +193,10 @@ private:
     double assignment_algo_time = 0.0;
     int n_assignment_algo_time = 0;
 //    void setupTimingVars();
+
+    //// Occupancy grid map
+    void updateOGM(pcl::PointCloud<pcl::PointXYZRGB>::Ptr output_ptr, bool verbose);
+    void initialiseOGM();
 
 
 };

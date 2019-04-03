@@ -65,12 +65,13 @@ void MOTracker::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr &cloud
 
     // Convert variable to correct type for VoxelGrid
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_ptr;
-    updateOGM(transformed_cloud, cloud_ptr);
-if (io_params.publishing)
-{
-       cout << "publishing ogm filtered cloud"<<endl;
-//        pcl::toROSMsg(*cloud_ptr,msg_to_publish ); // convert from PCL:PC1 to SM:PC2
-    //        pub_ogm_.publish (msg_to_publish);
+    convertSM2ToPclPtr(transformed_cloud, cloud_ptr);
+    updateOGM(cloud_ptr, true);
+    if (io_params.publishing)
+    {
+        cout << "publishing ogm filtered cloud"<<endl;
+        //        pcl::toROSMsg(*cloud_ptr,msg_to_publish ); // convert from PCL:PC1 to SM:PC2
+        //        pub_ogm_.publish (msg_to_publish);
     }
 
 
@@ -122,6 +123,12 @@ if (io_params.publishing)
     else
         cout << "No valid clusters visible after getCentroidsOfClusters()"<<endl;
 }
+void MOTracker::updateOGM(pcl::PointCloud<pcl::PointXYZRGB>::Ptr output_ptr, bool verbose)
+{
+    if (verbose) cout <<"updateOGM() called"<<endl;
+
+}
+
 
 void MOTracker::poseArrayCallback(const geometry_msgs::PoseArray &pose_array)
 {
