@@ -19,7 +19,8 @@ using namespace std;
 pcl_param_struct getPclParams() {
     // sets all the parameters for the pcl_params struct:
     return {.apply_passthrough_filter = true,
-                .apply_ogm_filter = true,
+                // 3 modes: 0 = off, 1 = remove point by point, 2 = cluster by cluster
+                .ogm_filter_mode = 2,
                 .apply_planar_outlier_removal = false, ///////////////////////////////////// TODO
                 .apply_voxel_grid = false,
                 .max_cluster_size = 10000,
@@ -113,7 +114,7 @@ io_param_struct getIOParams(){
     res_filename << "results_CSVs/res_0"<<1+ ltm->tm_mon<<  ltm->tm_mday<<"_"<<ltm->tm_hour<<1 + ltm->tm_min<< ".csv";
     gnd_filename << "results_CSVs/gnd_0"<<1+ ltm->tm_mon<<  ltm->tm_mday<<"_"<<ltm->tm_hour<<1 + ltm->tm_min<< ".csv";
 
-    return {.publishing = true,
+    return {.publishing = false,
                 .res_filename = res_filename.str(),
                 .gnd_filename = gnd_filename.str(),
                 .fixed_frame = "odom"

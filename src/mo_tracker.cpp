@@ -69,10 +69,12 @@ void MOTracker::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr &cloud
 
 
     /////// update an ogm and publish
-    if (pcl_params.apply_ogm_filter)
+    if (pcl_params.ogm_filter_mode != 0) // if method 1 or 2
     {
         updateOGM(cloud_ptr, true);
-        removeOccupiedPoints(cloud_ptr, true);
+        if (pcl_params.ogm_filter_mode == 1) // if filtering point by point
+            removeOccupiedPoints(cloud_ptr, true);
+
         // publish this map
         if (io_params.publishing)
         {
@@ -116,6 +118,8 @@ void MOTracker::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr &cloud
     vector <VectorXd> centroid_coord_array;
     getCentroidsOfClusters(cloud_cluster_vector, centroid_coord_array, false); // generate a vector of coordinates
 
+
+    ///////////// time the method
     stop_clock = clock();
     method_duration = (stop_clock - start_clock) / (double)CLOCKS_PER_SEC;
     pcl_callback_time += method_duration;
@@ -216,7 +220,7 @@ void MOTracker::removeOccupiedPoints(pcl::PointCloud<pcl::PointXYZRGB>::Ptr &clo
             {
                 // if this point is occupied, delete it
                 inliers->indices.push_back(i);
-                if (verbose) cout << "added point with index "<<i<<" to the inliers set"<<endl;
+//                if (verbose) cout << "added point with index "<<i<<" to the inliers set"<<endl;
             }
         }
         else
@@ -241,7 +245,7 @@ void MOTracker::initialiseOGM()
     //    occupancy_map_.add("local_occupancy", Matrix(100, 100)); // add the layer local occupancy for stuff
 
     // how to initialise this based on base frame location?
-    double height = 50.0, width = 50.0, cell_scale = 0.2; // map params in metres
+    double height = 70.0, width = 70.0, cell_scale = 0.2; // map params in metres
     int matrix_height = (int) (height/cell_scale), matrix_width = (int)(width/cell_scale); // n cells along one size
     occupancy_map_.setFrameId(io_params.fixed_frame);
     occupancy_map_.setGeometry(Length(height, width), cell_scale, Position(0.0,0.0));
@@ -514,22 +518,39 @@ void MOTracker::getCentroidsOfClusters (vector<pcl::PointCloud<pcl::PointXYZRGB>
 
         Eigen::Vector4f xyz_centroid;
         compute3DCentroid (*cloud_cluster, xyz_centroid);
-//        ////////// STATIC OR DYNAMIC
-
-//        VectorXd this_point(2);
-//        this_point<< xyz_centroid(0), xyz_centroid(1);
-
-//        grid_map::Index pt_index;
-//        occupancy_map_.getIndex(this_point, pt_index);
-//        if (occupancy_map_["thresholded_occupancy"](pt_index(0),pt_index(1)) == 1)
-//        {
-//            // this is a static cluster
-//            cout <<"this is a static cluster!!!!!"<<endl;
-//            break;
-//        }
 
 
+        if (io_params.publishing)
+        {
+            if (pub_index < 30) // don't publish if we've got too many people
+            {
+                sensor_msgs::PointCloud2 msg_to_publish; // initiate intermediate message variable
+                pcl::toROSMsg(*cloud_cluster,msg_to_publish);
+                msg_to_publish.header.frame_id = io_params.fixed_frame; // CHANGED THIS TO BASE INSTEAD OF ODOM BECAUSE WE WERE PUBLISHING POINTS IN THE WRONG PLACE
+                pub_centroid_.at(pub_index).publish (msg_to_publish); // this is not publishing correctly
+                pub_index++; // increment the publisher index
+            }
+        }
 
+        if (pcl_params.ogm_filter_mode == 2) // if we are ogm filtering cluster by cluster
+        {
+            //////////// STATIC OR DYNAMIC
+            VectorXd this_point(2);
+            this_point<< xyz_centroid(0), xyz_centroid(1);
+
+            grid_map::Index pt_index;
+            occupancy_map_.getIndex(this_point, pt_index);
+            if (occupancy_map_["thresholded_occupancy"](pt_index(0),pt_index(1)) == 1)
+            {
+                // this is a static cluster
+                cout <<"this is a static cluster!!!!!"<<endl;
+                break;
+            }
+            else
+            {
+                if (verbose) cout << "this cluster is dynamic, might be a person!!"<<endl;
+            }
+        }
 
         //// get the covariance in X,Y,Z
         Matrix3f covariance_matrix;
@@ -543,25 +564,14 @@ void MOTracker::getCentroidsOfClusters (vector<pcl::PointCloud<pcl::PointXYZRGB>
         float cov_Y = covariance_matrix(1,1);
         float cov_Z = covariance_matrix(2,2);
 
-
-        if (cov_Z > 2.0* cov_X & cov_Z > 2.0 * cov_Y)
+        if (cov_Z > 1.2* cov_X & cov_Z > 1.2 * cov_Y)
         {
             if (verbose)
             {
                 cout <<"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!this cluster is a person!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"<<endl;
                 cout <<"V = \n"<<covariance_matrix<<endl;
-                if (io_params.publishing)
-                {
-                    if (pub_index < 20) // don't publish if we've got too many people
-                    {
-                        sensor_msgs::PointCloud2 msg_to_publish; // initiate intermediate message variable
-                        pcl::toROSMsg(*cloud_cluster,msg_to_publish);
-                        msg_to_publish.header.frame_id = io_params.fixed_frame; // CHANGED THIS TO BASE INSTEAD OF ODOM BECAUSE WE WERE PUBLISHING POINTS IN THE WRONG PLACE
-                        pub_centroid_.at(pub_index).publish (msg_to_publish); // this is not publishing correctly
-                        pub_index++; // increment the publisher index
-                    }
-                }
             }
+
 
             // strip out the 4th coordinate which is a 1 for reverse compatibbility with other methods
             Vector3d coord_centroid(xyz_centroid[0],xyz_centroid[1],xyz_centroid[2]);
@@ -672,7 +682,7 @@ void MOTracker::createNewTracklets(vector<VectorXd> &unpaired_detections, bool v
             cout << "Tracklet with ID "<<next_tracklet_ID_<<" added to tracklet_vector_"<<endl;
 
         next_tracklet_ID_ ++; // increment ID so that the next tracklet will get a unique one
-        if (next_tracklet_ID_ > 20) // prevent the program getting an overflow after a really long time
+        if (next_tracklet_ID_ > 30) // prevent the program getting an overflow after a really long time
             next_tracklet_ID_ = 0;
     }
 }
@@ -822,7 +832,7 @@ void MOTracker::updateTrackletsWithCM(vector<VectorXd> &unpaired_detections, Mat
     }
 
     if (verbose) cout << "cost_matrix is now\n"<<cost_matrix<<endl;
-        cout << "\nupdateTrackletsWithCM()"<<endl;
+    cout << "\nupdateTrackletsWithCM()"<<endl;
 
     if (tracklet_vector_.size() == 0)
     {
@@ -1005,7 +1015,7 @@ void MOTracker::initialiseSubscribersAndPublishers() {
 
         pub_ogm_ = nh_.advertise<grid_map_msgs::GridMap>("multi_sensor_tracker/filtered_map", 1);
 
-        int numofpubs = 20;
+        int numofpubs = 30;
         for (int i = 0; i<numofpubs; i++)
         {
             stringstream ss;
