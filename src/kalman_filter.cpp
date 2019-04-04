@@ -79,12 +79,15 @@ void KalmanFilter::predict(double time, bool verbose){
     double var_vel = pow((0.5*tau_/timestep),2); // e.g. we have progressed dt/timestep timesteps since the past predict; and in each our velocity uncertainty has grown 3ms-1
 
     // update process noise
-    double Sa = 10;
-    GQG.block(0,0,3,3) = 20*I*Sa*pow(tau_,3)/3; //update GQG in 2 blocks.
-    GQG.block(0,3,3,3) = I*Sa*pow(tau_,2)/2; //update GQG in 2 blocks.
-    GQG.block(3,0,3,3) = I*Sa*pow(tau_,2)/2; //update GQG in 2 blocks.
-    GQG.block(3,3,3,3) = I*Sa*tau_;
-
+    double k = 0.0;
+//    GQG.block(0,0,3,3) = 20*I*Sa*pow(tau_,3)/3; //update GQG in 2 blocks.
+//    GQG.block(0,3,3,3) = I*Sa*pow(tau_,2)/2; //update GQG in 2 blocks.
+//    GQG.block(3,0,3,3) = I*Sa*pow(tau_,2)/2; //update GQG in 2 blocks.
+//    GQG.block(3,3,3,3) = I*Sa*tau_;
+    GQG.block(0,0,3,3) = 0.2*tau_*I; //update GQG in 2 blocks.
+        GQG.block(0,3,3,3) = I*k; //update GQG in 2 blocks.
+        GQG.block(3,0,3,3) = I*k;
+        GQG.block(3,3,3,3) = 0.5*I*tau_;
     if (verbose)
     {
         cout <<"time ="<<t_<<endl;
