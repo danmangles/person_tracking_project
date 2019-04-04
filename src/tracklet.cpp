@@ -24,8 +24,8 @@ void Tracklet::update(VectorXd detection, double current_time, bool isRGBD, bool
     if (isInitialised_)
     {
         if (verbose) cout << "predicting and updating kf for Tracklet_"<<ID_<<endl;
-        kf_.predict(current_time, false);
-        kf_.update(detection, isRGBD, false);
+        kf_.predict(current_time, true);
+        kf_.update(detection, isRGBD, true);
     }
 }
 double Tracklet::getDistance(VectorXd detection)
@@ -47,7 +47,7 @@ void Tracklet::recordMiss(double current_time)
     if (isInitialised_)
     {
 //        cout << "predicting kf for Tracklet_"<<ID_<<endl;
-        kf_.predict(current_time, false); // predict even if we don't have a measurement
+        kf_.predict(current_time, true); // predict even if we don't have a measurement
     } else{
         cout << "filter not initialised anyway" <<endl;
     }
