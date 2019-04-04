@@ -20,7 +20,7 @@ pcl_param_struct getPclParams() {
     // sets all the parameters for the pcl_params struct:
     return {.apply_passthrough_filter = true,
                 // 3 modes: 0 = off, 1 = remove point by point, 2 = cluster by cluster
-                .ogm_filter_mode = 2,
+                .ogm_filter_mode = 1,
                 .apply_planar_outlier_removal = false, ///////////////////////////////////// TODO
                 .apply_voxel_grid = false,
                 .max_cluster_size = 10000,

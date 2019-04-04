@@ -137,7 +137,7 @@ void KalmanFilter::update(const VectorXd& z, bool isRGBD, bool verbose) {
 
 MatrixXd KalmanFilter::getP()
 {
-    cout <<"returning P"<<endl;
+//    cout <<"returning P"<<endl;
     if (!initialized)
     {
         throw std::runtime_error("Can't return P when filter not initialised ... :3");
@@ -147,7 +147,7 @@ MatrixXd KalmanFilter::getP()
 
 VectorXd KalmanFilter::getV()
 {
-    cout <<"returning v"<<endl;
+//    cout <<"returning v"<<endl;
     if (!initialized)
     {
         throw std::runtime_error("Can't return v when filter not initialised ... :3");
@@ -157,7 +157,7 @@ VectorXd KalmanFilter::getV()
 
 VectorXd KalmanFilter::getState()
 {
-    cout <<"returning xhat"<<endl;
+//    cout <<"returning xhat"<<endl;
     if (!initialized)
     {
         throw std::runtime_error("Can't return xhat when filter not initialised ... :3");

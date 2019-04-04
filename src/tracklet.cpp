@@ -13,20 +13,18 @@ Tracklet::Tracklet(int ID,
 
 void Tracklet::update(VectorXd detection, double current_time, bool isRGBD, bool verbose) {
     // Update the tracklet with a new detection of type isRGBD taken at time current_time
-    if (verbose)
-        cout<<"Tracklet::update()"<<endl;
+    if (verbose) cout<<"Tracklet::update()"<<endl;
 
     detection_vector_.push_back(detection); // update this tracklet with the detection coord
-    if (verbose)
-        cout << "pushed back new coord"<<endl;
+    if (verbose) cout << "pushed back new coord"<<endl;
     tracklet_length_++; // increase tracklet length
     num_consecutive_misses = 0; // reset num of consecutive misses
     if (isRGBD)
         has_RGBD_detection_ = true; // register an RGBD detection
     if (isInitialised_)
     {
-        cout << "predicting and updating kf for Tracklet_"<<ID_<<endl;
-        kf_.predict(current_time, true);
+        if (verbose) cout << "predicting and updating kf for Tracklet_"<<ID_<<endl;
+        kf_.predict(current_time, false);
         kf_.update(detection, isRGBD, false);
     }
 }
@@ -48,7 +46,7 @@ void Tracklet::recordMiss(double current_time)
     num_consecutive_misses++;
     if (isInitialised_)
     {
-        cout << "predicting kf for Tracklet_"<<ID_<<endl;
+//        cout << "predicting kf for Tracklet_"<<ID_<<endl;
         kf_.predict(current_time, false); // predict even if we don't have a measurement
     } else{
         cout << "filter not initialised anyway" <<endl;

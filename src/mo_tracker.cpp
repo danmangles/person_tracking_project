@@ -71,10 +71,12 @@ void MOTracker::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr &cloud
     /////// update an ogm and publish
     if (pcl_params.ogm_filter_mode != 0) // if method 1 or 2
     {
-        updateOGM(cloud_ptr, true);
+        updateOGM(cloud_ptr, false);
         if (pcl_params.ogm_filter_mode == 1) // if filtering point by point
-            removeOccupiedPoints(cloud_ptr, true);
-
+        {
+            cout << "mode is 1"<<endl;
+            removeOccupiedPoints(cloud_ptr, false);
+        }
         // publish this map
         if (io_params.publishing)
         {
@@ -91,7 +93,7 @@ void MOTracker::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr &cloud
     }
 
     //////// Downsample with a Voxel Grid and publish
-    if (pcl_params.apply_voxel_grid == 1) {
+    if (pcl_params.apply_voxel_grid) {
         applyVoxelGrid(cloud_ptr, true); // apply the voxel_grid using a leaf size of 1cm
         // publish
         if (io_params.publishing) {
@@ -220,7 +222,7 @@ void MOTracker::removeOccupiedPoints(pcl::PointCloud<pcl::PointXYZRGB>::Ptr &clo
             {
                 // if this point is occupied, delete it
                 inliers->indices.push_back(i);
-//                if (verbose) cout << "added point with index "<<i<<" to the inliers set"<<endl;
+                //                if (verbose) cout << "added point with index "<<i<<" to the inliers set"<<endl;
             }
         }
         else
@@ -534,6 +536,7 @@ void MOTracker::getCentroidsOfClusters (vector<pcl::PointCloud<pcl::PointXYZRGB>
 
         if (pcl_params.ogm_filter_mode == 2) // if we are ogm filtering cluster by cluster
         {
+            cout << "mode is 2"<<endl;
             //////////// STATIC OR DYNAMIC
             VectorXd this_point(2);
             this_point<< xyz_centroid(0), xyz_centroid(1);
@@ -859,10 +862,10 @@ void MOTracker::updateTrackletsWithCM(vector<VectorXd> &unpaired_detections, Mat
         // add the index to the list of paired_tracklet_indices
         //        paired_tracklet_IDs.push_back(this_tracklet->getID());
         // if this min_distance is not too great
-        if (min_dist < getMaxGatingDistance(this_tracklet, true))
+        if (min_dist < getMaxGatingDistance(this_tracklet, false))
         {
             if (verbose) cout << "Updating tracklet_"<<this_tracklet->getID()<< " with detection at index "<<minRow<<endl;
-            updateTracklet(this_tracklet, unpaired_detections[minRow], msg_time,isRGBD, true);
+            updateTracklet(this_tracklet, unpaired_detections[minRow], msg_time,isRGBD, false);
 
             // delete the detection from the array of unpaired detections and the tracklet from unpaired tracklets
             unpaired_detections.erase(unpaired_detections.begin() + minRow);
