@@ -116,7 +116,7 @@ io_param_struct getIOParams(){
     return {.publishing = true,
                 .res_filename = res_filename.str(),
                 .gnd_filename = gnd_filename.str(),
-                .fixed_frame = "base"
+                .fixed_frame = "odom"
     };
 }
 

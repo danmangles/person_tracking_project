@@ -37,7 +37,6 @@ void MOTracker::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr &cloud
 
     /////////// Apply a passthrough filter and publish the result
     sensor_msgs::PointCloud2 bounded_cloud;
-
     if (pcl_params.apply_passthrough_filter == 1) {
         applyPassthroughFilter(cloud_msg, bounded_cloud); // remove all points outside of a predefined bod
         if (io_params.publishing)
@@ -51,7 +50,7 @@ void MOTracker::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr &cloud
         pcl_conversions::moveFromPCL(*cloud, bounded_cloud); // convert into the sensor_msgs format
     }
 
-    ////////// Transform the cloud into the odom frame to eliminate base motion
+    ////////// Transform the cloud into the odom frame to suppress base motion
     sensor_msgs::PointCloud2 transformed_cloud;
     transformFromBaseToFixedFrame(bounded_cloud, transformed_cloud);
     if (io_params.publishing)
@@ -64,7 +63,7 @@ void MOTracker::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr &cloud
     }
 
 
-    // Convert variable to correct type for VoxelGrid
+    // Convert variable to correct type for further processing
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_ptr;
     convertSM2ToPclPtr(transformed_cloud, cloud_ptr);
 
@@ -73,7 +72,7 @@ void MOTracker::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr &cloud
     if (pcl_params.apply_ogm_filter)
     {
         updateOGM(cloud_ptr, true);
-//        removeOccupiedPoints(cloud_ptr, true);
+        removeOccupiedPoints(cloud_ptr, true);
         // publish this map
         if (io_params.publishing)
         {
@@ -515,19 +514,19 @@ void MOTracker::getCentroidsOfClusters (vector<pcl::PointCloud<pcl::PointXYZRGB>
 
         Eigen::Vector4f xyz_centroid;
         compute3DCentroid (*cloud_cluster, xyz_centroid);
-        ////////// STATIC OR DYNAMIC
+//        ////////// STATIC OR DYNAMIC
 
-        VectorXd this_point(2);
-        this_point<< xyz_centroid(0), xyz_centroid(1);
+//        VectorXd this_point(2);
+//        this_point<< xyz_centroid(0), xyz_centroid(1);
 
-        grid_map::Index pt_index;
-        occupancy_map_.getIndex(this_point, pt_index);
-        if (occupancy_map_["thresholded_occupancy"](pt_index(0),pt_index(1)) == 1)
-        {
-            // this is a static cluster
-            cout <<"this is a static cluster!!!!!"<<endl;
-            break;
-        }
+//        grid_map::Index pt_index;
+//        occupancy_map_.getIndex(this_point, pt_index);
+//        if (occupancy_map_["thresholded_occupancy"](pt_index(0),pt_index(1)) == 1)
+//        {
+//            // this is a static cluster
+//            cout <<"this is a static cluster!!!!!"<<endl;
+//            break;
+//        }
 
 
 
