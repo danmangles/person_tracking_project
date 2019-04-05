@@ -62,11 +62,15 @@ void KalmanFilter::predict(double time, bool verbose){
 
     /////// Prediction
     tau_ = time - t_; // compute tau_ as new time - previous time
-    t_ = time; // update previous time
 
-    if (tau_ < 0)
-        cout<<"\n********************************\n!!!!!! dt is negative!!!"<<endl;
+    if (tau_ < 0) // if measurements have been received in the wrong order, simply set dt to zero and don't update the time.
+    {
+        cout<<"\n********************************\n!!!!!! dt is negative, ditching next measurement!!!"<<endl;
+        return; // exit the method without updating. negative tau causes filter to ditch the next measurement.
 
+    }else{ // measurements in the correct order
+        t_ = time; // update previous time
+    }
 //    MatrixXd I3(3,3);
 //    I3.setIdentity();
 
@@ -115,7 +119,11 @@ void KalmanFilter::update(const VectorXd& z, bool isRGBD, bool verbose) {
     //check if we are initialised
     if (!initialized)
         throw runtime_error("Filter is not initialised... :3");
-
+    if (tau_ < 0) // if measurements have been received in the wrong order
+    {
+        cout<<"\n********************************\n!!!!!![update] dt is negative, ditching this measurement!!!"<<endl;
+        return; // exit the method without updating. negative tau causes filter to ditch the next measurement.
+    }
     // select measurement covariance based on where the measurement came from
     if (isRGBD)
         R = R_rgbd;
