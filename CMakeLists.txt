@@ -63,34 +63,37 @@ include_directories(
 ## Declare a C++ library
  add_library(${PROJECT_NAME}
    src/kalman_filter.cpp
-#   src/old_files/tracker.cpp
-   src/centroid_estimator.cpp
-   src/pairing.cpp
    src/tracklet.cpp
    src/realsense_detector.py
+   #   src/old_files/tracker.cpp
+   #   src/centroid_estimator.cpp
+   #   src/pairing.cpp
  )
 
 link_directories(${PCL_LIBRARY_DIRS})
 add_definitions(${PCL_DEFINITIONS})
 
-add_executable(pcd_read src/pcd_read.cpp)
-target_link_libraries(pcd_read ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+add_executable (mo_tracker_node src/mo_tracker_node.cpp src/mo_tracker.cpp)
+target_link_libraries (mo_tracker_node ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${PROJECT_NAME})
 
-add_executable (voxel_grid src/voxel_grid.cpp)
-target_link_libraries (voxel_grid ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+#add_executable(pcd_read src/pcd_read.cpp)
+#target_link_libraries(pcd_read ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
-add_executable (passthrough src/passthrough.cpp)
-target_link_libraries (passthrough ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+#add_executable (voxel_grid src/voxel_grid.cpp)
+#target_link_libraries (voxel_grid ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+
+#add_executable (passthrough src/passthrough.cpp)
+#target_link_libraries (passthrough ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
 
-add_executable (clustering src/clustering.cpp)
-target_link_libraries (clustering ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+#add_executable (clustering src/clustering.cpp)
+#target_link_libraries (clustering ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
-add_executable (velodyne_tracker src/velodyne_tracker.cpp)
-target_link_libraries (velodyne_tracker ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+#add_executable (velodyne_tracker src/velodyne_tracker.cpp)
+#target_link_libraries (velodyne_tracker ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
-add_executable (average_tracker src/average_tracker.cpp)
-target_link_libraries (average_tracker ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+#add_executable (average_tracker src/average_tracker.cpp)
+#target_link_libraries (average_tracker ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
 #add_executable (kalman_test src/kalman_test.cpp)
 #target_link_libraries (kalman_test ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${PROJECT_NAME})
@@ -104,18 +107,15 @@ target_link_libraries (average_tracker ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 #add_executable (tracker_node src/old_files/tracker_node.cpp src/old_files/tracker.cpp)
 #target_link_libraries (tracker_node ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${PROJECT_NAME})
 
-add_executable (mo_tracker_node src/mo_tracker_node.cpp src/mo_tracker.cpp)
-target_link_libraries (mo_tracker_node ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${PROJECT_NAME})
-
 #add_executable (mo_tracker_node src/mo_tracker_node.cpp src/mo_tracker.cpp)
 #target_link_libraries (mo_tracker_node ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${PROJECT_NAME})
 ### CDT Navigation Demo
-add_executable(
-  challenge_node
-  src/challenge_node.cpp
-  src/Challenge.cpp
-)
-target_link_libraries(
-  challenge_node
-  ${catkin_LIBRARIES}
-)
+#add_executable(
+#  challenge_node
+#  src/challenge_node.cpp
+#  src/Challenge.cpp
+#)
+#target_link_libraries(
+#  challenge_node
+#  ${catkin_LIBRARIES}
+#)
