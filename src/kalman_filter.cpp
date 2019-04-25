@@ -88,10 +88,10 @@ void KalmanFilter::predict(double time, bool verbose){
 //    GQG.block(0,3,3,3) = I*Sa*pow(tau_,2)/2; //update GQG in 2 blocks.
 //    GQG.block(3,0,3,3) = I*Sa*pow(tau_,2)/2; //update GQG in 2 blocks.
 //    GQG.block(3,3,3,3) = I*Sa*tau_;
-    GQG.block(0,0,3,3) = 50*tau_*I; //update GQG in 2 blocks.
+    GQG.block(0,0,3,3) = 20*tau_*I; //update GQG in 2 blocks.
         GQG.block(0,3,3,3) = I*k; //update GQG in 2 blocks.
         GQG.block(3,0,3,3) = I*k;
-        GQG.block(3,3,3,3) = 0.5*I*tau_;
+        GQG.block(3,3,3,3) = 20*I*tau_;
     if (verbose)
     {
         cout <<"time ="<<t_<<endl;

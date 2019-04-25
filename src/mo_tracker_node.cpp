@@ -78,8 +78,8 @@ kf_param_struct getKfParams() {
     GQG.setZero(); //MAKE THIS A FUNCTION OF TIMESTEP^2
     //R
     MatrixXd R_rgbd(m, m), R_velodyne(m,m); // Measurement noise covariance
-    R_rgbd << 5, 0, 0, 0, 5, 0, 0, 0, 10; //I3 * .05 // MAKE THIS A FUNCTION OF TIMESTEP^2
-    R_velodyne << 2, 0, 0, 0, 2, 0, 0, 0, 2; //I3 * .05 // MAKE THIS A FUNCTION OF TIMESTEP^2
+    R_rgbd << 7, 0, 0, 0, 7, 0, 0, 0, 7; //I3 * .05 // MAKE THIS A FUNCTION OF TIMESTEP^2
+    R_velodyne << 5, 0, 0, 0, 5, 0, 0, 0, 5; //I3 * .05 // MAKE THIS A FUNCTION OF TIMESTEP^2
     //P0
     MatrixXd P0(n, n); // Estimate error covariance initial state
     P0.setIdentity();
