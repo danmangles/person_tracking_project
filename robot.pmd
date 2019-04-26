@@ -104,7 +104,7 @@ group "x.misc" {
         host = "localhost";
     }
     cmd "image_transport_republisher" {
-        exec = "rosrun image_transport republish compressedDepth in:=/realsense_d435_forward/aligned_depth_to_color/image_raw raw out:=/realsense_d435_forward/aligned_depth_to_color/image_raw";
+        exec = "rosrun image_transport republish compressedDepth in:=/realsense_d435_front_forward/aligned_depth_to_color/image_raw raw out:=/realsense_d435_front_forward/aligned_depth_to_color/image_raw";
         host = "localhost";
     }
 }
