@@ -998,7 +998,7 @@ void MOTracker::publishTransform(VectorXd coordinates, string target_frame_id) {
 }
 
 void MOTracker::initialiseSubscribersAndPublishers() {
-    string velodyne_topic = "/velodyne/point_cloud_filtered"; // topic is the pointcloud from the velodyne
+    string velodyne_topic = "/point_cloud_filter/velodyne/point_cloud_filtered"; // topic is the pointcloud from the velodyne
     point_cloud_sub_ = nh_.subscribe(velodyne_topic, 1, &MOTracker::pointCloudCallback, this); // Create a ROS subscriber for the input point cloud that calls the callback
 
     // SUBSCRIBE TO A POSESTAMPED::TRANSFORM here from RGBD

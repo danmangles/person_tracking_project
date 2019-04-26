@@ -54,7 +54,7 @@ class RealsenseDetector:
         
         # setup our ROS frames
         self.world_base_frame = "odom"
-        self.camera_base_frame = "realsense_d435_forward_camera"
+        self.camera_base_frame = "realsense_d435_front_forward_camera"
         self.target_frame = "realsense_detections_poseArray" # this is the output name of all things that are published from this module
 
         # setup bits of TF and CVbridge
@@ -505,15 +505,15 @@ class RealsenseDetector:
 
         # set the correct topic names based on our situation
         if self.in_simulator:
-            image_topic = "/realsense_d435_forward/rgb/image_raw/compressed"
+            image_topic = "/realsense_d435_front_forward/rgb/image_raw/compressed"
             self.rgb_sub = rospy.Subscriber(image_topic, CompressedImage,self.rgb_callback) # every time we get an RGB image, call self.rgb_callback
-            depth_topic = "/realsense_d435_forward/depth/image_raw"
+            depth_topic = "/realsense_d435_front_forward/depth/image_raw"
             self.depth_sub = rospy.Subscriber(depth_topic, Image, self.depth_callback) # same for depth images
 
         else:
-            image_topic = "/realsense_d435_forward/color/image_raw/compressed"
+            image_topic = "/realsense_d435_front_forward/color/image_raw/compressed"
             rgb_sub = message_filters.Subscriber(image_topic, CompressedImage) # every time we get an RGB image, call self.rgb_callback
-            depth_topic = "/realsense_d435_forward/aligned_depth_to_color/image_raw"
+            depth_topic = "/realsense_d435_front_forward/aligned_depth_to_color/image_raw"
             depth_sub = message_filters.Subscriber(depth_topic, Image) # same for depth images
 
         # setup the synchronised subscriber which combines the rgb and depth subscribers into a single callback
